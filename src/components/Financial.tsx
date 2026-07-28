@@ -8,7 +8,8 @@ import {
   DollarSign, TrendingUp, TrendingDown, Wallet, CreditCard, ArrowUpRight, 
   ArrowDownLeft, RefreshCw, Calendar, Search, Filter, Plus, CheckCircle, 
   XCircle, Clock, Shield, FileText, Download, Building, Users, AlertTriangle, 
-  ChevronRight, Layers, PieChart, BarChart3, Lock, Check, ArrowRightLeft, Eye
+  ChevronRight, Layers, PieChart, BarChart3, Lock, Check, ArrowRightLeft, Eye,
+  Edit, Trash2
 } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
@@ -19,8 +20,8 @@ import { DataList } from './ui/DataList';
 export default function Financial() {
   const { 
     useContasFinanceiras, useAddContaFinanceira, useUpdateContaFinanceira, useDeleteContaFinanceira,
-    useCategoriasFinanceiras, useAddCategoriaFinanceira, useDeleteCategoriaFinanceira,
-    useCentrosCusto, useAddCentroCusto, useDeleteCentroCusto,
+    useCategoriasFinanceiras, useAddCategoriaFinanceira, useUpdateCategoriaFinanceira, useDeleteCategoriaFinanceira,
+    useCentrosCusto, useAddCentroCusto, useUpdateCentroCusto, useDeleteCentroCusto,
     useLancamentosFinanceiros, useAddLancamentoFinanceiro, useUpdateLancamentoFinanceiro, useLiquidateLancamento, useConciliateLancamento, useDeleteLancamentoFinanceiro,
     useMovimentacoesFinanceiras, useTransferenciasFinanceiras, useAddTransferenciaFinanceira,
     useAuditoriaFinanceira, useAddAuditLog,
@@ -36,11 +37,17 @@ export default function Financial() {
   const { data: clients = [] } = useClientes();
 
   const addAccountMutation = useAddContaFinanceira();
+  const updateAccountMutation = useUpdateContaFinanceira();
   const deleteAccountMutation = useDeleteContaFinanceira();
+
   const addCatMutation = useAddCategoriaFinanceira();
+  const updateCatMutation = useUpdateCategoriaFinanceira();
   const deleteCatMutation = useDeleteCategoriaFinanceira();
+
   const addCCMutation = useAddCentroCusto();
+  const updateCCMutation = useUpdateCentroCusto();
   const deleteCCMutation = useDeleteCentroCusto();
+
   const addEntryMutation = useAddLancamentoFinanceiro();
   const liquidateMutation = useLiquidateLancamento();
   const conciliateMutation = useConciliateLancamento();
@@ -67,6 +74,11 @@ export default function Financial() {
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
   const [isCCModalOpen, setIsCCModalOpen] = useState(false);
   const [selectedEntryForAction, setSelectedEntryForAction] = useState<FinancialEntry | null>(null);
+
+  // Edit Objects State
+  const [editingAccount, setEditingAccount] = useState<FinancialAccount | null>(null);
+  const [editingCategory, setEditingCategory] = useState<FinancialCategory | null>(null);
+  const [editingCC, setEditingCC] = useState<CostCenter | null>(null);
 
   // Form: Manual Entry
   const [entryTipo, setEntryTipo] = useState<'Receita' | 'Despesa'>('Receita');
@@ -99,7 +111,9 @@ export default function Financial() {
   const [accDigito, setAccDigito] = useState('');
   const [accBandeira, setAccBandeira] = useState('Mastercard');
   const [accLimite, setAccLimite] = useState(5000);
-  const [accSaldoInicial, setAccSaldoInicial] = useState(1000);
+  const [accSaldoInicial, setAccSaldoInicial] = useState(0);
+  const [accSaldoAtual, setAccSaldoAtual] = useState(0);
+  const [accSituacao, setAccSituacao] = useState<'Ativa' | 'Inativa'>('Ativa');
 
   // Form: Transfer
   const [trOrigemId, setTrOrigemId] = useState('');
@@ -163,7 +177,219 @@ export default function Financial() {
     .filter(e => (e.status === 'Aberto' || e.status === 'Pendente') && new Date(e.dataVencimento) < new Date())
     .reduce((acc, e) => acc + e.valorLiquido, 0);
 
-  // Handlers
+  // Handlers for Accounts (Edit & Delete)
+  const handleOpenAccountModal = (acc?: FinancialAccount) => {
+    if (acc) {
+      setEditingAccount(acc);
+      setAccNome(acc.nome);
+      setAccTipo(acc.tipo);
+      setAccBanco(acc.banco || '');
+      setAccAgencia(acc.agencia || '');
+      setAccConta(acc.conta || '');
+      setAccDigito(acc.digito || '');
+      setAccBandeira(acc.bandeira || 'Mastercard');
+      setAccLimite(acc.limite || 0);
+      setAccSaldoInicial(acc.saldoInicial || 0);
+      setAccSaldoAtual(acc.saldoAtual || 0);
+      setAccSituacao(acc.situacao || 'Ativa');
+    } else {
+      setEditingAccount(null);
+      setAccNome('');
+      setAccTipo('Conta Bancaria');
+      setAccBanco('Itaú');
+      setAccAgencia('');
+      setAccConta('');
+      setAccDigito('');
+      setAccBandeira('Mastercard');
+      setAccLimite(5000);
+      setAccSaldoInicial(0);
+      setAccSaldoAtual(0);
+      setAccSituacao('Ativa');
+    }
+    setIsAccountModalOpen(true);
+  };
+
+  const handleSaveAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accNome) return;
+
+    if (editingAccount) {
+      const updated: FinancialAccount = {
+        ...editingAccount,
+        nome: accNome,
+        tipo: accTipo,
+        banco: accBanco,
+        agencia: accAgencia,
+        conta: accConta,
+        digito: accDigito,
+        bandeira: accBandeira,
+        limite: Number(accLimite),
+        saldoInicial: Number(accSaldoInicial),
+        saldoAtual: Number(accSaldoAtual),
+        situacao: accSituacao
+      };
+
+      updateAccountMutation.mutate(updated, {
+        onSuccess: () => {
+          setIsAccountModalOpen(false);
+          showToast('Conta / Cartão atualizado com sucesso!', 'success');
+        }
+      });
+    } else {
+      const newAcc: FinancialAccount = {
+        id: crypto.randomUUID(),
+        nome: accNome,
+        tipo: accTipo,
+        banco: accBanco,
+        agencia: accAgencia,
+        conta: accConta,
+        digito: accDigito,
+        bandeira: accBandeira,
+        limite: Number(accLimite),
+        limiteDisponivel: Number(accLimite),
+        saldoInicial: Number(accSaldoInicial),
+        saldoAtual: Number(accSaldoInicial),
+        situacao: accSituacao
+      };
+
+      addAccountMutation.mutate(newAcc, {
+        onSuccess: () => {
+          setIsAccountModalOpen(false);
+          showToast('Nova conta financeira cadastrada com sucesso!', 'success');
+        }
+      });
+    }
+  };
+
+  const handleDeleteAccount = (acc: FinancialAccount) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Excluir Conta Financeira',
+      desc: `Tem certeza que deseja excluir a conta "${acc.nome}"? Os lançamentos associados permanecerão no histórico.`,
+      action: () => {
+        deleteAccountMutation.mutate(acc.id, {
+          onSuccess: () => showToast('Conta financeira excluída.', 'warning')
+        });
+        setConfirmDialog({ ...confirmDialog, open: false });
+      }
+    });
+  };
+
+  // Handlers for Categories (Edit & Delete)
+  const handleOpenCatModal = (cat?: FinancialCategory) => {
+    if (cat) {
+      setEditingCategory(cat);
+      setCatNome(cat.nome);
+      setCatTipo(cat.tipo);
+      setCatDesc(cat.descricao || '');
+    } else {
+      setEditingCategory(null);
+      setCatNome('');
+      setCatTipo('Despesa');
+      setCatDesc('');
+    }
+    setIsCatModalOpen(true);
+  };
+
+  const handleSaveCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!catNome) return;
+
+    if (editingCategory) {
+      updateCatMutation.mutate(
+        { ...editingCategory, nome: catNome, tipo: catTipo, descricao: catDesc },
+        {
+          onSuccess: () => {
+            setIsCatModalOpen(false);
+            showToast('Categoria do Plano de Contas atualizada!', 'success');
+          }
+        }
+      );
+    } else {
+      addCatMutation.mutate(
+        { id: crypto.randomUUID(), nome: catNome, tipo: catTipo, descricao: catDesc },
+        {
+          onSuccess: () => {
+            setIsCatModalOpen(false);
+            showToast('Categoria adicionada ao Plano de Contas!', 'success');
+          }
+        }
+      );
+    }
+  };
+
+  const handleDeleteCategory = (cat: FinancialCategory) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Excluir Categoria',
+      desc: `Deseja excluir a categoria "${cat.nome}" do Plano de Contas?`,
+      action: () => {
+        deleteCatMutation.mutate(cat.id, {
+          onSuccess: () => showToast('Categoria excluída do Plano de Contas.', 'warning')
+        });
+        setConfirmDialog({ ...confirmDialog, open: false });
+      }
+    });
+  };
+
+  // Handlers for Cost Centers (Edit & Delete)
+  const handleOpenCCModal = (cc?: CostCenter) => {
+    if (cc) {
+      setEditingCC(cc);
+      setCcCodigo(cc.codigo);
+      setCcNome(cc.nome);
+      setCcDesc(cc.descricao || '');
+    } else {
+      setEditingCC(null);
+      setCcCodigo(`CC-0${costCenters.length + 1}`);
+      setCcNome('');
+      setCcDesc('');
+    }
+    setIsCCModalOpen(true);
+  };
+
+  const handleSaveCostCenter = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ccNome || !ccCodigo) return;
+
+    if (editingCC) {
+      updateCCMutation.mutate(
+        { ...editingCC, codigo: ccCodigo, nome: ccNome, descricao: ccDesc },
+        {
+          onSuccess: () => {
+            setIsCCModalOpen(false);
+            showToast('Centro de Custo atualizado com sucesso!', 'success');
+          }
+        }
+      );
+    } else {
+      addCCMutation.mutate(
+        { id: crypto.randomUUID(), codigo: ccCodigo, nome: ccNome, descricao: ccDesc },
+        {
+          onSuccess: () => {
+            setIsCCModalOpen(false);
+            showToast('Centro de Custo cadastrado!', 'success');
+          }
+        }
+      );
+    }
+  };
+
+  const handleDeleteCostCenter = (cc: CostCenter) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Excluir Centro de Custo',
+      desc: `Deseja excluir o centro de custo "${cc.nome}" (${cc.codigo})?`,
+      action: () => {
+        deleteCCMutation.mutate(cc.id, {
+          onSuccess: () => showToast('Centro de Custo excluído.', 'warning')
+        });
+        setConfirmDialog({ ...confirmDialog, open: false });
+      }
+    });
+  };
+
+  // Manual Entries Handler
   const handleOpenEntryModal = () => {
     setEntryTipo('Receita');
     setEntryDoc(`DOC-${Date.now().toString().slice(-6)}`);
@@ -327,34 +553,6 @@ export default function Financial() {
     );
   };
 
-  const handleSaveAccount = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!accNome) return;
-
-    const newAcc: FinancialAccount = {
-      id: crypto.randomUUID(),
-      nome: accNome,
-      tipo: accTipo,
-      banco: accBanco,
-      agencia: accAgencia,
-      conta: accConta,
-      digito: accDigito,
-      bandeira: accBandeira,
-      limite: Number(accLimite),
-      limiteDisponivel: Number(accLimite),
-      saldoInicial: Number(accSaldoInicial),
-      saldoAtual: Number(accSaldoInicial),
-      situacao: 'Ativa'
-    };
-
-    addAccountMutation.mutate(newAcc, {
-      onSuccess: () => {
-        setIsAccountModalOpen(false);
-        showToast('Nova conta financeira cadastrada com sucesso!', 'success');
-      }
-    });
-  };
-
   const handleSaveTransfer = (e: React.FormEvent) => {
     e.preventDefault();
     if (!trOrigemId || !trDestinoId || trValor <= 0) {
@@ -381,46 +579,6 @@ export default function Financial() {
           showToast('Transferência efetuada e saldos atualizados!', 'success');
         },
         onError: () => showToast('Erro ao efetuar transferência.', 'error')
-      }
-    );
-  };
-
-  const handleSaveCategory = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!catNome) return;
-
-    addCatMutation.mutate(
-      {
-        id: crypto.randomUUID(),
-        nome: catNome,
-        tipo: catTipo,
-        descricao: catDesc
-      },
-      {
-        onSuccess: () => {
-          setIsCatModalOpen(false);
-          showToast('Categoria adicionada ao Plano de Contas!', 'success');
-        }
-      }
-    );
-  };
-
-  const handleSaveCostCenter = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ccNome || !ccCodigo) return;
-
-    addCCMutation.mutate(
-      {
-        id: crypto.randomUUID(),
-        codigo: ccCodigo,
-        nome: ccNome,
-        descricao: ccDesc
-      },
-      {
-        onSuccess: () => {
-          setIsCCModalOpen(false);
-          showToast('Centro de Custo cadastrado!', 'success');
-        }
       }
     );
   };
@@ -943,52 +1101,67 @@ export default function Financial() {
               Contas Bancárias, Cartões de Crédito & Carteiras Digitais
             </h3>
             <button
-              onClick={() => {
-                setAccNome('');
-                setAccTipo('Conta Bancaria');
-                setAccBanco('Itaú');
-                setAccSaldoInicial(1000);
-                setIsAccountModalOpen(true);
-              }}
+              onClick={() => handleOpenAccountModal()}
               className="py-2 px-3 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold cursor-pointer flex items-center gap-1.5"
             >
               <Plus size={15} /> Nova Conta / Cartão
             </button>
           </div>
 
-          {/* ACCOUNTS CARDS GRID */}
+          {/* ACCOUNTS CARDS GRID WITH EDIT & DELETE ACTIONS */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {accounts.map(acc => (
-              <div key={acc.id} className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 space-y-3 relative overflow-hidden shadow-xl">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-[10px] font-mono uppercase text-orange-400 font-bold block">{acc.tipo}</span>
-                    <h4 className="text-base font-bold text-white mt-0.5">{acc.nome}</h4>
+              <div key={acc.id} className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 space-y-3 relative overflow-hidden shadow-xl flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-[10px] font-mono uppercase text-orange-400 font-bold block">{acc.tipo}</span>
+                      <h4 className="text-base font-bold text-white mt-0.5">{acc.nome}</h4>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${acc.situacao === 'Ativa' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30' : 'bg-neutral-950 text-neutral-500'}`}>
+                      {acc.situacao}
+                    </span>
                   </div>
-                  <span className="px-2 py-0.5 bg-neutral-950 border border-neutral-800 text-neutral-400 rounded text-[10px] font-mono">
-                    {acc.situacao}
-                  </span>
+
+                  <div className="pt-2 border-t border-neutral-800 mt-2">
+                    <span className="text-[10px] font-mono text-neutral-500 uppercase block">Saldo Atual em Conta</span>
+                    <strong className="text-2xl font-black font-mono text-emerald-400 block mt-0.5">
+                      R$ {acc.saldoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </strong>
+                  </div>
+
+                  {acc.tipo === 'Cartao Credito' && (
+                    <div className="text-xs font-mono text-neutral-400 space-y-1 bg-neutral-950 p-2.5 rounded-lg border border-neutral-800 mt-2">
+                      <div className="flex justify-between">
+                        <span>Limite Total:</span>
+                        <strong className="text-white">R$ {acc.limite?.toFixed(2)}</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Fechamento / Venc:</span>
+                        <strong className="text-orange-400">Dia {acc.diaFechamento || 15} / Dia {acc.diaVencimento || 25}</strong>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="pt-2 border-t border-neutral-800">
-                  <span className="text-[10px] font-mono text-neutral-500 uppercase block">Saldo Atual em Conta</span>
-                  <strong className="text-2xl font-black font-mono text-emerald-400 block mt-0.5">
-                    R$ {acc.saldoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </strong>
+                {/* EDIT & DELETE ACTION BAR */}
+                <div className="flex justify-end items-center gap-2 pt-2 border-t border-neutral-800/80">
+                  <button
+                    onClick={() => handleOpenAccountModal(acc)}
+                    className="p-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-mono"
+                    title="Editar Conta / Cartão"
+                  >
+                    <Edit size={14} /> Editar
+                  </button>
+                  <button
+                    onClick={() => handleDeleteAccount(acc)}
+                    className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-mono"
+                    title="Excluir Conta"
+                  >
+                    <Trash2 size={14} /> Excluir
+                  </button>
                 </div>
 
-                {acc.tipo === 'Cartao Credito' && (
-                  <div className="text-xs font-mono text-neutral-400 space-y-1 bg-neutral-950 p-2.5 rounded-lg border border-neutral-800">
-                    <div className="flex justify-between">
-                      <span>Limite Total:</span>
-                      <strong className="text-white">R$ {acc.limite?.toFixed(2)}</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Fechamento / Venc:</span>
-                      <strong className="text-orange-400">Dia {acc.diaFechamento} / Dia {acc.diaVencimento}</strong>
-                    </div>
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -1059,7 +1232,7 @@ export default function Financial() {
         </div>
       )}
 
-      {/* TAB 5: PLANO DE CONTAS & CENTROS DE CUSTO */}
+      {/* TAB 5: PLANO DE CONTAS & CENTROS DE CUSTO WITH EDIT & DELETE */}
       {activeTab === 'categories' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in" id="financial-tab-categories">
           
@@ -1071,10 +1244,10 @@ export default function Financial() {
                 Plano de Contas (Categorias)
               </h3>
               <button
-                onClick={() => { setCatNome(''); setIsCatModalOpen(true); }}
-                className="py-1.5 px-3 bg-neutral-800 hover:bg-neutral-750 text-neutral-200 rounded-lg text-xs font-semibold cursor-pointer"
+                onClick={() => handleOpenCatModal()}
+                className="py-1.5 px-3 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-semibold cursor-pointer flex items-center gap-1"
               >
-                + Categoria
+                <Plus size={14} /> + Categoria
               </button>
             </div>
 
@@ -1082,12 +1255,30 @@ export default function Financial() {
               {categories.map(cat => (
                 <div key={cat.id} className="p-3 bg-neutral-950 border border-neutral-800 rounded-xl flex items-center justify-between">
                   <div>
-                    <span className="text-white font-semibold block">{cat.nome}</span>
-                    <span className="text-[10px] text-neutral-500">{cat.descricao || 'Sem descrição'}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-semibold">{cat.nome}</span>
+                      <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${cat.tipo === 'Receita' ? 'bg-emerald-950 text-emerald-400' : 'bg-red-950 text-red-400'}`}>
+                        {cat.tipo}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-neutral-500 block mt-0.5">{cat.descricao || 'Sem descrição'}</span>
                   </div>
-                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${cat.tipo === 'Receita' ? 'bg-emerald-950 text-emerald-400' : 'bg-red-950 text-red-400'}`}>
-                    {cat.tipo}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleOpenCatModal(cat)}
+                      className="p-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
+                      title="Editar Categoria"
+                    >
+                      <Edit size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCategory(cat)}
+                      className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
+                      title="Excluir Categoria"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1101,10 +1292,10 @@ export default function Financial() {
                 Centros de Custo
               </h3>
               <button
-                onClick={() => { setCcCodigo(`CC-0${costCenters.length + 1}`); setCcNome(''); setIsCCModalOpen(true); }}
-                className="py-1.5 px-3 bg-neutral-800 hover:bg-neutral-750 text-neutral-200 rounded-lg text-xs font-semibold cursor-pointer"
+                onClick={() => handleOpenCCModal()}
+                className="py-1.5 px-3 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-semibold cursor-pointer flex items-center gap-1"
               >
-                + Centro de Custo
+                <Plus size={14} /> + Centro de Custo
               </button>
             </div>
 
@@ -1119,6 +1310,22 @@ export default function Financial() {
                       <strong className="text-white">{cc.nome}</strong>
                     </div>
                     <span className="text-[10px] text-neutral-500 block mt-1">{cc.descricao || 'Sem descrição'}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleOpenCCModal(cc)}
+                      className="p-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
+                      title="Editar Centro de Custo"
+                    >
+                      <Edit size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCostCenter(cc)}
+                      className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
+                      title="Excluir Centro de Custo"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -1463,11 +1670,13 @@ export default function Financial() {
         </div>
       )}
 
-      {/* MODAL: NOVA CONTA BANCÁRIA */}
+      {/* MODAL: CONTA BANCÁRIA (CRIAR E EDITAR) */}
       {isAccountModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-5 shadow-2xl">
-            <h3 className="text-base font-bold text-white mb-4">Nova Conta / Cartão de Crédito</h3>
+            <h3 className="text-base font-bold text-white mb-4">
+              {editingAccount ? 'Editar Conta / Cartão' : 'Nova Conta / Cartão de Crédito'}
+            </h3>
             <form onSubmit={handleSaveAccount} className="space-y-3 font-mono text-xs">
               <div>
                 <label className="block text-neutral-400 mb-1 uppercase font-semibold">Nome da Conta *</label>
@@ -1495,21 +1704,95 @@ export default function Financial() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-neutral-400 mb-1 uppercase font-semibold">Saldo Inicial R$ *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={accSaldoInicial}
-                  onChange={(e) => setAccSaldoInicial(Number(e.target.value))}
-                  className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white font-bold"
-                />
+              {accTipo === 'Conta Bancaria' && (
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Banco</label>
+                    <input
+                      type="text"
+                      value={accBanco}
+                      onChange={(e) => setAccBanco(e.target.value)}
+                      placeholder="Itaú"
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Agência</label>
+                    <input
+                      type="text"
+                      value={accAgencia}
+                      onChange={(e) => setAccAgencia(e.target.value)}
+                      placeholder="0001"
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Conta / Dígito</label>
+                    <input
+                      type="text"
+                      value={accConta}
+                      onChange={(e) => setAccConta(e.target.value)}
+                      placeholder="12345-6"
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {accTipo === 'Cartao Credito' && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Bandeira</label>
+                    <input
+                      type="text"
+                      value={accBandeira}
+                      onChange={(e) => setAccBandeira(e.target.value)}
+                      placeholder="Mastercard / Visa"
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Limite Total R$</label>
+                    <input
+                      type="number"
+                      value={accLimite}
+                      onChange={(e) => setAccLimite(Number(e.target.value))}
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-neutral-400 mb-1 uppercase font-semibold">Saldo Atual R$ *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={accSaldoAtual}
+                    onChange={(e) => setAccSaldoAtual(Number(e.target.value))}
+                    className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-emerald-400 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-neutral-400 mb-1 uppercase font-semibold">Situação</label>
+                  <select
+                    value={accSituacao}
+                    onChange={(e) => setAccSituacao(e.target.value as any)}
+                    className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white font-bold"
+                  >
+                    <option value="Ativa">Ativa</option>
+                    <option value="Inativa">Inativa</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setIsAccountModalOpen(false)} className="px-4 py-2 border border-neutral-800 text-neutral-400 rounded-xl">Cancelar</button>
-                <button type="submit" className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl">Salvar Conta</button>
+                <button type="button" onClick={() => setIsAccountModalOpen(false)} className="px-4 py-2 border border-neutral-800 text-neutral-400 rounded-xl cursor-pointer">Cancelar</button>
+                <button type="submit" className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl cursor-pointer">
+                  {editingAccount ? 'Atualizar Conta' : 'Salvar Conta'}
+                </button>
               </div>
             </form>
           </div>
@@ -1561,19 +1844,21 @@ export default function Financial() {
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setIsTransferModalOpen(false)} className="px-4 py-2 border border-neutral-800 text-neutral-400 rounded-xl">Cancelar</button>
-                <button type="submit" className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl">Confirmar Transferência</button>
+                <button type="button" onClick={() => setIsTransferModalOpen(false)} className="px-4 py-2 border border-neutral-800 text-neutral-400 rounded-xl cursor-pointer">Cancelar</button>
+                <button type="submit" className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl cursor-pointer">Confirmar Transferência</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL: CATEGORIA */}
+      {/* MODAL: CATEGORIA (CRIAR E EDITAR) */}
       {isCatModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-5 shadow-2xl">
-            <h3 className="text-base font-bold text-white mb-4">Adicionar Categoria (Plano de Contas)</h3>
+            <h3 className="text-base font-bold text-white mb-4">
+              {editingCategory ? 'Editar Categoria' : 'Adicionar Categoria (Plano de Contas)'}
+            </h3>
             <form onSubmit={handleSaveCategory} className="space-y-3 font-mono text-xs">
               <div>
                 <label className="block text-neutral-400 mb-1 uppercase font-semibold">Nome da Categoria *</label>
@@ -1590,26 +1875,39 @@ export default function Financial() {
                 <select
                   value={catTipo}
                   onChange={(e) => setCatTipo(e.target.value as any)}
-                  className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
+                  className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white font-bold"
                 >
                   <option value="Receita">Receita</option>
                   <option value="Despesa">Despesa</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-neutral-400 mb-1 uppercase font-semibold">Descrição</label>
+                <textarea
+                  value={catDesc}
+                  onChange={(e) => setCatDesc(e.target.value)}
+                  rows={2}
+                  className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white resize-none"
+                />
+              </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setIsCatModalOpen(false)} className="px-4 py-2 border border-neutral-800 text-neutral-400 rounded-xl">Cancelar</button>
-                <button type="submit" className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl">Salvar Categoria</button>
+                <button type="button" onClick={() => setIsCatModalOpen(false)} className="px-4 py-2 border border-neutral-800 text-neutral-400 rounded-xl cursor-pointer">Cancelar</button>
+                <button type="submit" className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl cursor-pointer">
+                  {editingCategory ? 'Atualizar Categoria' : 'Salvar Categoria'}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL: CENTRO DE CUSTO */}
+      {/* MODAL: CENTRO DE CUSTO (CRIAR E EDITAR) */}
       {isCCModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-5 shadow-2xl">
-            <h3 className="text-base font-bold text-white mb-4">Adicionar Centro de Custo</h3>
+            <h3 className="text-base font-bold text-white mb-4">
+              {editingCC ? 'Editar Centro de Custo' : 'Adicionar Centro de Custo'}
+            </h3>
             <form onSubmit={handleSaveCostCenter} className="space-y-3 font-mono text-xs">
               <div>
                 <label className="block text-neutral-400 mb-1 uppercase font-semibold">Código *</label>
@@ -1631,9 +1929,20 @@ export default function Financial() {
                   className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
                 />
               </div>
+              <div>
+                <label className="block text-neutral-400 mb-1 uppercase font-semibold">Descrição</label>
+                <textarea
+                  value={ccDesc}
+                  onChange={(e) => setCcDesc(e.target.value)}
+                  rows={2}
+                  className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white resize-none"
+                />
+              </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setIsCCModalOpen(false)} className="px-4 py-2 border border-neutral-800 text-neutral-400 rounded-xl">Cancelar</button>
-                <button type="submit" className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl">Salvar Centro de Custo</button>
+                <button type="button" onClick={() => setIsCCModalOpen(false)} className="px-4 py-2 border border-neutral-800 text-neutral-400 rounded-xl cursor-pointer">Cancelar</button>
+                <button type="submit" className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl cursor-pointer">
+                  {editingCC ? 'Atualizar Centro de Custo' : 'Salvar Centro de Custo'}
+                </button>
               </div>
             </form>
           </div>
