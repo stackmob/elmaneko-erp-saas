@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Product, BOMItem, Printer, Filament, EnergyTariff, FilamentType } from '../types';
-import { Plus, Search, ClipboardList, DollarSign, Sliders, Trash2, X } from 'lucide-react';
+import { Plus, Search, ClipboardList, DollarSign, Sliders, Trash2, X, Image as ImageIcon, FileText, ExternalLink, Paperclip, Upload } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { DataList, ColumnDef } from './ui/DataList';
 import { useToast } from '../hooks/useToast';
@@ -27,14 +27,19 @@ export default function Products() {
   const [nome, setNome] = useState('');
   const [categoria, setCategoria] = useState('Decoração');
   const [descricao, setDescricao] = useState('');
+  const [imagem, setImagem] = useState('');
+  const [pdfProjeto, setPdfProjeto] = useState('');
+  const [pdfProjetoNome, setPdfProjetoNome] = useState('');
+  const [linkProjeto, setLinkProjeto] = useState('');
   const [tempoImpressao, setTempoImpressao] = useState(4); // hours
   const [impressoraPadraoId, setImpressoraPadraoId] = useState('');
   const [tempoAcabamento, setTempoAcabamento] = useState(0.5); // hours
   const [valorMaoDeObra, setValorMaoDeObra] = useState(30.00);
   const [observacoes, setObservacoes] = useState('');
   
-  // Pricing & Profit Margin (Over/Markup %) Controls
-  const [marginPercentage, setMarginPercentage] = useState(100); // % markup/over
+  // Pricing & Separated Margins (Margem % e Over %)
+  const [marginPercentage, setMarginPercentage] = useState(100); // % Profit Margin
+  const [overPercent, setOverPercent] = useState(0); // % Overhead / Extra
   const [precoVenda, setPrecoVenda] = useState(0); // Selling price in R$
   const [isCustomPriceManual, setIsCustomPriceManual] = useState(false);
 
@@ -87,16 +92,57 @@ export default function Products() {
   // Dynamic price & margin handlers
   const handleMarginChange = (newMargin: number) => {
     setMarginPercentage(newMargin);
-    const newPrice = costTotal * (1 + newMargin / 100);
+    const totalMarkup = newMargin + overPercent;
+    const newPrice = costTotal * (1 + totalMarkup / 100);
+    setPrecoVenda(newPrice);
+    setIsCustomPriceManual(false);
+  };
+
+  const handleOverChange = (newOver: number) => {
+    setOverPercent(newOver);
+    const totalMarkup = marginPercentage + newOver;
+    const newPrice = costTotal * (1 + totalMarkup / 100);
     setPrecoVenda(newPrice);
     setIsCustomPriceManual(false);
   };
 
   const handlePriceChange = (newPrice: number) => {
     setPrecoVenda(newPrice);
-    const calcMargin = costTotal > 0 ? ((newPrice - costTotal) / costTotal) * 100 : 0;
-    setMarginPercentage(calcMargin);
+    const diff = newPrice - costTotal;
+    const totalMarkup = costTotal > 0 ? (diff / costTotal) * 100 : 0;
+    const newMargin = Math.max(0, totalMarkup - overPercent);
+    setMarginPercentage(newMargin);
     setIsCustomPriceManual(true);
+  };
+
+  // Local File Readers for Image & PDF
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('A imagem deve ser menor que 5MB.', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagem(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('O arquivo PDF deve ter até 10MB.', 'error');
+      return;
+    }
+    setPdfProjetoNome(file.name);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPdfProjeto(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleOpenAddModal = () => {
@@ -104,6 +150,10 @@ export default function Products() {
     setNome('');
     setCategoria('Decoração');
     setDescricao('');
+    setImagem('');
+    setPdfProjeto('');
+    setPdfProjetoNome('');
+    setLinkProjeto('');
     setTempoImpressao(4);
     const defaultPrinter = printers.length > 0 ? printers[0].id : '';
     setImpressoraPadraoId(defaultPrinter);
@@ -119,6 +169,7 @@ export default function Products() {
     const initTotal = initBOM + initEnergy + 30.00;
     
     setMarginPercentage(100);
+    setOverPercent(0);
     setPrecoVenda(initTotal * 2);
     setIsCustomPriceManual(false);
     setIsModalOpen(true);
@@ -129,6 +180,10 @@ export default function Products() {
     setNome(p.nome);
     setCategoria(p.categoria);
     setDescricao(p.descricao || '');
+    setImagem(p.imagem || '');
+    setPdfProjeto(p.pdfProjeto || '');
+    setPdfProjetoNome(p.pdfProjetoNome || '');
+    setLinkProjeto(p.linkProjeto || '');
     setTempoImpressao(p.tempoImpressao);
     setImpressoraPadraoId(p.impressoraPadraoId);
     setTempoAcabamento(p.tempoAcabamento || 0);
@@ -141,7 +196,9 @@ export default function Products() {
     setFormMaterials(mats);
     
     const loadedMargin = p.margemLucro !== undefined ? p.margemLucro : 100;
+    const loadedOver = p.overPercent !== undefined ? p.overPercent : 0;
     setMarginPercentage(loadedMargin);
+    setOverPercent(loadedOver);
 
     const bCost = calculateBOMCost(mats);
     const eCost = calculateEnergyCost(p.tempoImpressao, p.impressoraPadraoId);
@@ -151,7 +208,7 @@ export default function Products() {
       setPrecoVenda(p.precoVenda);
       setIsCustomPriceManual(true);
     } else {
-      setPrecoVenda(tCost * (1 + loadedMargin / 100));
+      setPrecoVenda(tCost * (1 + (loadedMargin + loadedOver) / 100));
       setIsCustomPriceManual(false);
     }
     setIsModalOpen(true);
@@ -163,7 +220,7 @@ export default function Products() {
     if (!isCustomPriceManual) {
       const newBOM = calculateBOMCost(list);
       const newTot = newBOM + costEnergy + Number(valorMaoDeObra);
-      setPrecoVenda(newTot * (1 + marginPercentage / 100));
+      setPrecoVenda(newTot * (1 + (marginPercentage + overPercent) / 100));
     }
   };
 
@@ -174,7 +231,7 @@ export default function Products() {
     if (!isCustomPriceManual) {
       const newBOM = calculateBOMCost(list);
       const newTot = newBOM + costEnergy + Number(valorMaoDeObra);
-      setPrecoVenda(newTot * (1 + marginPercentage / 100));
+      setPrecoVenda(newTot * (1 + (marginPercentage + overPercent) / 100));
     }
   };
 
@@ -192,7 +249,7 @@ export default function Products() {
     if (!isCustomPriceManual) {
       const newBOM = calculateBOMCost(list);
       const newTot = newBOM + costEnergy + Number(valorMaoDeObra);
-      setPrecoVenda(newTot * (1 + marginPercentage / 100));
+      setPrecoVenda(newTot * (1 + (marginPercentage + overPercent) / 100));
     }
   };
 
@@ -208,15 +265,19 @@ export default function Products() {
       nome,
       categoria,
       descricao,
+      imagem,
+      pdfProjeto,
+      pdfProjetoNome,
+      linkProjeto,
       tempoImpressao: Number(tempoImpressao),
       impressoraPadraoId,
       materials: formMaterials,
       tempoAcabamento: Number(tempoAcabamento),
       valorMaoDeObra: Number(valorMaoDeObra),
       margemLucro: Number(marginPercentage),
+      overPercent: Number(overPercent),
       precoVenda: Number(precoVenda),
-      observacoes,
-      imagem: editingProduct ? editingProduct.imagem : undefined
+      observacoes
     };
 
     const onSuccess = () => {
@@ -312,9 +373,25 @@ export default function Products() {
             key: 'nome',
             header: 'Produto / Categoria',
             render: (p) => (
-              <div>
-                <span className="font-semibold text-white block">{p.nome}</span>
-                <span className="text-[11px] text-neutral-500 uppercase tracking-wider">{p.categoria}</span>
+              <div className="flex items-center gap-3">
+                {p.imagem ? (
+                  <img src={p.imagem} alt={p.nome} className="w-10 h-10 rounded-lg object-cover border border-neutral-800 shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-neutral-800 border border-neutral-700 flex items-center justify-center text-neutral-500 shrink-0">
+                    <ImageIcon size={18} />
+                  </div>
+                )}
+                <div>
+                  <span className="font-semibold text-white block">{p.nome}</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[11px] text-neutral-500 uppercase tracking-wider">{p.categoria}</span>
+                    {p.linkProjeto && (
+                      <a href={p.linkProjeto} target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:text-orange-300 flex items-center gap-0.5 text-[10px]" title="Abrir Link do Projeto">
+                        <ExternalLink size={10} /> Link
+                      </a>
+                    )}
+                  </div>
+                </div>
               </div>
             ),
           },
@@ -348,9 +425,11 @@ export default function Products() {
               const fc = calculateBOMCost(p.materials);
               const ec = calculateEnergyCost(p.tempoImpressao, p.impressoraPadraoId);
               const totalCost = fc + ec + p.valorMaoDeObra;
+              const marginPct = p.margemLucro !== undefined ? p.margemLucro : 100;
+              const overPct = p.overPercent !== undefined ? p.overPercent : 0;
               const finalPrice = (p.precoVenda && p.precoVenda > 0) 
                 ? p.precoVenda 
-                : totalCost * (1 + (p.margemLucro !== undefined ? p.margemLucro : 100) / 100);
+                : totalCost * (1 + (marginPct + overPct) / 100);
 
               return (
                 <div className="text-right">
@@ -358,7 +437,7 @@ export default function Products() {
                     R$ {finalPrice.toFixed(2)}
                   </span>
                   <span className="font-mono text-[10px] text-neutral-500 block">
-                    Over: {p.margemLucro !== undefined ? `${p.margemLucro.toFixed(0)}%` : '100%'}
+                    Margem: {marginPct.toFixed(0)}% | Over: {overPct.toFixed(0)}%
                   </span>
                 </div>
               );
@@ -403,6 +482,36 @@ export default function Products() {
               );
             },
           },
+          {
+            key: 'projeto_anexos',
+            header: 'Anexos & Links do Projeto',
+            render: (p) => (
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                {p.pdfProjeto ? (
+                  <a
+                    href={p.pdfProjeto}
+                    download={p.pdfProjetoNome || `${p.nome}_projeto.pdf`}
+                    className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-750 text-neutral-200 border border-neutral-700 rounded-lg flex items-center gap-1.5 font-mono text-[11px]"
+                  >
+                    <FileText size={13} className="text-red-400" />
+                    <span>{p.pdfProjetoNome || 'Baixar PDF Projeto'}</span>
+                  </a>
+                ) : <span className="text-neutral-600 text-xs italic">Nenhum PDF anexo</span>}
+
+                {p.linkProjeto && (
+                  <a
+                    href={p.linkProjeto}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2.5 py-1 bg-orange-950/40 hover:bg-orange-900/50 text-orange-300 border border-orange-500/30 rounded-lg flex items-center gap-1.5 font-mono text-[11px]"
+                  >
+                    <ExternalLink size={13} />
+                    <span>Ver no Site</span>
+                  </a>
+                )}
+              </div>
+            ),
+          },
         ]}
         onEdit={handleOpenEditModal}
         onDelete={(p) => handleDelete(p.id, p.nome)}
@@ -412,7 +521,7 @@ export default function Products() {
       {/* PRODUCT / BOM DIALOG FORM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="product-form-modal" aria-modal="true" role="dialog">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-3xl flex flex-col max-h-[85vh] shadow-2xl overflow-hidden my-auto">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-3xl flex flex-col max-h-[88vh] shadow-2xl overflow-hidden my-auto">
             
             {/* STICKY MODAL HEADER */}
             <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
@@ -436,46 +545,140 @@ export default function Products() {
               {/* SCROLLABLE FORM BODY */}
               <div className="p-4 sm:p-6 overflow-y-auto space-y-4 font-mono text-xs flex-1">
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="col-span-2 md:col-span-1">
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome da Peça / Produto acabado *</label>
-                    <input
-                      type="text"
-                      required
-                      value={nome}
-                      onChange={(e) => setNome(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
+                {/* IMAGE & MAIN FIELDS ROW */}
+                <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-4">
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 border-b border-neutral-900 pb-2">
+                    <ImageIcon size={14} className="text-orange-500" /> Imagem & Identificação da Peça
+                  </h4>
 
-                  <div className="col-span-2 md:col-span-1">
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Categoria *</label>
-                    <select
-                      value={categoria}
-                      onChange={(e) => setCategoria(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
-                    >
-                      <option value="Decoração">Decoração</option>
-                      <option value="Escritório">Escritório</option>
-                      <option value="Colecionáveis">Colecionáveis</option>
-                      <option value="Industrial">Industrial</option>
-                      <option value="Brindes">Brindes</option>
-                      <option value="Outros">Outros</option>
-                    </select>
-                  </div>
+                  <div className="flex flex-col sm:flex-row gap-4 items-start">
+                    
+                    {/* Image selector */}
+                    <div className="flex flex-col items-center gap-2 shrink-0">
+                      <div className="w-24 h-24 rounded-xl bg-neutral-900 border border-neutral-800 flex flex-col items-center justify-center relative overflow-hidden group">
+                        {imagem ? (
+                          <>
+                            <img src={imagem} alt="Preview" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setImagem('')}
+                              className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-opacity"
+                            >
+                              Remover
+                            </button>
+                          </>
+                        ) : (
+                          <div className="text-center p-2">
+                            <ImageIcon size={24} className="mx-auto text-neutral-600 mb-1" />
+                            <span className="text-[9px] text-neutral-500 block">Sem foto</span>
+                          </div>
+                        )}
+                      </div>
+                      <label className="py-1 px-2.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-200 text-[10px] font-bold rounded-lg cursor-pointer border border-neutral-700 flex items-center gap-1">
+                        <Upload size={10} /> {imagem ? 'Alterar Foto' : 'Escolher Foto'}
+                        <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                      </label>
+                    </div>
 
-                  <div className="col-span-2">
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Descrição do Item</label>
-                    <input
-                      type="text"
-                      value={descricao}
-                      onChange={(e) => setDescricao(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
+                    {/* Product Name & Category */}
+                    <div className="flex-1 space-y-3 w-full">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Nome da Peça / Produto *</label>
+                          <input
+                            type="text"
+                            required
+                            value={nome}
+                            onChange={(e) => setNome(e.target.value)}
+                            placeholder="Ex: Suporte de Headset RGB"
+                            className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                          />
+                        </div>
 
+                        <div>
+                          <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Categoria *</label>
+                          <select
+                            value={categoria}
+                            onChange={(e) => setCategoria(e.target.value)}
+                            className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+                          >
+                            <option value="Decoração">Decoração</option>
+                            <option value="Escritório">Escritório</option>
+                            <option value="Colecionáveis">Colecionáveis</option>
+                            <option value="Industrial">Industrial</option>
+                            <option value="Brindes">Brindes</option>
+                            <option value="Outros">Outros</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Descrição Comercial</label>
+                        <input
+                          type="text"
+                          value={descricao}
+                          onChange={(e) => setDescricao(e.target.value)}
+                          placeholder="Ex: Peça fatiada em alta resolução para mesa de escritório"
+                          className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* PROJECT FILE (PDF) & EXTERNAL LINK SECTION */}
+                <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-3">
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 border-b border-neutral-900 pb-2">
+                    <Paperclip size={14} className="text-orange-500" /> Arquivo PDF do Projeto & Link Externo
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    
+                    {/* PDF Project File Upload */}
+                    <div>
+                      <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">PDF do Projeto (Arquivo Local)</label>
+                      <div className="flex items-center gap-2">
+                        <label className="py-2 px-3 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border border-neutral-800 rounded-lg text-xs font-semibold cursor-pointer flex items-center gap-2 flex-1">
+                          <FileText size={14} className="text-red-400" />
+                          <span className="truncate">{pdfProjetoNome || 'Selecionar PDF local...'}</span>
+                          <input type="file" accept="application/pdf" onChange={handlePdfUpload} className="hidden" />
+                        </label>
+                        {pdfProjeto && (
+                          <button
+                            type="button"
+                            onClick={() => { setPdfProjeto(''); setPdfProjetoNome(''); }}
+                            className="p-2 bg-neutral-900 hover:bg-neutral-800 text-red-400 border border-neutral-800 rounded-lg"
+                            title="Remover PDF"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Project Link / URL */}
+                    <div>
+                      <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Link do Projeto (Site / Modelo 3D)</label>
+                      <div className="relative">
+                        <ExternalLink size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+                        <input
+                          type="url"
+                          value={linkProjeto}
+                          onChange={(e) => setLinkProjeto(e.target.value)}
+                          placeholder="https://printables.com/model/..."
+                          className="w-full pl-9 pr-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* MANUFACTURING TIME & LABOR COST */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4">
                   <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Tempo de Impressão (Horas) *</label>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Tempo Impressão (Horas) *</label>
                     <input
                       type="number"
                       required
@@ -488,7 +691,7 @@ export default function Products() {
                         if (!isCustomPriceManual) {
                           const nrg = calculateEnergyCost(val, impressoraPadraoId);
                           const tot = costBOM + nrg + Number(valorMaoDeObra);
-                          setPrecoVenda(tot * (1 + marginPercentage / 100));
+                          setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
                         }
                       }}
                       className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -496,7 +699,7 @@ export default function Products() {
                   </div>
 
                   <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Impressora Padrão *</label>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Impressora Padrão *</label>
                     <select
                       value={impressoraPadraoId}
                       onChange={(e) => {
@@ -505,7 +708,7 @@ export default function Products() {
                         if (!isCustomPriceManual) {
                           const nrg = calculateEnergyCost(tempoImpressao, pid);
                           const tot = costBOM + nrg + Number(valorMaoDeObra);
-                          setPrecoVenda(tot * (1 + marginPercentage / 100));
+                          setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
                         }
                       }}
                       className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
@@ -519,7 +722,7 @@ export default function Products() {
                   </div>
 
                   <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Tempo de Acabamento (Horas, Opcional)</label>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Tempo Acabamento (h)</label>
                     <input
                       type="number"
                       step="0.1"
@@ -531,7 +734,7 @@ export default function Products() {
                   </div>
 
                   <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Valor Padrão de Mão de Obra R$ *</label>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Mão de Obra (R$) *</label>
                     <input
                       type="number"
                       required
@@ -543,7 +746,7 @@ export default function Products() {
                         setValorMaoDeObra(val);
                         if (!isCustomPriceManual) {
                           const tot = costBOM + costEnergy + val;
-                          setPrecoVenda(tot * (1 + marginPercentage / 100));
+                          setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
                         }
                       }}
                       className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -634,14 +837,14 @@ export default function Products() {
                   })}
                 </div>
 
-                {/* REAL-TIME COST SUMMARY & DUAL PRICING CONTROLS (OVER / MARGIN % AND SELLING PRICE R$) */}
+                {/* REAL-TIME COST SUMMARY & SEPARATED MARGIN % / OVER % / FINAL SELLING PRICE */}
                 <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-4">
                   <div className="flex justify-between items-center border-b border-neutral-900 pb-2">
                     <h4 className="text-xs font-bold text-orange-500 uppercase tracking-wider flex items-center gap-1.5">
-                      <DollarSign size={14} /> Detalhamento de Custos & Precificação Final
+                      <DollarSign size={14} /> Detalhamento de Custos, Margem & Over
                     </h4>
                     <span className="text-[10px] text-neutral-500 font-mono hidden sm:inline">
-                      Edite o Over % ou digite o Preço de Venda diretamente
+                      Campos de Margem, Over e Preço Final editáveis
                     </span>
                   </div>
                   
@@ -676,13 +879,13 @@ export default function Products() {
                     </div>
                   </div>
 
-                  {/* Dual Interactive Input Controls */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-neutral-900">
+                  {/* Separated Controls: Margem de Lucro %, Over %, Preço Final R$ */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-neutral-900">
                     
-                    {/* Over / Margem % Input */}
+                    {/* Margem de Lucro % */}
                     <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800">
                       <label className="block text-neutral-400 text-[10px] uppercase tracking-wider font-semibold mb-1">
-                        Margem / Over % (Markup)
+                        Margem de Lucro %
                       </label>
                       <div className="flex items-center gap-2">
                         <input
@@ -695,14 +898,35 @@ export default function Products() {
                         <span className="text-neutral-400 font-mono text-xs">%</span>
                       </div>
                       <span className="text-[9px] text-neutral-500 block mt-1">
-                        Lucro estimado: R$ {Math.max(0, precoVenda - costTotal).toFixed(2)}
+                        Lucro líquido: R$ {(costTotal * (marginPercentage / 100)).toFixed(2)}
+                      </span>
+                    </div>
+
+                    {/* Over % */}
+                    <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800">
+                      <label className="block text-neutral-400 text-[10px] uppercase tracking-wider font-semibold mb-1">
+                        Over / Custos Extras %
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={Number(overPercent.toFixed(1))}
+                          onChange={(e) => handleOverChange(Number(e.target.value))}
+                          className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold"
+                        />
+                        <span className="text-neutral-400 font-mono text-xs">%</span>
+                      </div>
+                      <span className="text-[9px] text-neutral-500 block mt-1">
+                        Valor Over: R$ {(costTotal * (overPercent / 100)).toFixed(2)}
                       </span>
                     </div>
 
                     {/* Preço de Venda R$ Input (digitável diretamente) */}
                     <div className="bg-neutral-900 p-3 rounded-lg border border-orange-500/30 shadow-inner">
                       <label className="block text-orange-400 text-[10px] uppercase tracking-wider font-bold mb-1">
-                        Preço Final de Venda Sugerido (R$) *
+                        Preço Final Sugerido (R$) *
                       </label>
                       <div className="flex items-center gap-2">
                         <span className="text-orange-500 font-mono font-bold text-xs">R$</span>
@@ -717,7 +941,7 @@ export default function Products() {
                         />
                       </div>
                       <span className="text-[9px] text-neutral-400 block mt-1">
-                        {isCustomPriceManual ? '✏️ Preço ajustado manualmente' : '⚡ Calculado via Margem/Over %'}
+                        {isCustomPriceManual ? '✏️ Preço ajustado manualmente' : '⚡ Calculado via Margem + Over'}
                       </span>
                     </div>
 

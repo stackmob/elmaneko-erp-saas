@@ -117,13 +117,21 @@ CREATE TABLE IF NOT EXISTS produtos (
   tempo_acabamento NUMERIC NOT NULL DEFAULT 0,
   valor_mao_de_obra NUMERIC NOT NULL DEFAULT 0,
   margem_lucro NUMERIC DEFAULT 100,
+  over_percent NUMERIC DEFAULT 0,
   preco_venda NUMERIC DEFAULT 0,
+  pdf_projeto TEXT,
+  pdf_projeto_nome TEXT,
+  link_projeto TEXT,
   observacoes TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
 ALTER TABLE produtos ADD COLUMN IF NOT EXISTS margem_lucro NUMERIC DEFAULT 100;
+ALTER TABLE produtos ADD COLUMN IF NOT EXISTS over_percent NUMERIC DEFAULT 0;
 ALTER TABLE produtos ADD COLUMN IF NOT EXISTS preco_venda NUMERIC DEFAULT 0;
+ALTER TABLE produtos ADD COLUMN IF NOT EXISTS pdf_projeto TEXT;
+ALTER TABLE produtos ADD COLUMN IF NOT EXISTS pdf_projeto_nome TEXT;
+ALTER TABLE produtos ADD COLUMN IF NOT EXISTS link_projeto TEXT;
 
 -- 8. PRODUTO MATERIAIS (BOM - Bill of Materials)
 CREATE TABLE IF NOT EXISTS produto_materiais (

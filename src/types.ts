@@ -58,14 +58,18 @@ export interface Product {
   nome: string;
   categoria: string;
   descricao?: string;
-  imagem?: string;
+  imagem?: string; // Base64 or URL
+  pdfProjeto?: string; // Base64 Data URL for project PDF file
+  pdfProjetoNome?: string; // Original filename of project PDF
+  linkProjeto?: string; // External web link (e.g. Printables, Cults3D)
   tempoImpressao: number; // in hours
   impressoraPadraoId: string;
   materials: BOMItem[];
   tempoAcabamento?: number; // in hours
   valorMaoDeObra: number; // Standard labor cost
-  margemLucro?: number; // % markup/over (e.g. 100 for 100%)
-  precoVenda?: number; // Selling price in R$
+  margemLucro?: number; // % profit margin
+  overPercent?: number; // % overhead / extra markup
+  precoVenda?: number; // Final selling price in R$
   observacoes?: string;
 }
 

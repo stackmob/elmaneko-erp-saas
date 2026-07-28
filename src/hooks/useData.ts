@@ -260,19 +260,25 @@ const mapProductFromDB = (row: any): Product => ({
   categoria: row.categoria,
   descricao: row.descricao || '',
   imagem: row.imagem || '',
+  pdfProjeto: row.pdf_projeto || '',
+  pdfProjetoNome: row.pdf_projeto_nome || '',
+  linkProjeto: row.link_projeto || '',
   tempoImpressao: Number(row.tempo_impressao || 0),
   impressoraPadraoId: row.impressora_padrao_id || '',
   tempoAcabamento: Number(row.tempo_acabamento || 0),
   valorMaoDeObra: Number(row.valor_mao_de_obra || 0),
   margemLucro: Number(row.margem_lucro !== undefined && row.margem_lucro !== null ? row.margem_lucro : 100),
+  overPercent: Number(row.over_percent !== undefined && row.over_percent !== null ? row.over_percent : 0),
   precoVenda: Number(row.preco_venda || 0),
   observacoes: row.observacoes || '',
   // Carregado via JOIN com tabela produto_materiais
-  materials: (row.produto_materiais || []).map((m: any) => ({
-    tipoFilamento: m.tipo_filamento,
-    filamentoId: m.filamento_id,
-    quantidadeGrams: Number(m.quantidade_grams || 0)
-  }))
+  materials: Array.isArray(row.produto_materiais)
+    ? row.produto_materiais.map((m: any) => ({
+        tipoFilamento: m.tipo_filamento,
+        filamentoId: m.filamento_id,
+        quantidadeGrams: Number(m.quantidade_grams || 0)
+      }))
+    : (Array.isArray(row.materials) ? row.materials : [])
 });
 
 const mapProductToDB = (p: Partial<Product>, empresaId: string) => {
@@ -282,11 +288,15 @@ const mapProductToDB = (p: Partial<Product>, empresaId: string) => {
     categoria: p.categoria,
     descricao: p.descricao || null,
     imagem: p.imagem || null,
+    pdf_projeto: p.pdfProjeto || null,
+    pdf_projeto_nome: p.pdfProjetoNome || null,
+    link_projeto: p.linkProjeto || null,
     tempo_impressao: Number(p.tempoImpressao || 0),
     impressora_padrao_id: isValidUuid(p.impressoraPadraoId) ? p.impressoraPadraoId : null,
     tempo_acabamento: Number(p.tempoAcabamento || 0),
     valor_mao_de_obra: Number(p.valorMaoDeObra || 0),
     margem_lucro: Number(p.margemLucro !== undefined ? p.margemLucro : 100),
+    over_percent: Number(p.overPercent !== undefined ? p.overPercent : 0),
     preco_venda: Number(p.precoVenda || 0),
     observacoes: p.observacoes || null
   };
