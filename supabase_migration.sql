@@ -311,6 +311,161 @@ BEGIN
 END $$;
 
 -- ============================================================
+-- 14. MÓDULO FINANCEIRO (TABELAS & ESTRUTURAS)
+-- ============================================================
+
+-- 14.1 CONTAS FINANCEIRAS (BANCOS, CARTÕES, CARTEIRAS)
+CREATE TABLE IF NOT EXISTS contas_financeiras (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  nome TEXT NOT NULL,
+  tipo TEXT NOT NULL DEFAULT 'Conta Bancaria',
+  banco TEXT,
+  agencia TEXT,
+  conta TEXT,
+  digito TEXT,
+  bandeira TEXT,
+  limite NUMERIC DEFAULT 0,
+  limite_disponivel NUMERIC DEFAULT 0,
+  dia_fechamento INT,
+  dia_vencimento INT,
+  saldo_inicial NUMERIC DEFAULT 0,
+  saldo_atual NUMERIC DEFAULT 0,
+  situacao TEXT DEFAULT 'Ativa',
+  observacoes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 14.2 CATEGORIAS FINANCEIRAS (PLANO DE CONTAS)
+CREATE TABLE IF NOT EXISTS categorias_financeiras (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  nome TEXT NOT NULL,
+  tipo TEXT NOT NULL DEFAULT 'Despesa',
+  categoria_pai_id UUID REFERENCES categorias_financeiras(id) ON DELETE SET NULL,
+  descricao TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 14.3 CENTROS DE CUSTO
+CREATE TABLE IF NOT EXISTS centros_custo (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  codigo TEXT NOT NULL,
+  nome TEXT NOT NULL,
+  descricao TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 14.4 LANÇAMENTOS FINANCEIROS (TÍTULOS A RECEBER & A PAGAR)
+CREATE TABLE IF NOT EXISTS lancamentos_financeiros (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  numero_documento TEXT NOT NULL,
+  tipo TEXT NOT NULL,
+  origem TEXT NOT NULL DEFAULT 'Avulso',
+  origem_id UUID,
+  cliente_id UUID REFERENCES clientes(id) ON DELETE SET NULL,
+  fornecedor TEXT,
+  data_emissao DATE DEFAULT CURRENT_DATE,
+  data_vencimento DATE NOT NULL,
+  data_liquidacao DATE,
+  valor_bruto NUMERIC NOT NULL DEFAULT 0,
+  desconto NUMERIC DEFAULT 0,
+  acrescimo NUMERIC DEFAULT 0,
+  valor_liquido NUMERIC NOT NULL DEFAULT 0,
+  valor_pago NUMERIC DEFAULT 0,
+  juros_multa NUMERIC DEFAULT 0,
+  forma_pagamento TEXT DEFAULT 'PIX',
+  conta_financeira_id UUID REFERENCES contas_financeiras(id) ON DELETE SET NULL,
+  categoria_id UUID REFERENCES categorias_financeiras(id) ON DELETE SET NULL,
+  centro_custo_id UUID REFERENCES centros_custo(id) ON DELETE SET NULL,
+  parcela_atual INT DEFAULT 1,
+  total_parcelas INT DEFAULT 1,
+  parcela_pai_id UUID REFERENCES lancamentos_financeiros(id) ON DELETE CASCADE,
+  status TEXT DEFAULT 'Aberto',
+  conciliado BOOLEAN DEFAULT false,
+  tipo_conciliacao TEXT,
+  observacoes TEXT,
+  is_deleted BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 14.5 MOVIMENTAÇÕES FINANCEIRAS (EXTRATO)
+CREATE TABLE IF NOT EXISTS movimentacoes_financeiras (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  conta_financeira_id UUID NOT NULL REFERENCES contas_financeiras(id) ON DELETE CASCADE,
+  lancamento_id UUID REFERENCES lancamentos_financeiros(id) ON DELETE SET NULL,
+  data DATE DEFAULT CURRENT_DATE,
+  tipo TEXT NOT NULL,
+  valor NUMERIC NOT NULL DEFAULT 0,
+  saldo_anterior NUMERIC DEFAULT 0,
+  saldo_posterior NUMERIC DEFAULT 0,
+  descricao TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 14.6 TRANSFERÊNCIAS FINANCEIRAS
+CREATE TABLE IF NOT EXISTS transferencias_financeiras (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  data DATE DEFAULT CURRENT_DATE,
+  conta_origem_id UUID NOT NULL REFERENCES contas_financeiras(id) ON DELETE CASCADE,
+  conta_destino_id UUID NOT NULL REFERENCES contas_financeiras(id) ON DELETE CASCADE,
+  valor NUMERIC NOT NULL DEFAULT 0,
+  observacoes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 14.7 AUDITORIA FINANCEIRA (TRILHA IMUTÁVEL)
+CREATE TABLE IF NOT EXISTS auditoria_financeira (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  data_hora TIMESTAMPTZ DEFAULT now(),
+  usuario TEXT NOT NULL,
+  ip TEXT,
+  operacao TEXT NOT NULL,
+  entidade TEXT NOT NULL,
+  entidade_id UUID NOT NULL,
+  valor_anterior TEXT,
+  valor_novo TEXT
+);
+
+-- HABILITAR RLS NAS TABELAS FINANCEIRAS
+ALTER TABLE contas_financeiras ENABLE ROW LEVEL SECURITY;
+ALTER TABLE categorias_financeiras ENABLE ROW LEVEL SECURITY;
+ALTER TABLE centros_custo ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lancamentos_financeiros ENABLE ROW LEVEL SECURITY;
+ALTER TABLE movimentacoes_financeiras ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transferencias_financeiras ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auditoria_financeira ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  DROP POLICY IF EXISTS "contas_financeiras_policy" ON contas_financeiras;
+  CREATE POLICY "contas_financeiras_policy" ON contas_financeiras FOR ALL USING (true);
+
+  DROP POLICY IF EXISTS "categorias_financeiras_policy" ON categorias_financeiras;
+  CREATE POLICY "categorias_financeiras_policy" ON categorias_financeiras FOR ALL USING (true);
+
+  DROP POLICY IF EXISTS "centros_custo_policy" ON centros_custo;
+  CREATE POLICY "centros_custo_policy" ON centros_custo FOR ALL USING (true);
+
+  DROP POLICY IF EXISTS "lancamentos_financeiros_policy" ON lancamentos_financeiros;
+  CREATE POLICY "lancamentos_financeiros_policy" ON lancamentos_financeiros FOR ALL USING (true);
+
+  DROP POLICY IF EXISTS "movimentacoes_financeiras_policy" ON movimentacoes_financeiras;
+  CREATE POLICY "movimentacoes_financeiras_policy" ON movimentacoes_financeiras FOR ALL USING (true);
+
+  DROP POLICY IF EXISTS "transferencias_financeiras_policy" ON transferencias_financeiras;
+  CREATE POLICY "transferencias_financeiras_policy" ON transferencias_financeiras FOR ALL USING (true);
+
+  DROP POLICY IF EXISTS "auditoria_financeira_policy" ON auditoria_financeira;
+  CREATE POLICY "auditoria_financeira_policy" ON auditoria_financeira FOR ALL USING (true);
+END $$;
+
+-- ============================================================
 -- ÍNDICES DE PERFORMANCE DE CONSULTA
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_filamentos_empresa ON filamentos(empresa_id);
@@ -323,3 +478,8 @@ CREATE INDEX IF NOT EXISTS idx_orcamentos_empresa ON orcamentos(empresa_id);
 CREATE INDEX IF NOT EXISTS idx_orcamento_itens_orcamento ON orcamento_itens(orcamento_id);
 CREATE INDEX IF NOT EXISTS idx_vendas_empresa ON vendas(empresa_id);
 CREATE INDEX IF NOT EXISTS idx_compras_empresa ON compras(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_contas_financeiras_empresa ON contas_financeiras(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_categorias_financeiras_empresa ON categorias_financeiras(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_centros_custo_empresa ON centros_custo(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_lancamentos_financeiros_empresa ON lancamentos_financeiros(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_movimentacoes_financeiras_conta ON movimentacoes_financeiras(conta_financeira_id);

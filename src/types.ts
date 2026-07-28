@@ -250,3 +250,119 @@ export interface Company {
   observacoes?: string;
 }
 
+// ============================================================================
+// MÓDULO FINANCEIRO (FINANCIAL MODULE ENTITIES)
+// ============================================================================
+
+export type FinancialAccountType = 'Conta Bancaria' | 'Cartao Credito' | 'Carteira Digital' | 'Caixa Fisico';
+
+export interface FinancialAccount {
+  id: string;
+  nome: string;               // Ex: "Itaú Conta Corrente", "Cartão Santander Corp", "Caixa Principal"
+  tipo: FinancialAccountType;
+  banco?: string;             // Itaú, Bradesco, Nubank, Inter
+  agencia?: string;
+  conta?: string;
+  digito?: string;
+  bandeira?: string;          // Visa, Mastercard, Elo
+  limite?: number;            // Limite total para cartões
+  limiteDisponivel?: number;
+  diaFechamento?: number;
+  diaVencimento?: number;
+  saldoInicial: number;
+  saldoAtual: number;
+  situacao: 'Ativa' | 'Inativa';
+  observacoes?: string;
+}
+
+export type FinancialCategoryType = 'Receita' | 'Despesa';
+
+export interface FinancialCategory {
+  id: string;
+  nome: string;               // Ex: "Venda de Produtos 3D", "Energia Elétrica", "Insumos"
+  tipo: FinancialCategoryType;
+  categoriaPaiId?: string;    // Suporte a subcategorias / árvore hierárquica
+  descricao?: string;
+}
+
+export interface CostCenter {
+  id: string;
+  codigo: string;             // Ex: "CC-01"
+  nome: string;               // Ex: "Produção 3D", "Administrativo", "Comercial / Mkt"
+  descricao?: string;
+}
+
+export type FinancialEntryStatus = 'Aberto' | 'Pendente' | 'Liquidado' | 'Conciliado' | 'Cancelado';
+
+export interface FinancialEntry {
+  id: string;
+  numeroDocumento: string;    // Ex: "REC-2026-001", "PAG-2026-042"
+  tipo: 'Receita' | 'Despesa';
+  origem: 'Venda' | 'Compra' | 'Avulso' | 'Transferencia';
+  origemId?: string;          // ID da Venda ou Compra vinculada
+  clienteId?: string;
+  fornecedor?: string;
+  dataEmissao: string;
+  dataVencimento: string;
+  dataLiquidacao?: string;
+  valorBruto: number;
+  desconto: number;
+  acrescimo: number;
+  valorLiquido: number;
+  valorPago?: number;
+  jurosMulta?: number;
+  formaPagamento: string;     // Dinheiro, PIX, Cartão Crédito, Boleto, etc.
+  contaFinanceiraId?: string;
+  categoriaId?: string;
+  centroCustoId?: string;
+  parcelaAtual?: number;
+  totalParcelas?: number;
+  parcelaPaiId?: string;
+  status: FinancialEntryStatus;
+  conciliado: boolean;
+  tipoConciliacao?: string;   // Extrato, PIX, TED, DOC, Cartão, Dinheiro
+  observacoes?: string;
+  isDeleted?: boolean;        // Soft Delete audit
+}
+
+export type FinancialMovementType = 
+  | 'Entrada' 
+  | 'Saida' 
+  | 'Transferencia_Debito' 
+  | 'Transferencia_Credito' 
+  | 'Estorno' 
+  | 'Ajuste';
+
+export interface FinancialMovement {
+  id: string;
+  contaFinanceiraId: string;
+  lancamentoId?: string;
+  data: string;
+  tipo: FinancialMovementType;
+  valor: number;
+  saldoAnterior: number;
+  saldoPosterior: number;
+  descricao: string;
+}
+
+export interface FinancialTransfer {
+  id: string;
+  data: string;
+  contaOrigemId: string;
+  contaDestinoId: string;
+  valor: number;
+  observacoes?: string;
+}
+
+export interface FinancialAuditLog {
+  id: string;
+  dataHora: string;
+  usuario: string;
+  ip: string;
+  operacao: string;          // "Criou Lançamento", "Liquidou", "Conciliou", "Cancelou", "Transferiu"
+  entidade: string;          // "FinancialEntry", "FinancialAccount", "FinancialTransfer"
+  entidadeId: string;
+  valorAnterior?: string;
+  valorNovo?: string;
+}
+

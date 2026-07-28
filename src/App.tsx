@@ -15,13 +15,14 @@ import Clients from './components/Clients';
 import Supplies from './components/Supplies';
 import BackupModule from './components/Backup';
 import CompanyModule from './components/Company';
+import Financial from './components/Financial';
 
 // Icons
 import { 
   LayoutDashboard, Users, Layers, ShoppingBag, Cpu, 
   Zap, FolderHeart, PlayCircle, FileCheck, DollarSign, LogOut, Shield, 
   AlertTriangle, Loader2, PanelLeftClose, PanelLeftOpen, Sparkles, Building2,
-  Menu, X, Package
+  Menu, X, Package, Wallet
 } from 'lucide-react';
 
 import { useAuth } from './context/AuthContext';
@@ -57,6 +58,7 @@ export default function App() {
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard HUD', icon: LayoutDashboard },
+    { id: 'financial', label: 'Módulo Financeiro', icon: Wallet },
     { id: 'clients', label: 'Clientes (CRM)', icon: Users },
     { id: 'filaments', label: 'Estoque Filamentos', icon: Layers },
     { id: 'supplies', label: 'Catálogo de Insumos', icon: Package },
@@ -215,6 +217,7 @@ export default function App() {
         {/* VIEWPORT CONTENT CONTAINER */}
         <div className="flex-1 p-3 sm:p-4 md:p-6" id="workspace-viewport">
           {currentView === 'dashboard' && <Dashboard />}
+          {currentView === 'financial' && <Financial />}
           {currentView === 'clients' && <Clients />}
           {currentView === 'filaments' && <Filaments />}
           {currentView === 'supplies' && <Supplies />}

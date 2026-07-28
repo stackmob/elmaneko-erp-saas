@@ -300,6 +300,153 @@ const mapTariffToDB = (t: Partial<EnergyTariff>, empresaId: string) => {
   return payload;
 };
 
+// 5.5 MÓDULO FINANCEIRO MAPPERS
+const mapFinancialAccountFromDB = (row: any): FinancialAccount => ({
+  id: row.id,
+  nome: row.nome,
+  tipo: row.tipo || 'Conta Bancaria',
+  banco: row.banco || '',
+  agencia: row.agencia || '',
+  conta: row.conta || '',
+  digito: row.digito || '',
+  bandeira: row.bandeira || '',
+  limite: Number(row.limite || 0),
+  limiteDisponivel: Number(row.limite_disponivel || 0),
+  diaFechamento: row.dia_fechamento ? Number(row.dia_fechamento) : undefined,
+  diaVencimento: row.dia_vencimento ? Number(row.dia_vencimento) : undefined,
+  saldoInicial: Number(row.saldo_inicial || 0),
+  saldoAtual: Number(row.saldo_atual || 0),
+  situacao: row.situacao || 'Ativa',
+  observacoes: row.observacoes || ''
+});
+
+const mapFinancialAccountToDB = (a: Partial<FinancialAccount>, empresaId: string) => {
+  const payload: any = {
+    empresa_id: empresaId,
+    nome: a.nome,
+    tipo: a.tipo,
+    banco: a.banco || null,
+    agencia: a.agencia || null,
+    conta: a.conta || null,
+    digito: a.digito || null,
+    bandeira: a.bandeira || null,
+    limite: Number(a.limite || 0),
+    limite_disponivel: Number(a.limiteDisponivel || 0),
+    dia_fechamento: a.diaFechamento || null,
+    dia_vencimento: a.diaVencimento || null,
+    saldo_inicial: Number(a.saldoInicial || 0),
+    saldo_atual: Number(a.saldoAtual || 0),
+    situacao: a.situacao || 'Ativa',
+    observacoes: a.observacoes || null
+  };
+  if (isValidUuid(a.id)) payload.id = a.id;
+  return payload;
+};
+
+const mapFinancialCategoryFromDB = (row: any): FinancialCategory => ({
+  id: row.id,
+  nome: row.nome,
+  tipo: row.tipo || 'Despesa',
+  categoriaPaiId: row.categoria_pai_id || '',
+  descricao: row.descricao || ''
+});
+
+const mapFinancialCategoryToDB = (c: Partial<FinancialCategory>, empresaId: string) => {
+  const payload: any = {
+    empresa_id: empresaId,
+    nome: c.nome,
+    tipo: c.tipo,
+    categoria_pai_id: isValidUuid(c.categoriaPaiId) ? c.categoriaPaiId : null,
+    descricao: c.descricao || null
+  };
+  if (isValidUuid(c.id)) payload.id = c.id;
+  return payload;
+};
+
+const mapCostCenterFromDB = (row: any): CostCenter => ({
+  id: row.id,
+  codigo: row.codigo,
+  nome: row.nome,
+  descricao: row.descricao || ''
+});
+
+const mapCostCenterToDB = (cc: Partial<CostCenter>, empresaId: string) => {
+  const payload: any = {
+    empresa_id: empresaId,
+    codigo: cc.codigo,
+    nome: cc.nome,
+    descricao: cc.descricao || null
+  };
+  if (isValidUuid(cc.id)) payload.id = cc.id;
+  return payload;
+};
+
+const mapFinancialEntryFromDB = (row: any): FinancialEntry => ({
+  id: row.id,
+  numeroDocumento: row.numero_documento,
+  tipo: row.tipo,
+  origem: row.origem || 'Avulso',
+  origemId: row.origem_id || '',
+  clienteId: row.cliente_id || '',
+  fornecedor: row.fornecedor || '',
+  dataEmissao: row.data_emissao || '',
+  dataVencimento: row.data_vencimento || '',
+  dataLiquidacao: row.data_liquidacao || '',
+  valorBruto: Number(row.valor_bruto || 0),
+  desconto: Number(row.desconto || 0),
+  acrescimo: Number(row.acrescimo || 0),
+  valorLiquido: Number(row.valor_liquido || 0),
+  valorPago: Number(row.valor_pago || 0),
+  jurosMulta: Number(row.juros_multa || 0),
+  formaPagamento: row.forma_pagamento || 'PIX',
+  contaFinanceiraId: row.conta_financeira_id || '',
+  categoriaId: row.categoria_id || '',
+  centroCustoId: row.centro_custo_id || '',
+  parcelaAtual: Number(row.parcela_atual || 1),
+  totalParcelas: Number(row.total_parcelas || 1),
+  parcelaPaiId: row.parcela_pai_id || '',
+  status: row.status || 'Aberto',
+  conciliado: !!row.conciliado,
+  tipoConciliacao: row.tipo_conciliacao || '',
+  observacoes: row.observacoes || '',
+  isDeleted: !!row.is_deleted
+});
+
+const mapFinancialEntryToDB = (e: Partial<FinancialEntry>, empresaId: string) => {
+  const payload: any = {
+    empresa_id: empresaId,
+    numero_documento: e.numeroDocumento,
+    tipo: e.tipo,
+    origem: e.origem || 'Avulso',
+    origem_id: isValidUuid(e.origemId) ? e.origemId : null,
+    cliente_id: isValidUuid(e.clienteId) ? e.clienteId : null,
+    fornecedor: e.fornecedor || null,
+    data_emissao: e.dataEmissao || new Date().toISOString().split('T')[0],
+    data_vencimento: e.dataVencimento,
+    data_liquidacao: e.dataLiquidacao || null,
+    valor_bruto: Number(e.valorBruto || 0),
+    desconto: Number(e.desconto || 0),
+    acrescimo: Number(e.acrescimo || 0),
+    valor_liquido: Number(e.valorLiquido || 0),
+    valor_pago: Number(e.valorPago || 0),
+    juros_multa: Number(e.jurosMulta || 0),
+    forma_pagamento: e.formaPagamento || 'PIX',
+    conta_financeira_id: isValidUuid(e.contaFinanceiraId) ? e.contaFinanceiraId : null,
+    categoria_id: isValidUuid(e.categoriaId) ? e.categoriaId : null,
+    centro_custo_id: isValidUuid(e.centroCustoId) ? e.centroCustoId : null,
+    parcela_atual: Number(e.parcelaAtual || 1),
+    total_parcelas: Number(e.totalParcelas || 1),
+    parcela_pai_id: isValidUuid(e.parcelaPaiId) ? e.parcelaPaiId : null,
+    status: e.status || 'Aberto',
+    conciliado: !!e.conciliado,
+    tipo_conciliacao: e.tipoConciliacao || null,
+    observacoes: e.observacoes || null,
+    is_deleted: !!e.isDeleted
+  };
+  if (isValidUuid(e.id)) payload.id = e.id;
+  return payload;
+};
+
 // 6. PRODUTOS — CR-03: materials carregados via JOIN com produto_materiais
 const mapProductFromDB = (row: any): Product => ({
   id: row.id,
@@ -1229,6 +1376,549 @@ export const useData = () => {
   });
 
   // ============================================================================
+  // MÓDULO FINANCEIRO (HOOKS & AUTOMAÇÕES DE INTEGRAÇÃO)
+  // ============================================================================
+
+  // --- 1. CONTAS FINANCEIRAS ---
+  const useContasFinanceiras = () => useQuery({
+    queryKey: ['contas_financeiras', activeTenant],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase.from('contas_financeiras').select('*').eq('empresa_id', activeTenant);
+        if (!error && data && data.length > 0) {
+          const mapped = data.map(mapFinancialAccountFromDB);
+          setLocalCache('contas_financeiras', mapped);
+          return mapped;
+        }
+      } catch (err) {
+        console.error('[useData] Exceção ao buscar contas financeiras:', err);
+      }
+      const cached = getLocalCache<FinancialAccount>('contas_financeiras');
+      if (cached.length > 0) return cached;
+
+      // Seed inicial
+      const defaultAccounts = DEFAULT_ACCOUNTS.map(a => ({ ...a, id: a.id }));
+      setLocalCache('contas_financeiras', defaultAccounts);
+      return defaultAccounts;
+    },
+    enabled: true,
+  });
+
+  const useAddContaFinanceira = () => useMutation({
+    mutationFn: async (account: FinancialAccount) => {
+      const payload = mapFinancialAccountToDB(account, activeTenant);
+      let itemSalvo: FinancialAccount = account;
+      try {
+        const { data, error } = await supabase.from('contas_financeiras').insert([payload]).select().single();
+        if (!error && data) itemSalvo = mapFinancialAccountFromDB(data);
+      } catch (err) {
+        console.error('[useData] Exceção ao salvar conta financeira:', err);
+      }
+      addToLocalCache('contas_financeiras', itemSalvo);
+      return itemSalvo;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contas_financeiras', activeTenant] }),
+  });
+
+  const useUpdateContaFinanceira = () => useMutation({
+    mutationFn: async (account: FinancialAccount) => {
+      const payload = mapFinancialAccountToDB(account, activeTenant);
+      delete payload.empresa_id;
+      let itemSalvo: FinancialAccount = account;
+      try {
+        const { data, error } = await supabase.from('contas_financeiras').update(payload).eq('id', account.id).select().single();
+        if (!error && data) itemSalvo = mapFinancialAccountFromDB(data);
+      } catch (err) {
+        console.error('[useData] Exceção ao atualizar conta financeira:', err);
+      }
+      addToLocalCache('contas_financeiras', itemSalvo);
+      return itemSalvo;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contas_financeiras', activeTenant] }),
+  });
+
+  const useDeleteContaFinanceira = () => useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        await supabase.from('contas_financeiras').delete().eq('id', id);
+      } catch (err) {
+        console.error('[useData] Exceção ao excluir conta financeira:', err);
+      }
+      removeFromLocalCache('contas_financeiras', id);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contas_financeiras', activeTenant] }),
+  });
+
+  // --- 2. CATEGORIAS FINANCEIRAS (PLANO DE CONTAS) ---
+  const useCategoriasFinanceiras = () => useQuery({
+    queryKey: ['categorias_financeiras', activeTenant],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase.from('categorias_financeiras').select('*').eq('empresa_id', activeTenant);
+        if (!error && data && data.length > 0) {
+          const mapped = data.map(mapFinancialCategoryFromDB);
+          setLocalCache('categorias_financeiras', mapped);
+          return mapped;
+        }
+      } catch (err) {
+        console.error('[useData] Exceção ao buscar categorias financeiras:', err);
+      }
+      const cached = getLocalCache<FinancialCategory>('categorias_financeiras');
+      if (cached.length > 0) return cached;
+
+      const defaultCats = DEFAULT_CATEGORIES.map(c => ({ ...c }));
+      setLocalCache('categorias_financeiras', defaultCats);
+      return defaultCats;
+    },
+    enabled: true,
+  });
+
+  const useAddCategoriaFinanceira = () => useMutation({
+    mutationFn: async (cat: FinancialCategory) => {
+      const payload = mapFinancialCategoryToDB(cat, activeTenant);
+      let itemSalvo: FinancialCategory = cat;
+      try {
+        const { data, error } = await supabase.from('categorias_financeiras').insert([payload]).select().single();
+        if (!error && data) itemSalvo = mapFinancialCategoryFromDB(data);
+      } catch (err) {
+        console.error('[useData] Exceção ao salvar categoria financeira:', err);
+      }
+      addToLocalCache('categorias_financeiras', itemSalvo);
+      return itemSalvo;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias_financeiras', activeTenant] }),
+  });
+
+  const useUpdateCategoriaFinanceira = () => useMutation({
+    mutationFn: async (cat: FinancialCategory) => {
+      const payload = mapFinancialCategoryToDB(cat, activeTenant);
+      delete payload.empresa_id;
+      let itemSalvo: FinancialCategory = cat;
+      try {
+        const { data, error } = await supabase.from('categorias_financeiras').update(payload).eq('id', cat.id).select().single();
+        if (!error && data) itemSalvo = mapFinancialCategoryFromDB(data);
+      } catch (err) {
+        console.error('[useData] Exceção ao atualizar categoria financeira:', err);
+      }
+      addToLocalCache('categorias_financeiras', itemSalvo);
+      return itemSalvo;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias_financeiras', activeTenant] }),
+  });
+
+  const useDeleteCategoriaFinanceira = () => useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        await supabase.from('categorias_financeiras').delete().eq('id', id);
+      } catch (err) {
+        console.error('[useData] Exceção ao excluir categoria financeira:', err);
+      }
+      removeFromLocalCache('categorias_financeiras', id);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias_financeiras', activeTenant] }),
+  });
+
+  // --- 3. CENTROS DE CUSTO ---
+  const useCentrosCusto = () => useQuery({
+    queryKey: ['centros_custo', activeTenant],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase.from('centros_custo').select('*').eq('empresa_id', activeTenant);
+        if (!error && data && data.length > 0) {
+          const mapped = data.map(mapCostCenterFromDB);
+          setLocalCache('centros_custo', mapped);
+          return mapped;
+        }
+      } catch (err) {
+        console.error('[useData] Exceção ao buscar centros de custo:', err);
+      }
+      const cached = getLocalCache<CostCenter>('centros_custo');
+      if (cached.length > 0) return cached;
+
+      const defaultCCs = DEFAULT_COST_CENTERS.map(cc => ({ ...cc }));
+      setLocalCache('centros_custo', defaultCCs);
+      return defaultCCs;
+    },
+    enabled: true,
+  });
+
+  const useAddCentroCusto = () => useMutation({
+    mutationFn: async (cc: CostCenter) => {
+      const payload = mapCostCenterToDB(cc, activeTenant);
+      let itemSalvo: CostCenter = cc;
+      try {
+        const { data, error } = await supabase.from('centros_custo').insert([payload]).select().single();
+        if (!error && data) itemSalvo = mapCostCenterFromDB(data);
+      } catch (err) {
+        console.error('[useData] Exceção ao salvar centro de custo:', err);
+      }
+      addToLocalCache('centros_custo', itemSalvo);
+      return itemSalvo;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['centros_custo', activeTenant] }),
+  });
+
+  const useUpdateCentroCusto = () => useMutation({
+    mutationFn: async (cc: CostCenter) => {
+      const payload = mapCostCenterToDB(cc, activeTenant);
+      delete payload.empresa_id;
+      let itemSalvo: CostCenter = cc;
+      try {
+        const { data, error } = await supabase.from('centros_custo').update(payload).eq('id', cc.id).select().single();
+        if (!error && data) itemSalvo = mapCostCenterFromDB(data);
+      } catch (err) {
+        console.error('[useData] Exceção ao atualizar centro de custo:', err);
+      }
+      addToLocalCache('centros_custo', itemSalvo);
+      return itemSalvo;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['centros_custo', activeTenant] }),
+  });
+
+  const useDeleteCentroCusto = () => useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        await supabase.from('centros_custo').delete().eq('id', id);
+      } catch (err) {
+        console.error('[useData] Exceção ao excluir centro de custo:', err);
+      }
+      removeFromLocalCache('centros_custo', id);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['centros_custo', activeTenant] }),
+  });
+
+  // --- 4. LANÇAMENTOS FINANCEIROS (TÍTULOS A RECEBER E A PAGAR) ---
+  const useLancamentosFinanceiros = () => useQuery({
+    queryKey: ['lancamentos_financeiros', activeTenant],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase.from('lancamentos_financeiros').select('*').eq('empresa_id', activeTenant).eq('is_deleted', false);
+        if (!error && data) {
+          const mapped = data.map(mapFinancialEntryFromDB);
+          setLocalCache('lancamentos_financeiros', mapped);
+          return mapped;
+        }
+      } catch (err) {
+        console.error('[useData] Exceção ao buscar lançamentos financeiros:', err);
+      }
+      return getLocalCache<FinancialEntry>('lancamentos_financeiros').filter(e => !e.isDeleted);
+    },
+    enabled: true,
+  });
+
+  const useAddLancamentoFinanceiro = () => useMutation({
+    mutationFn: async (entry: FinancialEntry) => {
+      const payload = mapFinancialEntryToDB(entry, activeTenant);
+      let itemSalvo: FinancialEntry = entry;
+      try {
+        const { data, error } = await supabase.from('lancamentos_financeiros').insert([payload]).select().single();
+        if (!error && data) itemSalvo = mapFinancialEntryFromDB(data);
+      } catch (err) {
+        console.error('[useData] Exceção ao salvar lançamento financeiro:', err);
+      }
+      addToLocalCache('lancamentos_financeiros', itemSalvo);
+      return itemSalvo;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros', activeTenant] }),
+  });
+
+  const useUpdateLancamentoFinanceiro = () => useMutation({
+    mutationFn: async (entry: FinancialEntry) => {
+      const payload = mapFinancialEntryToDB(entry, activeTenant);
+      delete payload.empresa_id;
+      let itemSalvo: FinancialEntry = entry;
+      try {
+        const { data, error } = await supabase.from('lancamentos_financeiros').update(payload).eq('id', entry.id).select().single();
+        if (!error && data) itemSalvo = mapFinancialEntryFromDB(data);
+      } catch (err) {
+        console.error('[useData] Exceção ao atualizar lançamento financeiro:', err);
+      }
+      addToLocalCache('lancamentos_financeiros', itemSalvo);
+      return itemSalvo;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros', activeTenant] }),
+  });
+
+  const useLiquidateLancamento = () => useMutation({
+    mutationFn: async ({ entryId, contaId, valorPago, dataLiquidacao, jurosMulta = 0, observacoes = '' }: { entryId: string; contaId: string; valorPago: number; dataLiquidacao: string; jurosMulta?: number; observacoes?: string }) => {
+      const cachedEntries = getLocalCache<FinancialEntry>('lancamentos_financeiros');
+      const targetEntry = cachedEntries.find(e => e.id === entryId);
+      if (!targetEntry) throw new Error('Lançamento não encontrado.');
+
+      const updatedEntry: FinancialEntry = {
+        ...targetEntry,
+        status: 'Liquidado',
+        contaFinanceiraId: contaId,
+        valorPago,
+        dataLiquidacao,
+        jurosMulta,
+        observacoes: observacoes ? `${targetEntry.observacoes || ''} | Baixa: ${observacoes}` : targetEntry.observacoes
+      };
+
+      // Atualizar Supabase
+      try {
+        const payload = mapFinancialEntryToDB(updatedEntry, activeTenant);
+        await supabase.from('lancamentos_financeiros').update(payload).eq('id', entryId);
+      } catch (e) {}
+
+      // Atualizar cache de lançamentos
+      addToLocalCache('lancamentos_financeiros', updatedEntry);
+
+      // Atualizar Saldo da Conta Financeira
+      const cachedAccounts = getLocalCache<FinancialAccount>('contas_financeiras');
+      const targetAccount = cachedAccounts.find(a => a.id === contaId);
+      if (targetAccount) {
+        const delta = targetEntry.tipo === 'Receita' ? valorPago : -valorPago;
+        const newBalance = targetAccount.saldoAtual + delta;
+        const updatedAccount: FinancialAccount = {
+          ...targetAccount,
+          saldoAtual: newBalance,
+          limiteDisponivel: targetAccount.tipo === 'Cartao Credito' ? Math.min(targetAccount.limite || 0, targetAccount.limiteDisponivel! - delta) : undefined
+        };
+
+        try {
+          const accPayload = mapFinancialAccountToDB(updatedAccount, activeTenant);
+          await supabase.from('contas_financeiras').update(accPayload).eq('id', contaId);
+        } catch (e) {}
+        addToLocalCache('contas_financeiras', updatedAccount);
+
+        // Registrar Movimentação no Extrato
+        const movement: FinancialMovement = {
+          id: crypto.randomUUID(),
+          contaFinanceiraId: contaId,
+          lancamentoId: entryId,
+          data: dataLiquidacao,
+          tipo: targetEntry.tipo === 'Receita' ? 'Entrada' : 'Saida',
+          valor: valorPago,
+          saldoAnterior: targetAccount.saldoAtual,
+          saldoPosterior: newBalance,
+          descricao: `Baixa de ${targetEntry.tipo}: ${targetEntry.numeroDocumento} (${targetEntry.fornecedor || 'Cliente'})`
+        };
+        addToLocalCache('movimentacoes_financeiras', movement);
+      }
+
+      return updatedEntry;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros', activeTenant] });
+      queryClient.invalidateQueries({ queryKey: ['contas_financeiras', activeTenant] });
+      queryClient.invalidateQueries({ queryKey: ['movimentacoes_financeiras', activeTenant] });
+    }
+  });
+
+  const useConciliateLancamento = () => useMutation({
+    mutationFn: async ({ entryId, tipoConciliacao }: { entryId: string; tipoConciliacao: string }) => {
+      const cachedEntries = getLocalCache<FinancialEntry>('lancamentos_financeiros');
+      const targetEntry = cachedEntries.find(e => e.id === entryId);
+      if (!targetEntry) throw new Error('Lançamento não encontrado');
+
+      const updatedEntry: FinancialEntry = {
+        ...targetEntry,
+        status: 'Conciliado',
+        conciliado: true,
+        tipoConciliacao
+      };
+
+      try {
+        const payload = mapFinancialEntryToDB(updatedEntry, activeTenant);
+        await supabase.from('lancamentos_financeiros').update(payload).eq('id', entryId);
+      } catch (e) {}
+
+      addToLocalCache('lancamentos_financeiros', updatedEntry);
+      return updatedEntry;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros', activeTenant] }),
+  });
+
+  const useDeleteLancamentoFinanceiro = () => useMutation({
+    mutationFn: async (id: string) => {
+      // Soft Delete auditoria
+      try {
+        await supabase.from('lancamentos_financeiros').update({ is_deleted: true }).eq('id', id);
+      } catch (err) {
+        console.error('[useData] Exceção ao realizar soft delete do lançamento:', err);
+      }
+      const cached = getLocalCache<FinancialEntry>('lancamentos_financeiros');
+      const updated = cached.map(e => e.id === id ? { ...e, isDeleted: true } : e);
+      setLocalCache('lancamentos_financeiros', updated);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros', activeTenant] }),
+  });
+
+  // --- 5. MOVIMENTAÇÕES FINANCEIRAS (EXTRATO) ---
+  const useMovimentacoesFinanceiras = (contaId?: string) => useQuery({
+    queryKey: ['movimentacoes_financeiras', activeTenant, contaId],
+    queryFn: async () => {
+      try {
+        let query = supabase.from('movimentacoes_financeiras').select('*').eq('empresa_id', activeTenant);
+        if (contaId) query = query.eq('conta_financeira_id', contaId);
+        const { data, error } = await query;
+        if (!error && data) {
+          return data.map((m: any) => ({
+            id: m.id,
+            contaFinanceiraId: m.conta_financeira_id,
+            lancamentoId: m.lancamento_id,
+            data: m.data,
+            tipo: m.tipo,
+            valor: Number(m.valor || 0),
+            saldoAnterior: Number(m.saldo_anterior || 0),
+            saldoPosterior: Number(m.saldo_posterior || 0),
+            descricao: m.descricao
+          }));
+        }
+      } catch (err) {
+        console.error('[useData] Exceção ao buscar movimentações financeiras:', err);
+      }
+      const cached = getLocalCache<FinancialMovement>('movimentacoes_financeiras');
+      if (contaId) return cached.filter(m => m.contaFinanceiraId === contaId);
+      return cached;
+    },
+    enabled: true,
+  });
+
+  // --- 6. TRANSFERÊNCIAS FINANCEIRAS ---
+  const useTransferenciasFinanceiras = () => useQuery({
+    queryKey: ['transferencias_financeiras', activeTenant],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase.from('transferencias_financeiras').select('*').eq('empresa_id', activeTenant);
+        if (!error && data) {
+          return data.map((t: any) => ({
+            id: t.id,
+            data: t.data,
+            contaOrigemId: t.conta_origem_id,
+            contaDestinoId: t.conta_destino_id,
+            valor: Number(t.valor || 0),
+            observacoes: t.observacoes || ''
+          }));
+        }
+      } catch (err) {
+        console.error('[useData] Exceção ao buscar transferências:', err);
+      }
+      return getLocalCache<FinancialTransfer>('transferencias_financeiras');
+    },
+    enabled: true,
+  });
+
+  const useAddTransferenciaFinanceira = () => useMutation({
+    mutationFn: async (transfer: FinancialTransfer) => {
+      const cachedAccounts = getLocalCache<FinancialAccount>('contas_financeiras');
+      const originAcc = cachedAccounts.find(a => a.id === transfer.contaOrigemId);
+      const destAcc = cachedAccounts.find(a => a.id === transfer.contaDestinoId);
+
+      if (!originAcc || !destAcc) throw new Error('Contas origem/destino não encontradas.');
+
+      const newOriginBal = originAcc.saldoAtual - transfer.valor;
+      const newDestBal = destAcc.saldoAtual + transfer.valor;
+
+      // Salvar Transferência
+      try {
+        await supabase.from('transferencias_financeiras').insert([{
+          empresa_id: activeTenant,
+          data: transfer.data,
+          conta_origem_id: transfer.contaOrigemId,
+          conta_destino_id: transfer.contaDestinoId,
+          valor: transfer.valor,
+          observacoes: transfer.observacoes || null
+        }]);
+      } catch (e) {}
+
+      // Atualizar Origem
+      const updatedOrigin: FinancialAccount = { ...originAcc, saldoAtual: newOriginBal };
+      try {
+        await supabase.from('contas_financeiras').update(mapFinancialAccountToDB(updatedOrigin, activeTenant)).eq('id', originAcc.id);
+      } catch (e) {}
+      addToLocalCache('contas_financeiras', updatedOrigin);
+
+      // Atualizar Destino
+      const updatedDest: FinancialAccount = { ...destAcc, saldoAtual: newDestBal };
+      try {
+        await supabase.from('contas_financeiras').update(mapFinancialAccountToDB(updatedDest, activeTenant)).eq('id', destAcc.id);
+      } catch (e) {}
+      addToLocalCache('contas_financeiras', updatedDest);
+
+      // Registrar Extrato Débito na Origem
+      addToLocalCache('movimentacoes_financeiras', {
+        id: crypto.randomUUID(),
+        contaFinanceiraId: originAcc.id,
+        data: transfer.data,
+        tipo: 'Transferencia_Debito',
+        valor: transfer.valor,
+        saldoAnterior: originAcc.saldoAtual,
+        saldoPosterior: newOriginBal,
+        descricao: `Transferência enviada para ${destAcc.nome}`
+      });
+
+      // Registrar Extrato Crédito no Destino
+      addToLocalCache('movimentacoes_financeiras', {
+        id: crypto.randomUUID(),
+        contaFinanceiraId: destAcc.id,
+        data: transfer.data,
+        tipo: 'Transferencia_Credito',
+        valor: transfer.valor,
+        saldoAnterior: destAcc.saldoAtual,
+        saldoPosterior: newDestBal,
+        descricao: `Transferência recebida de ${originAcc.nome}`
+      });
+
+      addToLocalCache('transferencias_financeiras', transfer);
+      return transfer;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transferencias_financeiras', activeTenant] });
+      queryClient.invalidateQueries({ queryKey: ['contas_financeiras', activeTenant] });
+      queryClient.invalidateQueries({ queryKey: ['movimentacoes_financeiras', activeTenant] });
+    }
+  });
+
+  // --- 7. TRILHA DE AUDITORIA ---
+  const useAuditoriaFinanceira = () => useQuery({
+    queryKey: ['auditoria_financeira', activeTenant],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase.from('auditoria_financeira').select('*').eq('empresa_id', activeTenant).order('data_hora', { ascending: false });
+        if (!error && data) {
+          return data.map((a: any) => ({
+            id: a.id,
+            dataHora: a.data_hora,
+            usuario: a.usuario,
+            ip: a.ip || '127.0.0.1',
+            operacao: a.operacao,
+            entidade: a.entidade,
+            entidadeId: a.entidade_id,
+            valorAnterior: a.valor_anterior || '',
+            valorNovo: a.valor_novo || ''
+          }));
+        }
+      } catch (err) {
+        console.error('[useData] Exceção ao buscar auditoria:', err);
+      }
+      return getLocalCache<FinancialAuditLog>('auditoria_financeira');
+    },
+    enabled: true,
+  });
+
+  const useAddAuditLog = () => useMutation({
+    mutationFn: async (log: FinancialAuditLog) => {
+      try {
+        await supabase.from('auditoria_financeira').insert([{
+          empresa_id: activeTenant,
+          usuario: log.usuario,
+          ip: log.ip,
+          operacao: log.operacao,
+          entidade: log.entidade,
+          entidade_id: log.entidadeId,
+          valor_anterior: log.valorAnterior || null,
+          valor_novo: log.valorNovo || null
+        }]);
+      } catch (e) {}
+      addToLocalCache('auditoria_financeira', log);
+      return log;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auditoria_financeira', activeTenant] }),
+  });
+
+  // ============================================================================
   // CADASTRO E PERFIL DA EMPRESA (MULTI-TENANT & RELATÓRIOS)
   // ============================================================================
   const useEmpresa = () => useQuery({
@@ -1307,7 +1997,41 @@ export const useData = () => {
     useProdutos, useAddProduto, useUpdateProduto, useDeleteProduto,
     useVendas, useAddVenda, useUpdateVenda, useDeleteVenda,
     useProducoes, useAddProducao, useUpdateProducao,
-    useOrcamentos, useAddOrcamento, useUpdateOrcamento, useDeleteOrcamento
+    useOrcamentos, useAddOrcamento, useUpdateOrcamento, useDeleteOrcamento,
+    // Financial Module
+    useContasFinanceiras, useAddContaFinanceira, useUpdateContaFinanceira, useDeleteContaFinanceira,
+    useCategoriasFinanceiras, useAddCategoriaFinanceira, useUpdateCategoriaFinanceira, useDeleteCategoriaFinanceira,
+    useCentrosCusto, useAddCentroCusto, useUpdateCentroCusto, useDeleteCentroCusto,
+    useLancamentosFinanceiros, useAddLancamentoFinanceiro, useUpdateLancamentoFinanceiro, useLiquidateLancamento, useConciliateLancamento, useDeleteLancamentoFinanceiro,
+    useMovimentacoesFinanceiras, useTransferenciasFinanceiras, useAddTransferenciaFinanceira,
+    useAuditoriaFinanceira, useAddAuditLog
   };
 };
+
+// Seeds Financeiros Iniciais
+const DEFAULT_ACCOUNTS: FinancialAccount[] = [
+  { id: 'acc-01', nome: 'Itaú Conta Corrente', tipo: 'Conta Bancaria', banco: 'Itaú', agencia: '1234', conta: '56789', digito: '0', saldoInicial: 5000, saldoAtual: 5000, situacao: 'Ativa' },
+  { id: 'acc-02', nome: 'Caixa Físico (Dinheiro)', tipo: 'Caixa Fisico', saldoInicial: 500, saldoAtual: 500, situacao: 'Ativa' },
+  { id: 'acc-03', nome: 'Mercado Pago / Carteira Digital', tipo: 'Carteira Digital', banco: 'Mercado Pago', saldoInicial: 1200, saldoAtual: 1200, situacao: 'Ativa' },
+  { id: 'acc-04', nome: 'Cartão Santander Corp', tipo: 'Cartao Credito', banco: 'Santander', bandeira: 'Mastercard', limite: 10000, limiteDisponivel: 10000, diaFechamento: 15, diaVencimento: 25, saldoInicial: 0, saldoAtual: 0, situacao: 'Ativa' },
+];
+
+const DEFAULT_CATEGORIES: FinancialCategory[] = [
+  { id: 'cat-01', nome: 'Venda de Produtos 3D', tipo: 'Receita', descricao: 'Faturamento de vendas de peças e protótipos 3D' },
+  { id: 'cat-02', nome: 'Serviços de Fatiamento & Modelagem', tipo: 'Receita', descricao: 'Receita com modelagem CAD e fatiamento 3D' },
+  { id: 'cat-03', nome: 'Rendimentos & Juros', tipo: 'Receita', descricao: 'Rendimentos de aplicações e juros recebidos' },
+  { id: 'cat-04', nome: 'Insumos & Filamentos (BOM)', tipo: 'Despesa', descricao: 'Aquisição de rolos de PLA, PETG, ABS, TPU e insumos' },
+  { id: 'cat-05', nome: 'Energia Elétrica', tipo: 'Despesa', descricao: 'Consumo de energia elétrica das impressoras e infraestrutura' },
+  { id: 'cat-06', nome: 'Manutenção de Impressoras & Peças', tipo: 'Despesa', descricao: 'Nozzles, extrusoras, mesas PEI, termistores' },
+  { id: 'cat-07', nome: 'Embalagens & Logística', tipo: 'Despesa', descricao: 'Caixas de papelão, plástico bolha, fitas e fretes' },
+  { id: 'cat-08', nome: 'Marketing & Anúncios', tipo: 'Despesa', descricao: 'Google Ads, Meta Ads, panfletos, site' },
+  { id: 'cat-09', nome: 'Salários & Pro-Labore', tipo: 'Despesa', descricao: 'Folha de pagamento e retiradas dos sócios' },
+  { id: 'cat-10', nome: 'Impostos & Taxas', tipo: 'Despesa', descricao: 'DAS, MEI, Simples Nacional, taxas bancárias' },
+];
+
+const DEFAULT_COST_CENTERS: CostCenter[] = [
+  { id: 'cc-01', codigo: 'CC-01', nome: 'Produção & Impressão 3D', descricao: 'Centro de custo operacional do parque de impressoras' },
+  { id: 'cc-02', codigo: 'CC-02', nome: 'Comercial & Vendas', descricao: 'Centro de custo das vendas e atendimento ao cliente' },
+  { id: 'cc-03', codigo: 'CC-03', nome: 'Administrativo & Infra', descricao: 'Custos fixos administrativos, energia e gestão' },
+];
 
