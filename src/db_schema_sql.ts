@@ -386,4 +386,4 @@ CREATE INDEX idx_vendas_empresa ON public.vendas(empresa_id);
 CREATE INDEX idx_produtos_empresa ON public.produtos(empresa_id);
 CREATE INDEX idx_orcamentos_empresa ON public.orcamentos(empresa_id);
 CREATE INDEX idx_producoes_empresa ON public.producoes(empresa_id);
-\`;
+`;

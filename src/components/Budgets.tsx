@@ -5,6 +5,8 @@ import {
   DollarSign, Check, ChevronRight, Share2, Download, Eye, X, Printer, Percent 
 } from 'lucide-react';
 import { useData } from '../hooks/useData';
+import { useToast } from '../hooks/useToast';
+import Toast from './ui/Toast';
 
 export default function Budgets() {
   const { useOrcamentos, useClientes, useProdutos, useFilamentos, useAddOrcamento, useUpdateOrcamento, useDeleteOrcamento, useAddVenda } = useData();
@@ -12,10 +14,11 @@ export default function Budgets() {
   const { data: clients = [] } = useClientes();
   const { data: products = [] } = useProdutos();
   const { data: filaments = [] } = useFilamentos();
-  const addMutation = useAddOrcamento ? useAddOrcamento() : { mutate: () => {} };
-  const editMutation = useUpdateOrcamento ? useUpdateOrcamento() : { mutate: () => {} };
-  const deleteMutation = useDeleteOrcamento ? useDeleteOrcamento() : { mutate: () => {} };
-  const addVendaMutation = useAddVenda ? useAddVenda() : { mutate: () => {} };
+  const addMutation = useAddOrcamento();
+  const editMutation = useUpdateOrcamento();
+  const deleteMutation = useDeleteOrcamento();
+  const addVendaMutation = useAddVenda();
+  const { toast, showToast, hideToast } = useToast();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
@@ -143,7 +146,7 @@ export default function Budgets() {
     }
 
     const budgetData: Budget = {
-      id: editingBudget ? editingBudget.id : `bdg-${Date.now()}`,
+      id: editingBudget ? editingBudget.id : crypto.randomUUID(),
       numero: editingBudget ? editingBudget.numero : `ORÇ-2026-${String(budgets.length + 1).padStart(4, '0')}`,
       clienteId,
       dataEmissao,
@@ -168,21 +171,21 @@ export default function Budgets() {
     if (!conversionBudget) return;
 
     const novaVenda: Sale = {
-      id: `vnd-${Date.now()}`,
-      numero: `VEN-2026-${String(Math.floor(Math.random() * 1000)).padStart(4, '0')}`, // Need proper sale ID generation if this gets more complex
-      data: new Date().toISOString().split('T')[0],
+      id: crypto.randomUUID(),
+      numero: `VEN-2026-${String(Math.floor(Math.random() * 1000)).padStart(4, '0')}`,
+      dataVenda: new Date().toISOString().split('T')[0],
       clienteId: conversionBudget.clienteId,
       itens: conversionBudget.itens,
       formaPagamento: paymentMethod,
-      descontoTotal: conversionBudget.descontoGeral,
       valorTotal: calculateTotal(conversionBudget.itens, conversionBudget.descontoGeral),
-      observacoes: `Venda gerada a partir do orçamento ${conversionBudget.numero}`
+      statusPagamento: 'Pago',
+      orcamentoOrigemId: conversionBudget.id
     };
 
     addVendaMutation.mutate(novaVenda);
     editMutation.mutate({ ...conversionBudget, status: 'Aprovado' });
     setConversionBudget(null);
-    alert(`Sucesso: Orçamento convertido em Venda com sucesso! Estoque de produtos acabado deduzido.`);
+    showToast('Orçamento convertido em Venda com sucesso!', 'success');
   };
 
   // WhatsApp share generator helper
@@ -198,6 +201,7 @@ export default function Budgets() {
 
   return (
     <div className="space-y-6" id="budgets-module-container">
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
       
       {/* MODULE HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="budgets-header">
@@ -513,7 +517,6 @@ export default function Budgets() {
               <div>
                 <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações / Termos de Pagamento</label>
                 <textarea
-                  placeholder="Ex: 50% de sinal via Pix e 50% na entrega. Prazo de fabricação estimado em 5 dias úteis."
                   value={observacoes}
                   onChange={(e) => setObservacoes(e.target.value)}
                   rows={2}

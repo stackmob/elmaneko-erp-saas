@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Client } from '../types';
 import { Plus, Edit, Trash2, Search, User, Mail, Phone, MapPin, CreditCard } from 'lucide-react';
 import { useData } from '../hooks/useData';
+import { useToast } from '../hooks/useToast';
+import Toast from './ui/Toast';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 export default function Clients() {
   const { useClientes, useAddCliente, useUpdateCliente, useDeleteCliente } = useData();
@@ -9,11 +12,15 @@ export default function Clients() {
   const addMutation = useAddCliente();
   const editMutation = useUpdateCliente();
   const deleteMutation = useDeleteCliente();
-  
+  const { toast, showToast, hideToast } = useToast();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
-  // SEARCH SEARCH STATE
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: '', name: '' });
+
+  // SEARCH STATE
   const [searchQuery, setSearchQuery] = useState('');
 
   // FORM FIELDS
@@ -23,6 +30,9 @@ export default function Clients() {
   const [email, setEmail] = useState('');
   const [endereco, setEndereco] = useState('');
 
+  // Inline form error
+  const [formError, setFormError] = useState('');
+
   const handleOpenAddModal = () => {
     setEditingClient(null);
     setNome('');
@@ -30,59 +40,106 @@ export default function Clients() {
     setWhatsapp('');
     setEmail('');
     setEndereco('');
+    setFormError('');
     setIsModalOpen(true);
   };
 
   const handleOpenEditModal = (c: Client) => {
     setEditingClient(c);
     setNome(c.nome);
-    setCpfCnpj(c.cpfCnpj);
+    setCpfCnpj(c.cpfCnpj || '');
     setWhatsapp(c.whatsapp);
-    setEmail(c.email);
+    setEmail(c.email || '');
     setEndereco(c.endereco);
+    setFormError('');
     setIsModalOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nome || !cpfCnpj || !whatsapp || !email) {
-      alert('Por favor, informe todos os dados obrigatórios.');
+    setFormError('');
+
+    // Apenas nome e whatsapp são obrigatórios
+    if (!nome.trim()) {
+      setFormError('O nome do cliente é obrigatório.');
+      return;
+    }
+    if (!whatsapp.trim()) {
+      setFormError('O WhatsApp de contato é obrigatório.');
       return;
     }
 
     const clientData: Client = {
-      id: editingClient ? editingClient.id : `cli-${Date.now()}`,
-      nome,
-      cpfCnpj,
-      whatsapp,
-      telefone: whatsapp,
-      email,
-      endereco
+      id: editingClient ? editingClient.id : crypto.randomUUID(),
+      nome: nome.trim(),
+      cpfCnpj: cpfCnpj.trim() || undefined,
+      whatsapp: whatsapp.trim(),
+      telefone: whatsapp.trim(),
+      email: email.trim() || undefined,
+      endereco: endereco.trim()
     };
 
     if (editingClient) {
-      editMutation.mutate(clientData);
+      editMutation.mutate(clientData, {
+        onSuccess: () => {
+          setIsModalOpen(false);
+          showToast('Cliente atualizado com sucesso!', 'success');
+        },
+        onError: () => {
+          showToast('Erro ao atualizar cliente. Tente novamente.', 'error');
+        }
+      });
     } else {
-      addMutation.mutate(clientData);
+      addMutation.mutate(clientData, {
+        onSuccess: () => {
+          setIsModalOpen(false);
+          showToast('Cliente cadastrado com sucesso!', 'success');
+        },
+        onError: () => {
+          showToast('Erro ao cadastrar cliente. Tente novamente.', 'error');
+        }
+      });
     }
-
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string, name: string) => {
-    if (confirm(`Tem certeza que deseja excluir o cliente "${name}"? Históricos de orçamentos e vendas associados perderão o vínculo de proprietário.`)) {
-      deleteMutation.mutate(id);
-    }
+  const handleDeleteRequest = (id: string, name: string) => {
+    setConfirmDialog({ open: true, id, name });
+  };
+
+  const handleDeleteConfirm = () => {
+    deleteMutation.mutate(confirmDialog.id, {
+      onSuccess: () => showToast('Cliente excluído com sucesso.', 'warning'),
+      onError: () => showToast('Erro ao excluir cliente.', 'error')
+    });
+    setConfirmDialog({ open: false, id: '', name: '' });
   };
 
   const filteredClients = clients.filter(c => {
     const query = searchQuery.toLowerCase();
-    return c.nome.toLowerCase().includes(query) || c.cpfCnpj.toLowerCase().includes(query) || c.email.toLowerCase().includes(query);
+    return (
+      c.nome.toLowerCase().includes(query) ||
+      (c.cpfCnpj || '').toLowerCase().includes(query) ||
+      (c.email || '').toLowerCase().includes(query) ||
+      c.whatsapp.includes(query)
+    );
   });
 
   return (
     <div className="space-y-6" id="clients-module-container">
-      
+
+      {/* TOAST */}
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
+
+      {/* CONFIRM DIALOG */}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title="Excluir Cliente"
+        description={`Tem certeza que deseja excluir "${confirmDialog.name}"? Históricos de orçamentos e vendas perderão o vínculo.`}
+        confirmLabel="Excluir Cliente"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmDialog({ open: false, id: '', name: '' })}
+      />
+
       {/* HEADER BAR */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="clients-header">
         <div>
@@ -107,7 +164,7 @@ export default function Clients() {
           </span>
           <input
             type="text"
-            placeholder="Pesquisar clientes por Nome, CPF, CNPJ ou E-mail corporativo..."
+            placeholder="Pesquisar por nome, CPF/CNPJ, e-mail ou WhatsApp..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500"
@@ -119,13 +176,12 @@ export default function Clients() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="clients-grid">
         {filteredClients.length > 0 ? (
           filteredClients.map(c => (
-            <div 
-              key={c.id} 
+            <div
+              key={c.id}
               className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 hover:border-orange-500/20 transition-all duration-300 relative flex flex-col justify-between"
               id={`client-card-${c.id}`}
             >
               <div>
-                
                 {/* Title Card */}
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-2">
@@ -135,7 +191,8 @@ export default function Clients() {
                     <div>
                       <h3 className="text-sm font-bold text-white line-clamp-1">{c.nome}</h3>
                       <span className="text-[10px] text-neutral-500 font-mono flex items-center gap-1 mt-0.5">
-                        <CreditCard size={10} /> {c.cpfCnpj}
+                        <CreditCard size={10} />
+                        {c.cpfCnpj || <span className="italic text-neutral-600">CPF não informado</span>}
                       </span>
                     </div>
                   </div>
@@ -150,7 +207,7 @@ export default function Clients() {
                       <Edit size={14} />
                     </button>
                     <button
-                      onClick={() => handleDelete(c.id, c.nome)}
+                      onClick={() => handleDeleteRequest(c.id, c.nome)}
                       className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-red-500 rounded-lg transition-colors cursor-pointer"
                       title="Excluir Cliente"
                       id={`delete-client-btn-${c.id}`}
@@ -163,11 +220,13 @@ export default function Clients() {
                 {/* Info List */}
                 <div className="mt-4 space-y-2 text-xs font-mono text-neutral-300 pt-3 border-t border-neutral-800/60">
                   <div className="flex items-center gap-2">
-                    <Mail size={13} className="text-neutral-500" />
-                    <span className="truncate">{c.email}</span>
+                    <Mail size={13} className="text-neutral-500 shrink-0" />
+                    <span className="truncate">
+                      {c.email || <span className="italic text-neutral-600">E-mail não informado</span>}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Phone size={13} className="text-neutral-500" />
+                    <Phone size={13} className="text-neutral-500 shrink-0" />
                     <span>{c.whatsapp}</span>
                   </div>
                   <div className="flex items-start gap-2 pt-1">
@@ -175,7 +234,6 @@ export default function Clients() {
                     <span className="line-clamp-2 text-neutral-400">{c.endereco || <span className="italic text-neutral-600">Sem endereço de entrega</span>}</span>
                   </div>
                 </div>
-
               </div>
 
               {/* CRM LINK ACTIONS */}
@@ -189,12 +247,11 @@ export default function Clients() {
                   Abrir WhatsApp
                 </a>
               </div>
-
             </div>
           ))
         ) : (
           <div className="col-span-full py-20 text-center text-neutral-500 font-mono text-xs bg-neutral-900 border border-neutral-800 rounded-2xl">
-            Nenhum cliente atende aos filtros de pesquisa inseridos.
+            {searchQuery ? 'Nenhum cliente atende aos filtros de pesquisa.' : 'Nenhum cliente cadastrado. Clique em "Adicionar Cliente" para começar.'}
           </div>
         )}
       </div>
@@ -205,17 +262,23 @@ export default function Clients() {
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <User size={20} className="text-orange-500" />
-              {editingClient ? 'Editar Informações do Cliente' : 'Cadastrar Novo Cliente no CRM'}
+              {editingClient ? 'Editar Informações do Cliente' : 'Cadastrar Novo Cliente'}
             </h3>
 
             <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs text-left">
-              
+
+              {/* Inline form error */}
+              {formError && (
+                <div className="p-3 bg-red-950/50 border border-red-800/60 text-red-300 text-xs rounded-lg">
+                  {formError}
+                </div>
+              )}
+
               <div>
                 <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome Completo / Razão Social *</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ex: Guilherme Henrique de Oliveira"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -223,11 +286,9 @@ export default function Clients() {
               </div>
 
               <div>
-                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">CPF ou CNPJ para Faturamento *</label>
+                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">CPF ou CNPJ <span className="text-neutral-600 normal-case">(opcional)</span></label>
                 <input
                   type="text"
-                  required
-                  placeholder="Ex: 123.456.789-00 ou 12.345.678/0001-00"
                   value={cpfCnpj}
                   onChange={(e) => setCpfCnpj(e.target.value)}
                   className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -236,11 +297,10 @@ export default function Clients() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">WhatsApp de Contato *</label>
+                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">WhatsApp *</label>
                   <input
                     type="tel"
                     required
-                    placeholder="Ex: (11) 98888-7777"
                     value={whatsapp}
                     onChange={(e) => setWhatsapp(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -248,11 +308,9 @@ export default function Clients() {
                 </div>
 
                 <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Email Principal *</label>
+                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Email <span className="text-neutral-600 normal-case">(opcional)</span></label>
                   <input
                     type="email"
-                    required
-                    placeholder="Ex: cliente@empresa.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -261,9 +319,8 @@ export default function Clients() {
               </div>
 
               <div>
-                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Endereço Completo de Entrega (Frete)</label>
+                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Endereço de Entrega <span className="text-neutral-600 normal-case">(opcional)</span></label>
                 <textarea
-                  placeholder="Ex: Av. Paulista, 1000 - Apto 51, Bela Vista - São Paulo/SP - CEP: 01310-100"
                   value={endereco}
                   onChange={(e) => setEndereco(e.target.value)}
                   rows={2}
@@ -282,12 +339,12 @@ export default function Clients() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer"
+                  disabled={addMutation.isPending || editMutation.isPending}
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer disabled:opacity-60"
                 >
-                  Gravar Cadastro
+                  {addMutation.isPending || editMutation.isPending ? 'Salvando...' : 'Gravar Cadastro'}
                 </button>
               </div>
-
             </form>
           </div>
         </div>

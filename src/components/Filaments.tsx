@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Filament, FilamentType } from '../types';
-import { Plus, Edit, Trash2, Search, Filter, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Filter, AlertTriangle } from 'lucide-react';
 import { useData } from '../hooks/useData';
+import { useToast } from '../hooks/useToast';
+import Toast from './ui/Toast';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 export default function Filaments() {
   const { useFilamentos, useAddFilamento, useUpdateFilamento, useDeleteFilamento } = useData();
@@ -9,6 +12,8 @@ export default function Filaments() {
   const addMutation = useAddFilamento();
   const editMutation = useUpdateFilamento();
   const deleteMutation = useDeleteFilamento();
+  const { toast, showToast, hideToast } = useToast();
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: '', name: '' });
   
   // States
   const [search, setSearch] = useState('');
@@ -81,12 +86,12 @@ export default function Filaments() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome || !marca || !cor || !fornecedor) {
-      alert('Por favor preencha todos os campos obrigatórios.');
+      showToast('Preencha todos os campos obrigatórios.', 'error');
       return;
     }
 
     const filamentData: Filament = {
-      id: editingFilament ? editingFilament.id : `fil-${Date.now()}`,
+      id: editingFilament ? editingFilament.id : crypto.randomUUID(),
       nome,
       tipo,
       marca,
@@ -99,23 +104,42 @@ export default function Filaments() {
       observacoes
     };
 
-    if (editingFilament) {
-      editMutation.mutate(filamentData);
-    } else {
-      addMutation.mutate(filamentData);
-    }
+    const onSuccess = () => {
+      setIsModalOpen(false);
+      showToast(editingFilament ? 'Filamento atualizado com sucesso!' : 'Filamento cadastrado com sucesso!', 'success');
+    };
+    const onError = () => showToast('Erro ao salvar filamento. Tente novamente.', 'error');
 
-    setIsModalOpen(false);
+    if (editingFilament) {
+      editMutation.mutate(filamentData, { onSuccess, onError });
+    } else {
+      addMutation.mutate(filamentData, { onSuccess, onError });
+    }
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (confirm(`Tem certeza de que deseja excluir o filamento "${name}"? Esta ação removerá a bobina e afetará o histórico.`)) {
-      deleteMutation.mutate(id);
-    }
+    setConfirmDialog({ open: true, id, name });
+  };
+
+  const handleDeleteConfirm = () => {
+    deleteMutation.mutate(confirmDialog.id, {
+      onSuccess: () => showToast('Filamento excluído.', 'warning'),
+      onError: () => showToast('Erro ao excluir filamento.', 'error')
+    });
+    setConfirmDialog({ open: false, id: '', name: '' });
   };
 
   return (
     <div className="space-y-6" id="filaments-module-container">
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title="Excluir Filamento"
+        description={`Tem certeza de que deseja excluir "${confirmDialog.name}"? Esta ação removerá a bobina e afetará o histórico.`}
+        confirmLabel="Excluir Bobina"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmDialog({ open: false, id: '', name: '' })}
+      />
       
       {/* 1. MODULE ACTIONS HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="filaments-header-box">
@@ -365,7 +389,6 @@ export default function Filaments() {
                   <input
                     type="text"
                     required
-                    placeholder="Ex: PLA Branco Premium 1.75mm"
                     value={nome}
                     onChange={(e) => setNome(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -391,7 +414,6 @@ export default function Filaments() {
                   <input
                     type="text"
                     required
-                    placeholder="Ex: 3D Fila"
                     value={marca}
                     onChange={(e) => setMarca(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -403,7 +425,6 @@ export default function Filaments() {
                   <input
                     type="text"
                     required
-                    placeholder="Ex: Branco / Preto / Transparente"
                     value={cor}
                     onChange={(e) => setCor(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -463,7 +484,6 @@ export default function Filaments() {
                   <input
                     type="text"
                     required
-                    placeholder="Ex: 3D Prime Comercial"
                     value={fornecedor}
                     onChange={(e) => setFornecedor(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -473,7 +493,6 @@ export default function Filaments() {
                 <div className="col-span-2">
                   <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações</label>
                   <textarea
-                    placeholder="Notas adicionais sobre a aderência, temperatura de extrusão ideal (ex: 210°C) etc."
                     value={observacoes}
                     onChange={(e) => setObservacoes(e.target.value)}
                     rows={2}

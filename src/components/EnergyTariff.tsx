@@ -19,7 +19,7 @@ export default function EnergyTariffModule() {
     }
 
     const newTariff: EnergyTariff = {
-      id: `trf-${Date.now()}`,
+      id: crypto.randomUUID(),
       dataInicio,
       valorKwh: Number(valorKwh)
     };
@@ -181,7 +181,6 @@ export default function EnergyTariffModule() {
                     required
                     step="0.0001"
                     min="0"
-                    placeholder="Ex: 0.8521"
                     value={valorKwh}
                     onChange={(e) => setValorKwh(Number(e.target.value))}
                     className="w-full pl-9 pr-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"

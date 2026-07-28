@@ -20,7 +20,7 @@ export default function Dashboard() {
   
   // --- 1. CORE STATISTICS ---
   const totalStockGrams = filaments.reduce((acc, f) => acc + f.quantidadeDisponivel, 0);
-  const totalStockValue = filaments.reduce((acc, f) => acc + (f.quantidadeDisponivel * (f.valorCompra / f.pesoTotal)), 0);
+  const totalStockValue = filaments.reduce((acc, f) => acc + (f.pesoTotal > 0 ? (f.quantidadeDisponivel * (f.valorCompra / f.pesoTotal)) : 0), 0);
   
   const lowStockFilaments = filaments.filter(f => f.quantidadeDisponivel < 200);
   const pendingBudgetsCount = budgets.filter(b => b.status === 'Aberto' || b.status === 'Enviado').length;

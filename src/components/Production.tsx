@@ -5,6 +5,8 @@ import {
   User, Database, Zap, Sparkles, AlertOctagon, HelpCircle, FileText, Search, Printer as PrinterIcon 
 } from 'lucide-react';
 import { useData } from '../hooks/useData';
+import { useToast } from '../hooks/useToast';
+import Toast from './ui/Toast';
 
 export default function Production() {
   const { useProducoes, useProdutos, useImpressoras, useFilamentos, useTarifas, useAddProducao, useUpdateProducao } = useData();
@@ -13,8 +15,9 @@ export default function Production() {
   const { data: printers = [] } = useImpressoras();
   const { data: filaments = [] } = useFilamentos();
   const { data: tariffs = [] } = useTarifas();
-  const addMutation = useAddProducao ? useAddProducao() : { mutate: () => {} };
-  const updateMutation = useUpdateProducao ? useUpdateProducao() : { mutate: () => {} };
+  const addMutation = useAddProducao();
+  const updateMutation = useUpdateProducao();
+  const { toast, showToast, hideToast } = useToast();
   
   const [activeTab, setActiveTab] = useState<'nova' | 'historico' | 'relatorios'>('historico');
 
@@ -125,7 +128,12 @@ export default function Production() {
       return;
     }
 
-    const newProdOrderNo = `PROD-${String(productions.length + 1).padStart(3, '0')}`;
+    // CM-04: Numeração baseada no maior número existente (evita duplicação após deleções)
+    const maxNum = productions.reduce((max, p) => {
+      const n = parseInt(p.numero.replace('PROD-', ''), 10) || 0;
+      return n > max ? n : max;
+    }, 0);
+    const newProdOrderNo = `PROD-${String(maxNum + 1).padStart(3, '0')}`;
     const timestamp = new Date().toISOString().split('T')[0];
 
     // Arrays to collect updates
@@ -201,7 +209,7 @@ export default function Production() {
 
     // Prepare production order object
     const newOrder: ProductionOrder = {
-      id: `po-${Date.now()}`,
+      id: crypto.randomUUID(),
       numero: newProdOrderNo,
       data: timestamp,
       produtoId: formData.produtoId,
@@ -219,7 +227,11 @@ export default function Production() {
       observacoes: formData.observacoes
     };
 
-    addMutation.mutate(newOrder);
+    addMutation.mutate(newOrder, {
+      onSuccess: () => {
+        showToast(`Ordem ${newProdOrderNo} registrada com sucesso!`, 'success');
+      }
+    });
     
     // reset form and notify
     setFormSuccess(`Ordem de Produção ${newProdOrderNo} registrada com sucesso!`);
@@ -233,7 +245,7 @@ export default function Production() {
   const handleFinalizeFromHistory = (po: ProductionOrder) => {
     const prodObj = products.find(p => p.id === po.produtoId);
     if (!prodObj) {
-      alert('Erro: Produto da ordem de produção não localizado.');
+      setFormError('Produto da ordem de produção não localizado.');
       return;
     }
 
@@ -382,6 +394,7 @@ export default function Production() {
 
   return (
     <div className="space-y-6" id="production-module-container">
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
       
       {/* 1. VIEW TOGGLE BAR */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-neutral-900 border border-neutral-800 rounded-2xl">
@@ -488,7 +501,6 @@ export default function Production() {
                   <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Operador responsável (Opcional)</label>
                   <input
                     type="text"
-                    placeholder="Ex: Guilherme Braga"
                     value={formData.operador}
                     onChange={(e) => setFormData(p => ({ ...p, operador: e.target.value }))}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -552,7 +564,6 @@ export default function Production() {
                 <div className="col-span-2">
                   <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Notas da Execução</label>
                   <textarea
-                    placeholder="Instruções sobre as velocidades, lote do filamento, notas de calibração..."
                     value={formData.observacoes}
                     onChange={(e) => setFormData(p => ({ ...p, observacoes: e.target.value }))}
                     rows={2}
@@ -691,10 +702,9 @@ export default function Production() {
             <div>
               <input
                 type="text"
-                placeholder="Operador..."
                 value={filterOperator}
                 onChange={(e) => setFilterOperator(e.target.value)}
-                className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-xs text-white placeholder-neutral-500 focus:outline-none"
+                className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-xs text-white focus:outline-none"
               />
             </div>
 

@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Product, BOMItem, Printer, Filament, EnergyTariff, FilamentType } from '../types';
 import { Plus, Edit, Trash2, List, ClipboardList, Info, DollarSign, PenTool, Flame, Sliders } from 'lucide-react';
 import { useData } from '../hooks/useData';
+import { useToast } from '../hooks/useToast';
+import Toast from './ui/Toast';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 export default function Products() {
   const { useProdutos, useImpressoras, useFilamentos, useTarifas, useAddProduto, useUpdateProduto, useDeleteProduto } = useData();
@@ -9,9 +12,11 @@ export default function Products() {
   const { data: printers = [] } = useImpressoras();
   const { data: filaments = [] } = useFilamentos();
   const { data: tariffs = [] } = useTarifas();
-  const addMutation = useAddProduto ? useAddProduto() : { mutate: () => {} };
-  const editMutation = useUpdateProduto ? useUpdateProduto() : { mutate: () => {} };
-  const deleteMutation = useDeleteProduto ? useDeleteProduto() : { mutate: () => {} };
+  const addMutation = useAddProduto();
+  const editMutation = useUpdateProduto();
+  const deleteMutation = useDeleteProduto();
+  const { toast, showToast, hideToast } = useToast();
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: '', name: '' });
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -40,18 +45,14 @@ export default function Products() {
   };
   const currentTariff = getActiveTariff();
 
-  // --- FILAMENT COST RULE CALCULATIONS ---
-  // Select MAX value per gram for a given filament type
+  // CM-07: Corrige divisão por zero quando pesoTotal = 0
   const getMaxCostPerGram = (type: FilamentType): number => {
     const typeFilaments = filaments.filter(f => f.tipo === type);
-    if (typeFilaments.length === 0) return 0.12; // fallback average R$ 120/1000g
-    
+    if (typeFilaments.length === 0) return 0.12;
     let maxRate = 0;
     typeFilaments.forEach(f => {
-      const rate = f.valorCompra / f.pesoTotal;
-      if (rate > maxRate) {
-        maxRate = rate;
-      }
+      const rate = f.pesoTotal > 0 ? f.valorCompra / f.pesoTotal : 0;
+      if (rate > maxRate) maxRate = rate;
     });
     return maxRate;
   };
@@ -126,12 +127,12 @@ export default function Products() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome || !categoria || !impressoraPadraoId || formMaterials.length === 0) {
-      alert('Por favor, informe todos os campos obrigatórios.');
+      showToast('Preencha todos os campos obrigatórios.', 'error');
       return;
     }
 
     const productData: Product = {
-      id: editingProduct ? editingProduct.id : `prod-${Date.now()}`,
+      id: editingProduct ? editingProduct.id : crypto.randomUUID(),
       nome,
       categoria,
       descricao,
@@ -144,23 +145,42 @@ export default function Products() {
       imagem: editingProduct ? editingProduct.imagem : undefined
     };
 
-    if (editingProduct) {
-      editMutation.mutate(productData);
-    } else {
-      addMutation.mutate(productData);
-    }
+    const onSuccess = () => {
+      setIsModalOpen(false);
+      showToast(editingProduct ? 'Produto atualizado com sucesso!' : 'Produto cadastrado com sucesso!', 'success');
+    };
+    const onError = () => showToast('Erro ao salvar produto. Tente novamente.', 'error');
 
-    setIsModalOpen(false);
+    if (editingProduct) {
+      editMutation.mutate(productData, { onSuccess, onError });
+    } else {
+      addMutation.mutate(productData, { onSuccess, onError });
+    }
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (confirm(`Tem certeza de que deseja excluir o produto "${name}"? Fichas de produção associadas ficarão sem vínculo.`)) {
-      deleteMutation.mutate(id);
-    }
+    setConfirmDialog({ open: true, id, name });
+  };
+
+  const handleDeleteConfirm = () => {
+    deleteMutation.mutate(confirmDialog.id, {
+      onSuccess: () => showToast('Produto excluído com sucesso.', 'warning'),
+      onError: () => showToast('Erro ao excluir produto.', 'error')
+    });
+    setConfirmDialog({ open: false, id: '', name: '' });
   };
 
   return (
     <div className="space-y-6" id="products-module-container">
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title="Excluir Produto"
+        description={`Tem certeza que deseja excluir "${confirmDialog.name}"? Ordens de produção associadas perderão o vínculo.`}
+        confirmLabel="Excluir Produto"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmDialog({ open: false, id: '', name: '' })}
+      />
       
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="products-header">
@@ -348,7 +368,6 @@ export default function Products() {
                   <input
                     type="text"
                     required
-                    placeholder="Ex: Vaso Geométrico Espiral 20cm"
                     value={nome}
                     onChange={(e) => setNome(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -375,7 +394,6 @@ export default function Products() {
                   <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Descrição do Item</label>
                   <input
                     type="text"
-                    placeholder="Insira detalhes sobre o acabamento, material recomendado e características..."
                     value={descricao}
                     onChange={(e) => setDescricao(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -578,7 +596,6 @@ export default function Products() {
               <div>
                 <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações Técnicas / Fatiador / Notas de Produção</label>
                 <textarea
-                  placeholder="Insira detalhes adicionais do fatiador 3D (ex: infill, suportes, temperatura de mesa 60°C...)"
                   value={observacoes}
                   onChange={(e) => setObservacoes(e.target.value)}
                   rows={2}

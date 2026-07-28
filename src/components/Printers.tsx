@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { Printer, EnergyTariff } from '../types';
-import { Plus, Edit, Trash2, Cpu, Zap, Activity, Info } from 'lucide-react';
+import { Printer } from '../types';
+import { Plus, Edit, Trash2, Zap, Cpu } from 'lucide-react';
 import { useData } from '../hooks/useData';
+import { useToast } from '../hooks/useToast';
+import Toast from './ui/Toast';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 export default function Printers() {
   const { useImpressoras, useTarifas, useAddImpressora, useUpdateImpressora, useDeleteImpressora } = useData();
@@ -10,6 +13,8 @@ export default function Printers() {
   const addMutation = useAddImpressora();
   const editMutation = useUpdateImpressora();
   const deleteMutation = useDeleteImpressora();
+  const { toast, showToast, hideToast } = useToast();
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: '', name: '' });
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPrinter, setEditingPrinter] = useState<Printer | null>(null);
@@ -58,7 +63,7 @@ export default function Printers() {
     }
 
     const printerData: Printer = {
-      id: editingPrinter ? editingPrinter.id : `prt-${Date.now()}`,
+      id: editingPrinter ? editingPrinter.id : crypto.randomUUID(),
       nome,
       marca,
       modelo,
@@ -66,23 +71,42 @@ export default function Printers() {
       status
     };
 
-    if (editingPrinter) {
-      editMutation.mutate(printerData);
-    } else {
-      addMutation.mutate(printerData);
-    }
+    const onSuccess = () => {
+      setIsModalOpen(false);
+      showToast(editingPrinter ? 'Impressora atualizada com sucesso!' : 'Impressora cadastrada com sucesso!', 'success');
+    };
+    const onError = () => showToast('Erro ao salvar impressora.', 'error');
 
-    setIsModalOpen(false);
+    if (editingPrinter) {
+      editMutation.mutate(printerData, { onSuccess, onError });
+    } else {
+      addMutation.mutate(printerData, { onSuccess, onError });
+    }
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (confirm(`Tem certeza de que deseja excluir a impressora "${name}"? Peças associadas a ela precisarão de atualização.`)) {
-      deleteMutation.mutate(id);
-    }
+    setConfirmDialog({ open: true, id, name });
+  };
+
+  const handleDeleteConfirm = () => {
+    deleteMutation.mutate(confirmDialog.id, {
+      onSuccess: () => showToast('Impressora excluída.', 'warning'),
+      onError: () => showToast('Erro ao excluir impressora.', 'error')
+    });
+    setConfirmDialog({ open: false, id: '', name: '' });
   };
 
   return (
     <div className="space-y-6" id="printers-module-container">
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title="Excluir Impressora"
+        description={`Tem certeza que deseja excluir "${confirmDialog.name}"? Ordens de produção associadas precisarão de atualização.`}
+        confirmLabel="Excluir Impressora"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmDialog({ open: false, id: '', name: '' })}
+      />
       
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="printers-header">
@@ -218,7 +242,6 @@ export default function Printers() {
                 <input
                   type="text"
                   required
-                  placeholder="Ex: Ender 3 V2 - Esquerda"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -231,7 +254,6 @@ export default function Printers() {
                   <input
                     type="text"
                     required
-                    placeholder="Ex: Creality"
                     value={marca}
                     onChange={(e) => setMarca(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -243,7 +265,6 @@ export default function Printers() {
                   <input
                     type="text"
                     required
-                    placeholder="Ex: Ender 3 V2 Neo"
                     value={modelo}
                     onChange={(e) => setModelo(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"

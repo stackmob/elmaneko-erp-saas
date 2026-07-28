@@ -17,7 +17,8 @@ import BackupModule from './components/Backup';
 // Icons
 import { 
   LayoutDashboard, Users, Layers, ShoppingBag, Cpu, 
-  Zap, FolderHeart, PlayCircle, FileCheck, DollarSign, ShieldAlert, LogOut, Shield, AlertTriangle, Loader2 
+  Zap, FolderHeart, PlayCircle, FileCheck, DollarSign, LogOut, Shield, 
+  AlertTriangle, Loader2, PanelLeftClose, PanelLeftOpen, Sparkles
 } from 'lucide-react';
 
 import { useAuth } from './context/AuthContext';
@@ -29,6 +30,7 @@ export default function App() {
   const { data: filaments = [] } = useFilamentos();
 
   const [currentView, setCurrentView] = useState<string>('dashboard');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
 
   const auth = {
     isAuthenticated: !!session,
@@ -49,96 +51,139 @@ export default function App() {
     return <AuthPage />;
   }
 
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard HUD', icon: LayoutDashboard },
+    { id: 'clients', label: 'Clientes (CRM)', icon: Users },
+    { id: 'filaments', label: 'Estoque Filamentos', icon: Layers },
+    { id: 'purchases', label: 'Compras Insumos', icon: ShoppingBag },
+    { id: 'printers', label: 'Impressoras 3D', icon: Cpu },
+    { id: 'tariffs', label: 'Tarifa de Energia', icon: Zap },
+    { id: 'products', label: 'Produtos / BOM', icon: FolderHeart },
+    { id: 'production', label: 'Produção (Fila)', icon: PlayCircle },
+    { id: 'budgets', label: 'Orçamentos', icon: FileCheck },
+    { id: 'sales', label: 'Vendas Realizadas', icon: DollarSign },
+    { id: 'backup', label: 'Segurança / Backup', icon: Shield },
+  ];
+
   return (
     <div className="flex h-screen bg-neutral-950 text-neutral-200 font-sans selection:bg-orange-500/30 overflow-hidden" id="app-root">
       
-      {/* SIDEBAR NAVIGATION PANEL */}
-      <aside className="w-full md:w-64 bg-neutral-900/50 border-r border-neutral-800 flex flex-col justify-between shrink-0" id="sidebar">
-        <div className="p-6 border-b border-neutral-800">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-orange-600 rounded flex items-center justify-center font-bold text-white shadow-md shadow-orange-600/10">
+      {/* SIDEBAR NAVIGATION PANEL — FUTURISTIC COLLAPSIBLE */}
+      <aside 
+        className={`${isSidebarCollapsed ? 'w-20' : 'w-64'} bg-neutral-900/80 backdrop-blur-xl border-r border-neutral-800/80 flex flex-col justify-between shrink-0 transition-all duration-300 relative z-30 shadow-[4px_0_24px_rgba(0,0,0,0.4)]`} 
+        id="sidebar"
+      >
+        {/* LOGO & COLLAPSE TOGGLE */}
+        <div className="p-5 border-b border-neutral-800/80 flex items-center justify-between">
+          <div className="flex items-center gap-3 overflow-hidden">
+            <div className="w-9 h-9 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg shadow-orange-500/20 shrink-0 border border-orange-400/30">
               E3
             </div>
-            <div>
-              <h1 className="text-base font-bold tracking-tight text-white">ELMANEKO <span className="text-orange-500">SaaS</span></h1>
-              <p className="text-[9px] font-mono tracking-widest text-neutral-500 font-semibold uppercase">ERP CONTROL 2.0</p>
-            </div>
+            {!isSidebarCollapsed && (
+              <div className="animate-fade-in font-sans">
+                <h1 className="text-sm font-black tracking-wider text-white flex items-center gap-1.5">
+                  ELMANEKO <span className="text-orange-500 text-xs px-1.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 font-mono">3D</span>
+                </h1>
+                <p className="text-[9px] font-mono tracking-widest text-neutral-400 font-semibold uppercase">ERP HUD v2.0</p>
+              </div>
+            )}
           </div>
+
+          <button
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="p-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800/80 rounded-lg transition-colors cursor-pointer shrink-0"
+            title={isSidebarCollapsed ? "Expandir Menu" : "Recolher Menu"}
+            id="sidebar-toggle-btn"
+          >
+            {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto font-mono text-xs" id="nav-links">
-          <button onClick={() => setCurrentView('dashboard')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all cursor-pointer border ${currentView === 'dashboard' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 font-semibold' : 'text-neutral-400 border-transparent hover:bg-neutral-800/50 hover:text-neutral-200'}`}>
-            <LayoutDashboard size={16} /> <span>Dashboard</span>
-          </button>
-          <button onClick={() => setCurrentView('clients')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all cursor-pointer border ${currentView === 'clients' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 font-semibold' : 'text-neutral-400 border-transparent hover:bg-neutral-800/50 hover:text-neutral-200'}`}>
-            <Users size={16} /> <span>Clientes (CRM)</span>
-          </button>
-          <button onClick={() => setCurrentView('filaments')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all cursor-pointer border ${currentView === 'filaments' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 font-semibold' : 'text-neutral-400 border-transparent hover:bg-neutral-800/50 hover:text-neutral-200'}`}>
-            <Layers size={16} /> <span>Estoque Filamentos</span>
-          </button>
-          <button onClick={() => setCurrentView('purchases')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all cursor-pointer border ${currentView === 'purchases' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 font-semibold' : 'text-neutral-400 border-transparent hover:bg-neutral-800/50 hover:text-neutral-200'}`}>
-            <ShoppingBag size={16} /> <span>Compras Insumos</span>
-          </button>
-          <button onClick={() => setCurrentView('printers')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all cursor-pointer border ${currentView === 'printers' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 font-semibold' : 'text-neutral-400 border-transparent hover:bg-neutral-800/50 hover:text-neutral-200'}`}>
-            <Cpu size={16} /> <span>Impressoras</span>
-          </button>
-          <button onClick={() => setCurrentView('tariffs')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all cursor-pointer border ${currentView === 'tariffs' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 font-semibold' : 'text-neutral-400 border-transparent hover:bg-neutral-800/50 hover:text-neutral-200'}`}>
-            <Zap size={16} /> <span>Tarifa de Energia</span>
-          </button>
-          <button onClick={() => setCurrentView('products')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all cursor-pointer border ${currentView === 'products' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 font-semibold' : 'text-neutral-400 border-transparent hover:bg-neutral-800/50 hover:text-neutral-200'}`}>
-            <FolderHeart size={16} /> <span>Produtos / BOM</span>
-          </button>
-          <button onClick={() => setCurrentView('production')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all cursor-pointer border ${currentView === 'production' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 font-semibold' : 'text-neutral-400 border-transparent hover:bg-neutral-800/50 hover:text-neutral-200'}`}>
-            <PlayCircle size={16} /> <span>Produção (Fila)</span>
-          </button>
-          <button onClick={() => setCurrentView('budgets')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all cursor-pointer border ${currentView === 'budgets' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 font-semibold' : 'text-neutral-400 border-transparent hover:bg-neutral-800/50 hover:text-neutral-200'}`}>
-            <FileCheck size={16} /> <span>Orçamentos</span>
-          </button>
-          <button onClick={() => setCurrentView('sales')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all cursor-pointer border ${currentView === 'sales' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 font-semibold' : 'text-neutral-400 border-transparent hover:bg-neutral-800/50 hover:text-neutral-200'}`}>
-            <DollarSign size={16} /> <span>Vendas Realizadas</span>
-          </button>
-          <button onClick={() => setCurrentView('backup')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all cursor-pointer border ${currentView === 'backup' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 font-semibold' : 'text-neutral-400 border-transparent hover:bg-neutral-800/50 hover:text-neutral-200'}`}>
-            <Shield size={16} /> <span>Segurança / Backup</span>
-          </button>
+        {/* NAVIGATION LINKS */}
+        <nav className="flex-1 px-3 py-5 space-y-1 overflow-y-auto font-mono text-xs scrollbar-thin" id="nav-links">
+          {navItems.map(item => {
+            const Icon = item.icon;
+            const isActive = currentView === item.id;
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => setCurrentView(item.id)}
+                title={isSidebarCollapsed ? item.label : undefined}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer border ${
+                  isActive 
+                    ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-400 border-orange-500/40 font-bold shadow-lg shadow-orange-500/5' 
+                    : 'text-neutral-400 border-transparent hover:bg-neutral-800/60 hover:text-neutral-100 hover:border-neutral-700/50'
+                }`}
+                id={`nav-item-${item.id}`}
+              >
+                <Icon size={18} className={`shrink-0 ${isActive ? 'text-orange-400 animate-pulse' : 'text-neutral-400'}`} />
+                {!isSidebarCollapsed && (
+                  <span className="truncate text-xs tracking-wide font-medium">{item.label}</span>
+                )}
+              </button>
+            );
+          })}
         </nav>
 
-        <div className="p-4 border-t border-neutral-800" id="sidebar-footer">
-          <div className="flex items-center gap-3 bg-neutral-900/60 p-3 rounded-xl border border-neutral-800/60">
-            <div className="w-8 h-8 rounded-full bg-orange-600/15 border border-orange-500/25 flex items-center justify-center text-orange-500 text-xs font-bold uppercase shrink-0">
+        {/* FOOTER USER TENANT PROFILE */}
+        <div className="p-3 border-t border-neutral-800/80" id="sidebar-footer">
+          <div className={`flex items-center gap-3 bg-neutral-950/60 p-2.5 rounded-xl border border-neutral-800/80 ${isSidebarCollapsed ? 'justify-center' : ''}`}>
+            <div className="w-8 h-8 rounded-xl bg-orange-950/60 border border-orange-500/30 flex items-center justify-center text-orange-400 text-xs font-bold uppercase shrink-0">
               {auth.email ? auth.email[0] : 'A'}
             </div>
-            <div className="overflow-hidden flex-1 font-mono">
-              <p className="text-xs font-semibold text-neutral-200">Tenant Admin</p>
-              <p className="text-[10px] text-neutral-500 truncate" title={auth.email}>{auth.email}</p>
-            </div>
-            <button onClick={() => signOut()} className="flex items-center justify-center p-2 text-red-400 hover:text-red-300 hover:bg-red-950/30 rounded-lg transition-all cursor-pointer" title="Encerrar Sessão">
+            {!isSidebarCollapsed && (
+              <div className="overflow-hidden flex-1 font-mono">
+                <p className="text-xs font-semibold text-neutral-200 truncate">Tenant Admin</p>
+                <p className="text-[10px] text-neutral-500 truncate" title={auth.email}>{auth.email}</p>
+              </div>
+            )}
+            <button 
+              onClick={() => signOut()} 
+              className="flex items-center justify-center p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg transition-all cursor-pointer shrink-0" 
+              title="Encerrar Sessão"
+            >
               <LogOut size={16} />
             </button>
           </div>
         </div>
       </aside>
 
-      <main className="flex-1 bg-neutral-950 overflow-y-auto flex flex-col min-h-0" id="main-content-canvas">
-        <header className="px-8 py-4 border-b border-neutral-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-neutral-900/20" id="top-header">
-          <div>
-            <h2 className="text-[10px] font-mono uppercase text-neutral-500 tracking-wider font-semibold">Painel Administrador SaaS</h2>
-            <h1 className="text-base font-bold tracking-tight text-white mt-0.5">ELMANEKO 3D ERP - SaaS v2.0</h1>
+      {/* MAIN WORKSPACE CANVAS */}
+      <main className="flex-1 bg-neutral-950 overflow-y-auto flex flex-col min-h-0 relative" id="main-content-canvas">
+        {/* HEADER BAR HUD */}
+        <header className="px-6 py-4 border-b border-neutral-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-neutral-900/40 backdrop-blur-md sticky top-0 z-20" id="top-header">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="p-2 bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white rounded-xl transition-colors cursor-pointer md:hidden"
+            >
+              {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            </button>
+            <div>
+              <h2 className="text-[10px] font-mono uppercase text-neutral-400 tracking-widest font-semibold flex items-center gap-1.5">
+                <Sparkles size={11} className="text-orange-400" />
+                Painel Administrador SaaS
+              </h2>
+              <h1 className="text-sm font-bold tracking-tight text-white mt-0.5">ELMANEKO 3D ERP — Control Center</h1>
+            </div>
           </div>
 
           {lowStockFilaments.length > 0 ? (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-950/30 border border-amber-500/20 rounded-xl text-amber-400 text-xs font-mono">
-              <AlertTriangle size={15} className="text-amber-500 animate-pulse" />
-              <span>Aviso: <strong>{lowStockFilaments.length} bobina(s)</strong> abaixo de 200g!</span>
+            <div className="flex items-center gap-2 px-3.5 py-1.5 bg-amber-950/40 border border-amber-500/30 rounded-xl text-amber-300 text-xs font-mono shadow-lg shadow-amber-950/20">
+              <AlertTriangle size={15} className="text-amber-400 animate-bounce" />
+              <span>Aviso HUD: <strong className="text-amber-200">{lowStockFilaments.length} bobina(s)</strong> abaixo de 200g!</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-950/30 border border-emerald-500/10 rounded-xl text-emerald-400 text-xs font-mono">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
-              <span>Insumos estocados conformes</span>
+            <div className="flex items-center gap-2 px-3.5 py-1.5 bg-emerald-950/40 border border-emerald-500/20 rounded-xl text-emerald-300 text-xs font-mono">
+              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+              <span>Insumos & Impressoras operacionais</span>
             </div>
           )}
         </header>
 
-        <div className="flex-1 px-8 py-8" id="workspace-viewport">
+        {/* VIEWPORT CONTENT CONTAINER */}
+        <div className="flex-1 px-6 py-6" id="workspace-viewport">
           {currentView === 'dashboard' && <Dashboard />}
           {currentView === 'clients' && <Clients />}
           {currentView === 'filaments' && <Filaments />}

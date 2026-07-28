@@ -10,6 +10,21 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
+const DEFAULT_DEMO_EMPRESA_ID = "00000000-0000-0000-0000-000000000001";
+
+const getFallbackEmpresaId = (): string => {
+  try {
+    let savedId = localStorage.getItem('elmaneko_empresa_id');
+    if (!savedId) {
+      savedId = DEFAULT_DEMO_EMPRESA_ID;
+      localStorage.setItem('elmaneko_empresa_id', savedId);
+    }
+    return savedId;
+  } catch (e) {
+    return DEFAULT_DEMO_EMPRESA_ID;
+  }
+};
+
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
@@ -21,7 +36,7 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [empresaId, setEmpresaId] = useState<string | null>(null);
+  const [empresaId, setEmpresaId] = useState<string | null>(getFallbackEmpresaId());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         fetchEmpresaId(session.user.id);
       } else {
-        setLoading(false);
+        ensureEmpresaId();
       }
     });
 
@@ -43,8 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         fetchEmpresaId(session.user.id);
       } else {
-        setEmpresaId(null);
-        setLoading(false);
+        ensureEmpresaId();
       }
     });
 
@@ -57,13 +71,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('usuario_empresa')
         .select('empresa_id')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
       
-      if (!error && data) {
+      if (!error && data?.empresa_id) {
         setEmpresaId(data.empresa_id);
+        try { localStorage.setItem('elmaneko_empresa_id', data.empresa_id); } catch(e){}
+      } else {
+        await bootstrapUserCompany(userId);
       }
     } catch (err) {
       console.error("Erro ao buscar empresa:", err);
+      ensureEmpresaId();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const bootstrapUserCompany = async (userId: string) => {
+    try {
+      const { data: empList } = await supabase.from('empresas').select('id').limit(1);
+      let targetEmpresaId = empList && empList.length > 0 ? empList[0].id : null;
+
+      if (!targetEmpresaId) {
+        const { data: newEmp, error: createErr } = await supabase
+          .from('empresas')
+          .insert([{ nome: 'Empresa Principal' }])
+          .select()
+          .single();
+        if (!createErr && newEmp) {
+          targetEmpresaId = newEmp.id;
+        }
+      }
+
+      if (targetEmpresaId) {
+        await supabase
+          .from('usuario_empresa')
+          .insert([{ user_id: userId, empresa_id: targetEmpresaId, role: 'admin' }]);
+        setEmpresaId(targetEmpresaId);
+        try { localStorage.setItem('elmaneko_empresa_id', targetEmpresaId); } catch(e){}
+      } else {
+        ensureEmpresaId();
+      }
+    } catch (e) {
+      console.error("Erro ao vincular empresa ao usuário:", e);
+      ensureEmpresaId();
+    }
+  };
+
+  const ensureEmpresaId = async () => {
+    try {
+      const { data } = await supabase.from('empresas').select('id').limit(1);
+      if (data && data.length > 0) {
+        setEmpresaId(data[0].id);
+        try { localStorage.setItem('elmaneko_empresa_id', data[0].id); } catch(e){}
+      } else {
+        const fallback = getFallbackEmpresaId();
+        setEmpresaId(fallback);
+      }
+    } catch (e) {
+      const fallback = getFallbackEmpresaId();
+      setEmpresaId(fallback);
     } finally {
       setLoading(false);
     }

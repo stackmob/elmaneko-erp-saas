@@ -39,7 +39,7 @@ export default function Purchases() {
     }
 
     const newPurchase: Purchase = {
-      id: `pur-${Date.now()}`,
+      id: crypto.randomUUID(),
       data,
       fornecedor,
       filamentoId,
@@ -240,7 +240,6 @@ export default function Purchases() {
                   <input
                     type="text"
                     required
-                    placeholder="Ex: 3D Prime Comercial"
                     value={fornecedor}
                     onChange={(e) => setFornecedor(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -276,7 +275,6 @@ export default function Purchases() {
                   <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Número da Nota Fiscal (opcional)</label>
                   <input
                     type="text"
-                    placeholder="Ex: NF-2309 / Sem NF"
                     value={notaFiscal}
                     onChange={(e) => setNotaFiscal(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -286,7 +284,6 @@ export default function Purchases() {
                 <div className="col-span-2">
                   <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações</label>
                   <textarea
-                    placeholder="Informações adicionais sobre o lote, código de rastreio, condições do frete..."
                     value={observacoes}
                     onChange={(e) => setObservacoes(e.target.value)}
                     rows={2}

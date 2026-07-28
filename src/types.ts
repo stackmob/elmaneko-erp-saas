@@ -161,10 +161,10 @@ export interface BackupLog {
 export interface Client {
   id: string;
   nome: string;
-  cpfCnpj: string;
+  cpfCnpj?: string;    // opcional — não obrigatório para cadastro
   telefone: string;
   whatsapp: string;
-  email: string;
+  email?: string;      // opcional — não obrigatório para cadastro
   endereco: string;
   observacoes?: string;
 }
