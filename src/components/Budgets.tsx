@@ -9,12 +9,13 @@ import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
 
 export default function Budgets() {
-  const { useOrcamentos, useClientes, useProdutos, useFilamentos, useEmpresa, useAddOrcamento, useUpdateOrcamento, useDeleteOrcamento, useAddVenda } = useData();
+  const { useOrcamentos, useClientes, useProdutos, useFilamentos, useEmpresa, useAddOrcamento, useUpdateOrcamento, useDeleteOrcamento, useAddVenda, useVendas } = useData();
   const { data: budgets = [] } = useOrcamentos();
   const { data: clients = [] } = useClientes();
   const { data: products = [] } = useProdutos();
   const { data: filaments = [] } = useFilamentos();
   const { data: company } = useEmpresa();
+  const { data: sales = [] } = useVendas();
   const addMutation = useAddOrcamento();
   const editMutation = useUpdateOrcamento();
   const deleteMutation = useDeleteOrcamento();
@@ -30,6 +31,13 @@ export default function Budgets() {
   // Conversion to sale modal
   const [conversionBudget, setConversionBudget] = useState<Budget | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'Pix' | 'Cartão de Crédito' | 'Cartão de Débito' | 'Boleto' | 'Dinheiro'>('Pix');
+  const [isSubmittingSale, setIsSubmittingSale] = useState(false);
+
+  // Helper check if budget is already invoiced (status === Faturado or has associated Sale)
+  const isBudgetInvoiced = (b: Budget): boolean => {
+    if (b.status === 'Faturado') return true;
+    return sales.some(s => s.orcamentoOrigemId === b.id);
+  };
 
   // FORM FIELDS
   const [clienteId, setClienteId] = useState('');
@@ -169,27 +177,44 @@ export default function Budgets() {
 
   const handleConvertToSaleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!conversionBudget) return;
+    if (!conversionBudget || isSubmittingSale) return;
 
-    const novaVenda: Sale = {
-      id: crypto.randomUUID(),
-      numero: `VEN-2026-${String(Math.floor(Math.random() * 1000)).padStart(4, '0')}`,
-      dataVenda: new Date().toISOString().split('T')[0],
-      clienteId: conversionBudget.clienteId,
-      itens: conversionBudget.itens,
-      formaPagamento: paymentMethod,
-      valorTotal: calculateTotal(conversionBudget.itens, conversionBudget.descontoGeral),
-      statusPagamento: 'Pago',
-      orcamentoOrigemId: conversionBudget.id
-    };
+    if (isBudgetInvoiced(conversionBudget)) {
+      showToast(`O orçamento ${conversionBudget.numero} já foi faturado e não pode ser faturado novamente!`, 'error');
+      setConversionBudget(null);
+      return;
+    }
 
-    addVendaMutation.mutate(novaVenda);
-    editMutation.mutate({ ...conversionBudget, status: 'Faturado' });
-    setConversionBudget(null);
-    showToast(`Orçamento ${conversionBudget.numero} faturado com sucesso! Venda gerada.`, 'success');
+    setIsSubmittingSale(true);
+    try {
+      const novaVenda: Sale = {
+        id: crypto.randomUUID(),
+        numero: `VEN-2026-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
+        dataVenda: new Date().toISOString().split('T')[0],
+        clienteId: conversionBudget.clienteId,
+        itens: conversionBudget.itens,
+        formaPagamento: paymentMethod,
+        valorTotal: calculateTotal(conversionBudget.itens, conversionBudget.descontoGeral),
+        statusPagamento: 'Pago',
+        orcamentoOrigemId: conversionBudget.id
+      };
+
+      addVendaMutation.mutate(novaVenda);
+      editMutation.mutate({ ...conversionBudget, status: 'Faturado' });
+      setConversionBudget(null);
+      showToast(`Orçamento ${conversionBudget.numero} faturado com sucesso! Venda gerada.`, 'success');
+    } catch (err) {
+      showToast('Erro ao processar faturamento.', 'error');
+    } finally {
+      setIsSubmittingSale(false);
+    }
   };
 
   const handleApproveBudget = (b: Budget) => {
+    if (isBudgetInvoiced(b)) {
+      showToast(`O orçamento ${b.numero} já está faturado e não pode ser alterado.`, 'error');
+      return;
+    }
     editMutation.mutate({ ...b, status: 'Aprovado' });
     showToast(`Orçamento ${b.numero} marcado como Aprovado!`, 'success');
   };
@@ -253,6 +278,7 @@ export default function Budgets() {
                   const client = clients.find(c => c.id === b.clienteId);
                   const itemsCount = b.itens.reduce((acc, it) => acc + it.quantidade, 0);
                   const totalVal = calculateTotal(b.itens, b.descontoGeral);
+                  const invoiced = isBudgetInvoiced(b);
 
                   return (
                     <tr key={b.id} className="hover:bg-neutral-800/10 transition-colors" id={`row-budget-${b.id}`}>
@@ -274,18 +300,18 @@ export default function Budgets() {
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <span className={`px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-full ${
-                          b.status === 'Faturado' ? 'bg-purple-950/80 border border-purple-500/40 text-purple-300' :
+                          invoiced ? 'bg-purple-950/80 border border-purple-500/40 text-purple-300' :
                           b.status === 'Aprovado' ? 'bg-emerald-950/60 border border-emerald-500/20 text-emerald-400' :
                           b.status === 'Enviado' ? 'bg-blue-950/60 border border-blue-500/20 text-blue-400' :
                           b.status === 'Aberto' ? 'bg-orange-950/60 border border-orange-500/20 text-orange-400' :
                           b.status === 'Rejeitado' ? 'bg-red-950/60 border border-red-500/20 text-red-400' :
                           'bg-neutral-950 border border-neutral-800 text-neutral-500'
                         }`}>
-                          {b.status}
+                          {invoiced ? 'Faturado' : b.status}
                         </span>
                       </td>
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="flex items-center justify-center gap-1.5">
                           
                           {/* VIEW PDF */}
                           <button
@@ -307,8 +333,26 @@ export default function Budgets() {
                             <Share2 size={15} />
                           </button>
 
-                          {/* BOTÃO APROVAR (Se ainda não aprovado/faturado) */}
-                          {b.status !== 'Aprovado' && b.status !== 'Faturado' && (
+                          {/* FLUXO DE STATUS: APROVAR | APROVADO + FATURAR | FATURADO (BLOQUEADO) */}
+                          {invoiced ? (
+                            <span className="px-2 py-0.5 bg-purple-950/50 border border-purple-500/30 text-purple-300 font-mono font-bold text-[10px] rounded flex items-center gap-1 cursor-not-allowed" title="Orçamento Faturado — Bloqueado para novos faturamentos">
+                              <Check size={11} className="text-purple-400" /> Faturado
+                            </span>
+                          ) : b.status === 'Aprovado' ? (
+                            <div className="flex items-center gap-1">
+                              <span className="px-1.5 py-0.5 bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-mono font-bold text-[10px] rounded">
+                                Aprovado
+                              </span>
+                              <button
+                                onClick={() => setConversionBudget(b)}
+                                className="px-2 py-1 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono font-bold text-[10px] rounded flex items-center gap-0.5 cursor-pointer shadow-md shadow-orange-600/20 active:scale-95 transition-all"
+                                title="Faturar Orçamento (Gerar Venda)"
+                                id={`convert-btn-${b.id}`}
+                              >
+                                <DollarSign size={11} /> Faturar
+                              </button>
+                            </div>
+                          ) : (
                             <button
                               onClick={() => handleApproveBudget(b)}
                               className="px-2 py-1 bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-600 hover:text-white font-mono font-bold text-[10px] rounded flex items-center gap-0.5 transition-all cursor-pointer"
@@ -319,41 +363,27 @@ export default function Budgets() {
                             </button>
                           )}
 
-                          {/* BOTÃO FATURAR (Se aprovado) */}
-                          {b.status === 'Aprovado' && (
-                            <button
-                              onClick={() => setConversionBudget(b)}
-                              className="px-2 py-1 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono font-bold text-[10px] rounded flex items-center gap-0.5 cursor-pointer shadow-md shadow-orange-600/20"
-                              title="Faturar Orçamento (Gerar Venda)"
-                              id={`convert-btn-${b.id}`}
-                            >
-                              <DollarSign size={11} /> Faturar
-                            </button>
-                          )}
-
-                          {/* STATUS FATURADO (Não permite faturar novamente) */}
-                          {b.status === 'Faturado' && (
-                            <span className="px-2 py-0.5 bg-purple-950/40 border border-purple-500/30 text-purple-300 font-mono font-bold text-[10px] rounded flex items-center gap-1" title="Este orçamento já foi faturado">
-                              <Check size={11} /> Faturado
-                            </span>
-                          )}
-
                           {/* EDIT / DELETE */}
                           <button
                             onClick={() => handleOpenEditModal(b)}
                             className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded transition-colors cursor-pointer"
                             id={`edit-btn-${b.id}`}
+                            title="Editar Orçamento"
                           >
                             <Edit size={14} />
                           </button>
                           <button
                             onClick={() => {
-                              if (confirm(`Deseja excluir o orçamento ${b.numero}?`)) {
-                                deleteMutation.mutate(b.id);
+                              if (invoiced) {
+                                if (!confirm(`Este orçamento já está faturado com uma venda gerada. Deseja realmente excluí-lo?`)) return;
+                              } else {
+                                if (!confirm(`Deseja excluir o orçamento ${b.numero}?`)) return;
                               }
+                              deleteMutation.mutate(b.id);
                             }}
                             className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-red-500 rounded transition-colors cursor-pointer"
                             id={`delete-btn-${b.id}`}
+                            title="Excluir Orçamento"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -405,18 +435,24 @@ export default function Budgets() {
                 {/* Status */}
                 <div>
                   <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Situação da Proposta *</label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as Budget['status'])}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
-                  >
-                    <option value="Aberto">Aberto</option>
-                    <option value="Enviado">Enviado (Aguardando cliente)</option>
-                    <option value="Aprovado">Aprovado pelo Cliente</option>
-                    <option value="Faturado">Faturado (Venda Realizada)</option>
-                    <option value="Rejeitado">Rejeitado</option>
-                    <option value="Expirado">Expirado</option>
-                  </select>
+                  {editingBudget && isBudgetInvoiced(editingBudget) ? (
+                    <div className="px-3 py-2 bg-purple-950/40 border border-purple-800/60 text-purple-300 rounded-lg text-xs font-mono font-bold flex items-center gap-2">
+                      <Check size={14} className="text-purple-400" /> Faturado (Bloqueado para refaturamento)
+                    </div>
+                  ) : (
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as Budget['status'])}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+                    >
+                      <option value="Aberto">Aberto</option>
+                      <option value="Enviado">Enviado (Aguardando cliente)</option>
+                      <option value="Aprovado">Aprovado pelo Cliente</option>
+                      <option value="Faturado">Faturado (Venda Realizada)</option>
+                      <option value="Rejeitado">Rejeitado</option>
+                      <option value="Expirado">Expirado</option>
+                    </select>
+                  )}
                 </div>
 
                 {/* Datas */}
