@@ -41,15 +41,6 @@ export default function Sales() {
   const [maxValor, setMaxValor] = useState('');
   const [sortBy, setSortBy] = useState<'data_desc' | 'data_asc' | 'cliente_asc' | 'cliente_desc' | 'valor_desc' | 'valor_asc'>('data_desc');
 
-  // KPIS
-  const paidSales = sales.filter(s => s.statusPagamento === 'Pago');
-  const pendingSales = sales.filter(s => s.statusPagamento === 'Pendente');
-  const cancelledSales = sales.filter(s => s.statusPagamento === 'Cancelado');
-
-  const totalFaturadoVal = paidSales.reduce((acc, s) => acc + s.valorTotal, 0);
-  const totalPendenteVal = pendingSales.reduce((acc, s) => acc + s.valorTotal, 0);
-  const averageTicket = paidSales.length > 0 ? totalFaturadoVal / paidSales.length : 0;
-
   // Filter & Sort Sales list
   const filteredAndSortedSales = sales.filter(s => {
     const matchesClient = filterClient === 'todos' || s.clienteId === filterClient;
@@ -82,6 +73,15 @@ export default function Sales() {
         return b.dataVenda.localeCompare(a.dataVenda);
     }
   });
+
+  // KPIS TOTALIZED ON FILTERED SALES
+  const paidSales = filteredAndSortedSales.filter(s => s.statusPagamento === 'Pago');
+  const pendingSales = filteredAndSortedSales.filter(s => s.statusPagamento === 'Pendente');
+  const cancelledSales = filteredAndSortedSales.filter(s => s.statusPagamento === 'Cancelado');
+
+  const totalFaturadoVal = paidSales.reduce((acc, s) => acc + s.valorTotal, 0);
+  const totalPendenteVal = pendingSales.reduce((acc, s) => acc + s.valorTotal, 0);
+  const averageTicket = paidSales.length > 0 ? totalFaturadoVal / paidSales.length : 0;
 
   const handleDeleteSale = (s: Sale) => {
     if (confirm(`Deseja realmente excluir a venda ${s.numero}? O orçamento de origem voltará a ficar PENDENTE.`)) {
