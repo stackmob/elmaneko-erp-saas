@@ -1,0 +1,2468 @@
+{
+  
+  "filamentos": [
+    {
+      "id": "FIL-0CBB8Y7",
+      "nome": "PLA High Speed",
+      "tipo": "PLA",
+      "marca": "Prime 3D",
+      "cor": "Army Green",
+      "pesoTotal": 1000,
+      "quantDisponivel": 0,
+      "valorCompra": 123,
+      "dataCompra": "2026-06-25",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "Caixa plástica, dentro de saco a vácuo, e pode de sílica"
+    },
+    {
+      "id": "FIL-5QWJH9A",
+      "nome": "Petg Color White",
+      "tipo": "PETG",
+      "marca": "Master Print",
+      "cor": "Branco",
+      "pesoTotal": 1000,
+      "quantDisponivel": 0,
+      "valorCompra": 99.9,
+      "dataCompra": "2026-06-25",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "saco a vácuo, com pode de silica"
+    },
+    {
+      "id": "FIL-FR162L2",
+      "nome": "PETG Branco Translucido",
+      "tipo": "PETG",
+      "marca": "Master Print",
+      "cor": "Branco Translúcido",
+      "pesoTotal": 1000,
+      "quantDisponivel": 186,
+      "valorCompra": 99,
+      "dataCompra": "2026-06-25",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "saco a vácuo, caixa plástica, pote de sílica"
+    },
+    {
+      "id": "FIL-BS7ZEXU",
+      "nome": "Petg Color White",
+      "tipo": "PETG",
+      "marca": "Master Print",
+      "cor": "Branco",
+      "pesoTotal": 1000,
+      "quantDisponivel": 1000,
+      "valorCompra": 99.9,
+      "dataCompra": "2026-06-25",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "Caixa Plástica, saco a vácuo, pote de sílica"
+    },
+    {
+      "id": "FIL-423JBQT",
+      "nome": "ABS Premium Filamento 3D",
+      "tipo": "ABS",
+      "marca": "Master Print",
+      "cor": "Vermelho/Rojo",
+      "pesoTotal": 1000,
+      "quantDisponivel": 1000,
+      "valorCompra": 89.9,
+      "dataCompra": "2026-06-25",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "Caixa Plástica, saco a vácuo, pote de sílica"
+    },
+    {
+      "id": "FIL-NH2D1CT",
+      "nome": "PLA Red",
+      "tipo": "PLA",
+      "marca": "Creality",
+      "cor": "Vermelho",
+      "pesoTotal": 1000,
+      "quantDisponivel": 611,
+      "valorCompra": 109,
+      "dataCompra": "2026-06-25",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "Caixa Plástica, saco a vácuo, pote de sílica"
+    },
+    {
+      "id": "FIL-XA01XSA",
+      "nome": "PLA Elegoo",
+      "tipo": "PLA",
+      "marca": "3D Printer Filament Elegoo",
+      "cor": "Marrom",
+      "pesoTotal": 1000,
+      "quantDisponivel": 1000,
+      "valorCompra": 114.9,
+      "dataCompra": "2026-06-25",
+      "fornecedor": "Elegoo",
+      "observacoes": "Caixa Plástica, saco a vácuo, pote de sílica"
+    },
+    {
+      "id": "FIL-FZXT9AU",
+      "nome": "pla Hyper Speed",
+      "tipo": "PLA",
+      "marca": "Master Print",
+      "cor": "Bronze",
+      "pesoTotal": 1000,
+      "quantDisponivel": 100,
+      "valorCompra": 119.9,
+      "dataCompra": "2026-06-25",
+      "fornecedor": "Mercado Livre",
+      "observacoes": ""
+    },
+    {
+      "id": "FIL-2OSWJ5Q",
+      "nome": "Petg Red",
+      "tipo": "PETG",
+      "marca": "Master Print",
+      "cor": "vermelho",
+      "pesoTotal": 1000,
+      "quantDisponivel": 900,
+      "valorCompra": 109,
+      "dataCompra": "2026-06-25",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "Caixa Plástica, saco a vácuo, pote de sílica"
+    },
+    {
+      "id": "FIL-Q9XX4XM",
+      "nome": "Petg Skin",
+      "tipo": "PETG",
+      "marca": "Master Print",
+      "cor": "cor da pele",
+      "pesoTotal": 1000,
+      "quantDisponivel": 800,
+      "valorCompra": 98.9,
+      "dataCompra": "2026-06-25",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "Caixa plástica, saco a vácuo, pote de sílica"
+    },
+    {
+      "id": "FIL-7MAKZ77",
+      "nome": "EN PLA Blue",
+      "tipo": "PLA",
+      "marca": "Creality",
+      "cor": "Azul",
+      "pesoTotal": 1000,
+      "quantDisponivel": 900,
+      "valorCompra": 138.95,
+      "dataCompra": "2026-06-25",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "Caixa plástica, saco a vácuo, pote de sílica"
+    },
+    {
+      "id": "FIL-63TVGEJ",
+      "nome": "PLA basic bringht yellow",
+      "tipo": "PLA",
+      "marca": "Onyon3d",
+      "cor": "amarelo",
+      "pesoTotal": 1000,
+      "quantDisponivel": 200,
+      "valorCompra": 99.52,
+      "dataCompra": "2026-06-28",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "saco a vácuo, caixa plástica, pote de sílica. "
+    },
+    {
+      "id": "FIL-C5AH10A",
+      "nome": "Pla  Speed Premium",
+      "tipo": "PLA",
+      "marca": "3D LAB",
+      "cor": "Areia",
+      "pesoTotal": 1000,
+      "quantDisponivel": 1000,
+      "valorCompra": 144.9,
+      "dataCompra": "2026-06-30",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "saco a vácuo, caixa plástica e pote de sílica"
+    },
+    {
+      "id": "FIL-7KH0Y3L",
+      "nome": "EN PLA BLACK",
+      "tipo": "PLA",
+      "marca": "Creality",
+      "cor": "Preto",
+      "pesoTotal": 1000,
+      "quantDisponivel": 500,
+      "valorCompra": 128.9,
+      "dataCompra": "2026-07-03",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "caixa plástica, pote de sílica, saco a vácuo"
+    },
+    {
+      "id": "FIL-QJA8P1Y",
+      "nome": "PLA V Silk PREMIUM",
+      "tipo": "PLA",
+      "marca": "Premium",
+      "cor": "Tri color dourado/rosa choque/verde",
+      "pesoTotal": 1000,
+      "quantDisponivel": 2000,
+      "valorCompra": 124.9,
+      "dataCompra": "2026-07-10",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "caixa plástica, saco a vácuo/ pote de sílica"
+    },
+    {
+      "id": "FIL-TSFFZV2",
+      "nome": "Filamento Pla Tri Azulsafira/dourado/verde Vsilk 1kg Voolt3d",
+      "tipo": "PLA",
+      "marca": "Voolt3d",
+      "cor": "azul, dourado e verde",
+      "pesoTotal": 1000,
+      "quantDisponivel": 1000,
+      "valorCompra": 140,
+      "dataCompra": "2026-07-17",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "caixa plástica, pote sílica e saco a vácuo\n"
+    },
+    {
+      "id": "FIL-IAAP60X",
+      "nome": "EN PLA White",
+      "tipo": "PLA",
+      "marca": "Creality",
+      "cor": "Branco",
+      "pesoTotal": 1000,
+      "quantDisponivel": 200,
+      "valorCompra": 139.9,
+      "dataCompra": "2026-07-20",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "Caixa Plástica, pote de Sílica, saco a vácuo"
+    },
+    {
+      "id": "FIL-YRFVHCS",
+      "nome": "PLA V-SILK PREMIUM",
+      "tipo": "PLA",
+      "marca": "Voolt3d",
+      "cor": "Dourado",
+      "pesoTotal": 1000,
+      "quantDisponivel": 1000,
+      "valorCompra": 119.9,
+      "dataCompra": "2026-07-20",
+      "fornecedor": "Mercado Livre",
+      "observacoes": "caixa plástica, pote de sílica, saco vácuo"
+    }
+  ],
+  "impressoras": [
+    {
+      "id": "IMP-YZE6J80",
+      "nome": "Bambu Lab A1",
+      "marca": "Bambu Lab",
+      "modelo": "A1",
+      "potenciaWatts": 350,
+      "status": "ativa"
+    }
+  ],
+  "tarifas": [
+    {
+      "id": "TAR-WRDOTZY",
+      "dataInicio": "2026-07-08",
+      "valorKwh": 1.2
+    }
+  ],
+  "clientes": [
+    {
+      "id": "CLI-GCQK1M7",
+      "nome": "Aline Helena Alves Braga",
+      "cpfCnpj": "04753904660",
+      "telefone": "34998642398",
+      "whatsapp": "5534998642398",
+      "email": "aninhappt@gmail.com",
+      "endereco": "",
+      "observacoes": "Retirada no local"
+    },
+    {
+      "id": "CLI-912IJWZ",
+      "nome": "Neide Vaz",
+      "cpfCnpj": "04753904660",
+      "telefone": "34997827250",
+      "whatsapp": "5534997827250",
+      "email": "aninhappt@gmail.com",
+      "endereco": "",
+      "observacoes": ""
+    },
+    {
+      "id": "CLI-TANDREO",
+      "nome": "Ezequiel Naves",
+      "cpfCnpj": "04753904660",
+      "telefone": "34997646496",
+      "whatsapp": "5534997646496",
+      "email": "aninhappt@gmail.com",
+      "endereco": "",
+      "observacoes": "Colega da Hadassa"
+    },
+    {
+      "id": "CLI-4SOVQG6",
+      "nome": "Sara Beatriz",
+      "cpfCnpj": "04753904660",
+      "telefone": "34991075683",
+      "whatsapp": "5534991075683",
+      "email": "aninhappt@gmail.com",
+      "endereco": "",
+      "observacoes": "entregar"
+    },
+    {
+      "id": "CLI-H3FNPUD",
+      "nome": "Flavia Cristina Alves",
+      "cpfCnpj": "04753904660",
+      "telefone": "34991933569",
+      "whatsapp": "5534991933569",
+      "email": "aninhappt@gmail.com",
+      "endereco": "",
+      "observacoes": "Irma da Aline"
+    },
+    {
+      "id": "CLI-5KVC43B",
+      "nome": "Vitoria Neres- colega da Sara",
+      "cpfCnpj": "04753904660",
+      "telefone": "34991933569",
+      "whatsapp": "5534991933569",
+      "email": "aninhappt@gmail.com",
+      "endereco": "",
+      "observacoes": "colega de trabalho da Sara Beatriz - sobrinha"
+    },
+    {
+      "id": "CLI-MZG0ARB",
+      "nome": "Angela Aparecida Braga",
+      "cpfCnpj": "04753904660",
+      "telefone": "34991933569",
+      "whatsapp": "5534991933569",
+      "email": "aninhappt@gmail.com",
+      "endereco": "Cunhada",
+      "observacoes": ""
+    },
+    {
+      "id": "CLI-XVDNIZ5",
+      "nome": "Nathalia -Neide",
+      "cpfCnpj": "04753904660",
+      "telefone": "34991933569",
+      "whatsapp": "5534991933569",
+      "email": "aninhappt@gmail.com",
+      "endereco": "",
+      "observacoes": "suporte para bottons"
+    },
+    {
+      "id": "CLI-GHS2ZVN",
+      "nome": "Leticia- amiga da Hadassa",
+      "cpfCnpj": "04753904660",
+      "telefone": "34991933569",
+      "whatsapp": "5534991933569",
+      "email": "aninhappt@gmail.com",
+      "endereco": "",
+      "observacoes": "amiga da Hadassa escola"
+    },
+    {
+      "id": "CLI-N1L2RE5",
+      "nome": "Emilly- amiga da Hadassa",
+      "cpfCnpj": "04753904660",
+      "telefone": "34991933569",
+      "whatsapp": "5534991933569",
+      "email": "aninhappt@gmail.com",
+      "endereco": "",
+      "observacoes": "amiga da Hadassa escola"
+    },
+    {
+      "id": "CLI-DNGEK31",
+      "nome": "Emanuelle Medeiros- Amiga do Henry",
+      "cpfCnpj": "04753904660",
+      "telefone": "34991933569",
+      "whatsapp": "5534991933569",
+      "email": "aninhappt@gmail.com",
+      "endereco": "",
+      "observacoes": "Amiga do Henry de escola"
+    },
+    {
+      "id": "CLI-BNS0K24",
+      "nome": "Amigo de Trabalho do Wellington",
+      "cpfCnpj": "04753904660",
+      "telefone": "34991933569",
+      "whatsapp": "5534991933569",
+      "email": "aninhappt@gmail.com",
+      "endereco": "",
+      "observacoes": "Amigo de trabalho do Wellington"
+    },
+    {
+      "id": "CLI-S5QQXUD",
+      "nome": "Victor / colega de trabalho do Wellington",
+      "cpfCnpj": "04753904660",
+      "telefone": "34991933569",
+      "whatsapp": "5534991933569",
+      "email": "aninhappt@gmail.com",
+      "endereco": "",
+      "observacoes": ""
+    },
+    {
+      "id": "CLI-BFPYALW",
+      "nome": "Everson Perez Teixeira",
+      "cpfCnpj": "04753904660",
+      "telefone": "34991933569",
+      "whatsapp": "5534991933569",
+      "email": "aninhappt@gmail.com",
+      "endereco": "",
+      "observacoes": ""
+    }
+  ],
+  "produtos": [
+    {
+      "id": "PRD-GENAY5S",
+      "nome": "Empunhadura para Raspador Bambu",
+      "categoria": "Suporte",
+      "descricao": "0.2mm layer, 20%+15% infill, walls OPTIMIZED 6+2",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 2.2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 42
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-D5USHPV",
+      "nome": "Suporte superior AMS Lite para Bambu Lab A1",
+      "categoria": "Suporte",
+      "descricao": "AMS Lite top mount (Update v1.1)",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 7,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 148
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-IV0F9AB",
+      "nome": "Chaveiros Smiley Daisy — Clicker Fidget",
+      "categoria": "Lembrancinha",
+      "descricao": "0.2mm layer, 3 walls, 15% infill",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 1.1,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 18
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-WZC2E72",
+      "nome": "Chaveiros Smiley Daisy — Clicker Fidget",
+      "categoria": "Lembrancinha",
+      "descricao": "0.2mm layer, 3 walls, 15% infill",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 0.2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 5
+        }
+      ],
+      "maoDeObraValor": 15,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-SUL8EO4",
+      "nome": "Gabinete Definitivo para Bobinas de Filamento - TIPO 01",
+      "categoria": "Suporte",
+      "descricao": "Latest version",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 16,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 404
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-ONCBF3G",
+      "nome": "Gabinete Definitivo para Bobinas de Filamento - TIPO 01",
+      "categoria": "Suporte",
+      "descricao": "Latest version",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 15,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 204
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-LKED8NE",
+      "nome": "Gabinete Definitivo para Bobinas de Filamento - TIPO 01",
+      "categoria": "Suporte",
+      "descricao": "Latest version",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 3,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 54
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-VT3QSSO",
+      "nome": "Gabinete Definitivo para Bobinas de Filamento - TIPO 01",
+      "categoria": "Suporte",
+      "descricao": "Latest version",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 3,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 48
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-NQM6OW9",
+      "nome": "Gabinete Definitivo para Bobinas de Filamento - TIPO 01",
+      "categoria": "Suporte",
+      "descricao": "Latest version",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 2.2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 36
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-LIJBJPL",
+      "nome": "Gabinete Definitivo para Bobinas de Filamento - TIPO 01",
+      "categoria": "Suporte",
+      "descricao": "Latest version",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 2.3,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 36
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-H9X1ZAZ",
+      "nome": "Chaveiros Smiley Daisy — Clicker Fidget",
+      "categoria": "Lembrancinha",
+      "descricao": "0.2mm layer, 3 walls, 15% infill",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 9.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 196
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-3WOJZ78",
+      "nome": "Chaveiros Smiley Daisy — Clicker Fidget",
+      "categoria": "Lembrancinha",
+      "descricao": "0.2mm layer, 3 walls, 15% infill",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 3.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 55
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-P74B9UO",
+      "nome": "A Base Impossível para Laptop v2 - Serve no A1 Mini!",
+      "categoria": "Suporte",
+      "descricao": "Fast - Stand with no cutout for TPU foot",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 6.2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 168
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-JJ08LG0",
+      "nome": "Suporte para Garrafas de Vinho",
+      "categoria": "Decoração",
+      "descricao": "0.8mm nozzle, 0.4mm layer, 2 walls, 5% infill",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 6.3,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 320
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-FUAGJ64",
+      "nome": "Um pequeno dragão branco",
+      "categoria": "Brinquedo",
+      "descricao": "Standard，42cm in length，0.2mm layer, 2 walls, 15% infill",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 3.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 40
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-IDHC6W8",
+      "nome": "Meu design de fidget de 10 estrelas",
+      "categoria": "Brinquedo",
+      "descricao": "0.24mm layer, 1 walls, 10% infill, 2 colors, both sides",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 3,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 90
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-JNQRU8F",
+      "nome": "Estátua do Homem-Aranha Noir | Base de Fan Art com Alto Detalhe",
+      "categoria": "Brinquedo",
+      "descricao": "0.2mm layer, 2 walls, 15% infill",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 5.2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 75
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-F1IDO5H",
+      "nome": "Suporte para taças de vinho | Opções para 2, 3 ou 4 taças",
+      "categoria": "Decoração",
+      "descricao": "Fast print!",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 1,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 35
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-QGUA613",
+      "nome": "logo Zaya",
+      "categoria": "Decoração",
+      "descricao": "Placa1",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 0.2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 2
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-NQ2Z96Y",
+      "nome": "Caixa de Cartões",
+      "categoria": "Brinquedo",
+      "descricao": "Standard 0.2mm V2",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 3.3,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 88
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-2STYYWV",
+      "nome": "Suporte Triplo para Vinhos",
+      "categoria": "Decoração",
+      "descricao": "0.28mm layer, 3 walls, 6% infill",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 4.7,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 191
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-IW4R39O",
+      "nome": "Recipiente - gel de sílica",
+      "categoria": "Suporte",
+      "descricao": "0.2mm layer, 2 walls, 15% infill",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 4.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 61
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-2RAKTFE",
+      "nome": "Bandeja Prato Tigela Oval Contorno V5 - Design Japandi",
+      "categoria": "Decoração",
+      "descricao": "Medium Plate Tray oval Bowl Contour V5 - Japandi Design",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 3.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 98
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-XF9RZCA",
+      "nome": "Suporte de Taças de Vinho Montado na Garrafa – 6 Taças",
+      "categoria": "Decoração",
+      "descricao": "6 glasses version , 1-piece, print & enjoy (A1 & up)",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 1.9,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 52
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-6A4DKIS",
+      "nome": "Homem-Aranha / SEM AMS / COMPATÍVEL COM AMS",
+      "categoria": "Brinquedo",
+      "descricao": "NO AMS NEED MULTIPART",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 0.2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 1
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-6UU0O1G",
+      "nome": "Homem-Aranha / SEM AMS / COMPATÍVEL COM AMS",
+      "categoria": "Brinquedo",
+      "descricao": "NO AMS NEED MULTIPART",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 4,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 100
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-5V5DGRZ",
+      "nome": "Homem-Aranha / SEM AMS / COMPATÍVEL COM AMS",
+      "categoria": "Brinquedo",
+      "descricao": "NO AMS NEED MULTIPART",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 0.1,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 1
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-VIJTOPL",
+      "nome": "Homem-Aranha / SEM AMS / COMPATÍVEL COM AMS",
+      "categoria": "Brinquedo",
+      "descricao": "NO AMS NEED MULTIPART",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 4.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 109
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-NPX75VZ",
+      "nome": "Bandeja com Borda de Corda - Decoração de Luxo Minimalista",
+      "categoria": "Decoração",
+      "descricao": "0.2mm layer, 2 walls, 5% infill",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 2.9,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 100
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-S9NFBW1",
+      "nome": "Porta-Velas Zen \"Flor de Lótus\"",
+      "categoria": "Decoração",
+      "descricao": "0.2mm layer, 2 walls, 5% infill",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 1
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-SUZG2VH",
+      "nome": "Girador Estrela de Engrenagem Planetária – Fidget Sensorial",
+      "categoria": "Brinquedo",
+      "descricao": "0.2mm layer, 2 walls, 15% infill",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 3.1,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 38
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-GM175BY",
+      "nome": "Vaso de Planta Canelado Moderno Japandi com drenagem",
+      "categoria": "Decoração",
+      "descricao": "Planter for Baby Plant - inner diameter 6,7 cm",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 3.6,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 73
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-LNSZOBA",
+      "nome": "Letreiro Bíblico Ore e Confie",
+      "categoria": "Decoração",
+      "descricao": "0.2mm layer, 2 walls, 8% infill/ ",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 5.6,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 124
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 0
+    },
+    {
+      "id": "PRD-2FBU9XR",
+      "nome": "Prateleira de Parede e Porta-Chaves ArchLine",
+      "categoria": "Decoração",
+      "descricao": "valor de venda 40,00",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 8.6,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 190
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-8RGWCBR",
+      "nome": "Suporte para vinho cobra",
+      "categoria": "Decoração",
+      "descricao": "",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 11.2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 445
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-V1NWKDW",
+      "nome": "torção fidget dançarino estelar",
+      "categoria": "Brinquedo",
+      "descricao": "",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 3,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 100
+        }
+      ],
+      "maoDeObraValor": 0,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-DJ473TB",
+      "nome": " Pikachu / NO AMS",
+      "categoria": "Brinquedo",
+      "descricao": "",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 7,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 217
+        }
+      ],
+      "maoDeObraValor": 10,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-MS2ZLHD",
+      "nome": "Shadow Sombra — Clássico",
+      "categoria": "Brinquedo",
+      "descricao": "",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 5.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 86
+        }
+      ],
+      "maoDeObraValor": 15,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-WEF15HJ",
+      "nome": "Dragonair – Modelo em Várias Partes (Não Requer AMS",
+      "categoria": "Brinquedo",
+      "descricao": "",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 9.9,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 120
+        }
+      ],
+      "maoDeObraValor": 15,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-LQNHSJP",
+      "nome": "MONSTER ENERGY PORTA-LATA",
+      "categoria": "suporte de latinha monster, completo tampa e chaveiro",
+      "descricao": "",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 7.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 198
+        }
+      ],
+      "maoDeObraValor": 15,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-9BMOJIQ",
+      "nome": "MONSTER ENERGY PORTA-LATA DE FELPA",
+      "categoria": "Suporte lata Monster Moleton",
+      "descricao": "",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 9.4,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 198
+        }
+      ],
+      "maoDeObraValor": 10,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-WZC9RIV",
+      "nome": "chaveiro Monster",
+      "categoria": "Suporte",
+      "descricao": "",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 0.2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 1
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-PKY5ROK",
+      "nome": "Blobtopus - Polvo Articulado Grudento e Torcido",
+      "categoria": "Brinquedo",
+      "descricao": "No-AMS / Multipart Version/ 34,90 COR SOLIDA E 39,90 COLORIDO",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 6.6,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 84
+        }
+      ],
+      "maoDeObraValor": 10,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-UOQL1BY",
+      "nome": "Homem-Aranha / SEM AMS / COMPATÍVEL COM AMS",
+      "categoria": "Brinquedo",
+      "descricao": "",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 7.7,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 240
+        }
+      ],
+      "maoDeObraValor": 10,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-FQ1RBWK",
+      "nome": "Fofo chaveiro articulado do Banguela Fúria da Noite",
+      "categoria": "chaveiro Articulado Banguela",
+      "descricao": "chaveiro Articulado Banguela / valor de venda 18,90",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 1.4,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 19
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-S2EYB7O",
+      "nome": "Chaveiro de Dragão Fúria da Luz Articulado",
+      "categoria": "chaveiro Articulado namorada do Banguela",
+      "descricao": "chaveiro da namorada do banguela/ valor de venda 14,90",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 1.4,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 16
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-D83UQRU",
+      "nome": "Chaveiro Pokébola",
+      "categoria": "chaveiro Chaveiro Pokébola",
+      "descricao": "Chaveiro Pokébola/ valor de venda 15,90",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 1,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 18
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-A26NYB5",
+      "nome": "Coleção de Clickers de Pokebola, AMS ",
+      "categoria": "chaveiro pokebola de click",
+      "descricao": "Coleção de Clickers de Pokebola, AMS / chaveiro click/ valor de venda 19,90",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 1.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 17
+        }
+      ],
+      "maoDeObraValor": 10,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-CW8FNYC",
+      "nome": "Abridor de Latas de Botão 32MM",
+      "categoria": "chaveiro botton",
+      "descricao": "0.2mm camada, 2 paredes, 15% de preenchimento/ VALOR DE VENDA 3.50",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 0.2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 1
+        }
+      ],
+      "maoDeObraValor": 2,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-12T0Q6Z",
+      "nome": " CHAVEIRO GIRATÓRIO ALL BLACKS",
+      "categoria": "chaveiro giratorio bottons",
+      "descricao": "0.2mm de camada, 3 paredes, 10% de preenchimento/ valor de venda 11,90\n\n",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 0.3,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 10
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-3QKMHEE",
+      "nome": "Virgem Maria Minimalista (Q_Craft)",
+      "categoria": "Decoração",
+      "descricao": "0.16mm camada, 3 paredes, 15% de preenchimento/ preço informado 29,90\n",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 2.3,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 41
+        }
+      ],
+      "maoDeObraValor": 10,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-3IDXT7N",
+      "nome": "Ornamento da Sagrada Família em Oração",
+      "categoria": "Decoração",
+      "descricao": "0.2mm camada, 2 paredes, 15% de preenchimento\n",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 13,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 500
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-TYRULPD",
+      "nome": "Crucifixo com suporte",
+      "categoria": "Decoração Crucifixo",
+      "descricao": "Chris1974/ informado preco de venda 34,90\n",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 4,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 120
+        }
+      ],
+      "maoDeObraValor": 9,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-351FHZP",
+      "nome": "Sagrada Família",
+      "categoria": "decoracao sagrada familia com suporte de pe e em S",
+      "descricao": "0.2mm camada, 2 paredes, 15% de preenchimento/ Informado preço de venda 50,00\n",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 3.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 80
+        }
+      ],
+      "maoDeObraValor": 15,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-RU8CPRQ",
+      "nome": "Leque stray kids Coleção de personagens",
+      "categoria": "Brinquedo",
+      "descricao": "straykids leque - 0.12mm camada, 3 paredes, 100% preenchimento/ valor de venda 25,90\n",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 5.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 65
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-38S364T",
+      "nome": "Chaveiro de Casa com porta-foto ou mensagem",
+      "categoria": "chaveiro botton",
+      "descricao": "0.16mm camada, 2 paredes, 15% de preenchimento/ valor de venda 15,90\n",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 1.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 15
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-XUTTR1U",
+      "nome": "Chaveiro Polaroid / Instax - (Sem cola / Suportes)",
+      "categoria": "chaveiro para foto personalizado",
+      "descricao": "0.2mm camada, 2 paredes, 15% de preenchimento/ valor de venda 19,90\n",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 0.4,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 20
+        }
+      ],
+      "maoDeObraValor": 10,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-WQUVB7L",
+      "nome": "Fidget de Ovo de Dragão Texturizado e Giratório",
+      "categoria": "Brinquedo/ Ovo de Dragão",
+      "descricao": "1 Ovo de Dragão Escamado Torcido Texturizado Anti-Estresse/ valor de venda 32,00\n",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 8,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PETG",
+          "quantidadeG": 116
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-3JPJI1O",
+      "nome": "rato cego personagem shrek",
+      "categoria": "Brinquedo",
+      "descricao": "rato cego personagem shrek/ STL salvo na pasta D, Elmaneko ",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 14
+        }
+      ],
+      "maoDeObraValor": 3,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-6BHBQ18",
+      "nome": "Torre de Rabanetes de Balé 2",
+      "categoria": "Brinquedo",
+      "descricao": "Altura da camada de 0.16mm, 2 paredes, 15% de preenchimento - Valor de venda 39,90",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 100
+        }
+      ],
+      "maoDeObraValor": 10,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-127I9H2",
+      "nome": "Boneco famale figure",
+      "categoria": "Brinquedo",
+      "descricao": "valor de venda com uma cor 13,90",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 1.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 20
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-8PB8UPP",
+      "nome": "Caixa para Dois Baralhos de Cartas - Edição Snaplock",
+      "categoria": "Brinquedo",
+      "descricao": "Esta é uma caixa com fecho tipo snaplock que comporta dois baralhos de cartas de bicicleta.\nPreco de venda 42,90",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 4.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 145
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-U73F1K8",
+      "nome": "Chaveiro Esqueleto Flexível Sorridente",
+      "categoria": "CHAVEIRO",
+      "descricao": "Chaveiro Esqueleto Flexível Sorridente/ Valor de venda 12,90",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 0.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 12
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-UW6NBTK",
+      "nome": "Kimono taekwondo",
+      "categoria": "CHAVEIRO",
+      "descricao": "CHAVEIRO Kimono taekwondo/ VALOR DE VENDA 16,90",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 1.2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 30
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-PGJABQN",
+      "nome": "Chaveiro raposa click",
+      "categoria": "chaveiro click",
+      "descricao": "Raposa - Coleção Animais Apaixonados/ valor 15,90",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 1.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 30
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-HNM9PEG",
+      "nome": "Aparador de livros Leão e Cruz",
+      "categoria": "Aparador de Livros",
+      "descricao": "Aparador de livros Leão e Cruz/ valor de venda 49,00",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 10.4,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 172
+        }
+      ],
+      "maoDeObraValor": 3,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-O6J3HR7",
+      "nome": "Expositor de chaveiros - Porta-chaveiros",
+      "categoria": "Suporte",
+      "descricao": "10 galhos/ 0.2mm layer, 3 walls, 15% infill/ valor de venda 32,90",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 4,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 100
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-DWF8J4M",
+      "nome": "Suporte de Exibição para Chaveiros",
+      "categoria": "Suporte",
+      "descricao": "com 4 galhos/FAST PRINT (0.28mm layer, 2 walls, 15% infill)/ valor de venda 25,90",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 60
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-GSG2CNM",
+      "nome": "Jogo de Equilíbrio Dinossauro",
+      "categoria": "Brinquedo",
+      "descricao": "A1 mini,X1,X1 Carbon,X1E,H2D,P1S,P1P,A1,H2D Pro,H2S,P2S,H2C,X2D,A2L/ brinquedo de equilíbrio/ valor de venda 29,90\n",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 4.2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 90
+        }
+      ],
+      "maoDeObraValor": 5,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-L0U1REO",
+      "nome": "Cacho de Uva",
+      "categoria": "Decoração",
+      "descricao": "Uvas - Fruta Falsa - Decoração/A1 mini,X1,H2S,A1,X1E,X1 Carbon,P1S,P2S,H2D Pro,H2D,P1P,X2D,H2C,A2L/ valor de venda 19,90\n",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 3.2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 51
+        }
+      ],
+      "maoDeObraValor": 4,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-DLN2KKR",
+      "nome": "Folha para o cacho de uva",
+      "categoria": "Decoração",
+      "descricao": "Galho de Videira 3D ou Videira Flexível/0.16mm camada, 2 paredes, 15% de preenchimento/ valor de venda  5,00\n",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 0.1,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 1
+        }
+      ],
+      "maoDeObraValor": 3,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-BDSTJJC",
+      "nome": "Pão Redondo Miniatura",
+      "categoria": "Decoração",
+      "descricao": "Bico de 0,2 mm, camada de 0,1 mm, 4 paredes, 15% de preenchimento/ valor de venda 30,90\n",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 4,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 100
+        }
+      ],
+      "maoDeObraValor": 4,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-91CBL3N",
+      "nome": "Letreiro Ele Vive",
+      "categoria": "Decoração",
+      "descricao": "Letreiro Ele Vive _ 0.2mm layer, 2 walls, 15% infill/ valor de venda sem a bandeija 30,9\n",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 3.5,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 125
+        }
+      ],
+      "maoDeObraValor": 1,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-SZ6355P",
+      "nome": "Coroa de Espinhos de Jesus Cristo",
+      "categoria": "Decoração",
+      "descricao": "0,08 mm camada, 2 paredes, 15% de preenchimento/ valor de venda 6,90\n",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 2.2,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 9
+        }
+      ],
+      "maoDeObraValor": 2,
+      "margemLucroPorcentagem": 50
+    },
+    {
+      "id": "PRD-OLKGJM5",
+      "nome": "Letreiro Foi por Amor",
+      "categoria": "Decoração",
+      "descricao": "Letreiro \"Foi por Amor\" - Sem AMS/ valor de venda",
+      "imagemUrl": "",
+      "tempoImpressaoHoras": 5.6,
+      "impressoraUtilizadaId": "IMP-YZE6J80",
+      "materiais": [
+        {
+          "tipoFilamento": "PLA",
+          "quantidadeG": 183
+        }
+      ],
+      "maoDeObraValor": 2,
+      "margemLucroPorcentagem": 50
+    }
+  ],
+  "orcamentos": [
+    {
+      "id": "ORC-OR9K16C",
+      "numero": "ORC-2026-428",
+      "clienteId": "CLI-GCQK1M7",
+      "dataEmissao": "2026-06-25",
+      "validade": "2026-07-25",
+      "itens": [
+        {
+          "produtoId": "PRD-2FBU9XR",
+          "quantidade": 1,
+          "valorUnitario": 30,
+          "desconto": 0
+        },
+        {
+          "produtoId": "PRD-GM175BY",
+          "quantidade": 2,
+          "valorUnitario": 12,
+          "desconto": 0
+        },
+        {
+          "produtoId": "PRD-LNSZOBA",
+          "quantidade": 1,
+          "valorUnitario": 15,
+          "desconto": 0
+        },
+        {
+          "produtoId": "PRD-2RAKTFE",
+          "quantidade": 1,
+          "valorUnitario": 10,
+          "desconto": 0
+        }
+      ],
+      "status": "aprovado",
+      "observacoes": "valor repassado ao cliente 79,00"
+    },
+    {
+      "id": "ORC-HOWDIBR",
+      "numero": "ORC-2026-935",
+      "clienteId": "CLI-912IJWZ",
+      "dataEmissao": "2026-06-25",
+      "validade": "2026-07-25",
+      "itens": [
+        {
+          "produtoId": "PRD-8RGWCBR",
+          "quantidade": 1,
+          "valorUnitario": 91.5,
+          "desconto": 0
+        },
+        {
+          "produtoId": "PRD-V1NWKDW",
+          "quantidade": 1,
+          "valorUnitario": 25,
+          "desconto": 0
+        },
+        {
+          "produtoId": "PRD-WQUVB7L",
+          "quantidade": 1,
+          "valorUnitario": 25.9,
+          "desconto": 0
+        }
+      ],
+      "status": "aberto",
+      "observacoes": "valor informado para cliente 148,40"
+    },
+    {
+      "id": "ORC-WX6XOPO",
+      "numero": "ORC-2026-499",
+      "clienteId": "CLI-TANDREO",
+      "dataEmissao": "2026-06-25",
+      "validade": "2026-07-25",
+      "itens": [
+        {
+          "produtoId": "PRD-DJ473TB",
+          "quantidade": 1,
+          "valorUnitario": 69,
+          "desconto": 0
+        }
+      ],
+      "status": "aprovado",
+      "observacoes": "valor informado 70,00"
+    },
+    {
+      "id": "ORC-CZ31LTZ",
+      "numero": "ORC-2026-547",
+      "clienteId": "CLI-H3FNPUD",
+      "dataEmissao": "2026-06-26",
+      "validade": "2026-07-26",
+      "itens": [
+        {
+          "produtoId": "PRD-UOQL1BY",
+          "quantidade": 2,
+          "valorUnitario": 70,
+          "desconto": 0
+        }
+      ],
+      "status": "aberto",
+      "observacoes": "valor informado ao cliente 69,90 unitário / valor total 139,80"
+    },
+    {
+      "id": "ORC-CIGSP5F",
+      "numero": "ORC-2026-933",
+      "clienteId": "CLI-4SOVQG6",
+      "dataEmissao": "2026-06-26",
+      "validade": "2026-07-26",
+      "itens": [
+        {
+          "produtoId": "PRD-LQNHSJP",
+          "quantidade": 1,
+          "valorUnitario": 70,
+          "desconto": 0
+        }
+      ],
+      "status": "aprovado",
+      "observacoes": "valor informado 70,00"
+    },
+    {
+      "id": "ORC-7QSQDAA",
+      "numero": "ORC-2026-536",
+      "clienteId": "CLI-912IJWZ",
+      "dataEmissao": "2026-06-28",
+      "validade": "2026-07-28",
+      "itens": [
+        {
+          "produtoId": "PRD-IDHC6W8",
+          "quantidade": 1,
+          "valorUnitario": 19.9,
+          "desconto": 0
+        }
+      ],
+      "status": "aprovado",
+      "observacoes": "19,90"
+    },
+    {
+      "id": "ORC-JWTYOHZ",
+      "numero": "ORC-2026-274",
+      "clienteId": "CLI-MZG0ARB",
+      "dataEmissao": "2026-07-04",
+      "validade": "2026-08-03",
+      "itens": [
+        {
+          "produtoId": "PRD-351FHZP",
+          "quantidade": 1,
+          "valorUnitario": 50,
+          "desconto": 0
+        },
+        {
+          "produtoId": "PRD-TYRULPD",
+          "quantidade": 1,
+          "valorUnitario": 34.9,
+          "desconto": 0
+        },
+        {
+          "produtoId": "PRD-3QKMHEE",
+          "quantidade": 1,
+          "valorUnitario": 29.9,
+          "desconto": 0
+        }
+      ],
+      "status": "aberto",
+      "observacoes": ""
+    },
+    {
+      "id": "ORC-GYTRA0O",
+      "numero": "ORC-2026-949",
+      "clienteId": "CLI-XVDNIZ5",
+      "dataEmissao": "2026-07-09",
+      "validade": "2026-08-08",
+      "itens": [
+        {
+          "produtoId": "PRD-38S364T",
+          "quantidade": 5,
+          "valorUnitario": 15.9,
+          "desconto": 0
+        },
+        {
+          "produtoId": "PRD-12T0Q6Z",
+          "quantidade": 10,
+          "valorUnitario": 11.9,
+          "desconto": 0
+        }
+      ],
+      "status": "aprovado",
+      "observacoes": ""
+    },
+    {
+      "id": "ORC-HSHBZZQ",
+      "numero": "ORC-2026-723",
+      "clienteId": "CLI-GHS2ZVN",
+      "dataEmissao": "2026-07-10",
+      "validade": "2026-08-09",
+      "itens": [
+        {
+          "produtoId": "PRD-RU8CPRQ",
+          "quantidade": 1,
+          "valorUnitario": 25,
+          "desconto": 0
+        }
+      ],
+      "status": "aberto",
+      "observacoes": ""
+    },
+    {
+      "id": "ORC-ULXCVXT",
+      "numero": "ORC-2026-248",
+      "clienteId": "CLI-N1L2RE5",
+      "dataEmissao": "2026-07-10",
+      "validade": "2026-08-09",
+      "itens": [
+        {
+          "produtoId": "PRD-RU8CPRQ",
+          "quantidade": 1,
+          "valorUnitario": 25,
+          "desconto": 0
+        }
+      ],
+      "status": "aberto",
+      "observacoes": ""
+    },
+    {
+      "id": "ORC-RTGH0AR",
+      "numero": "ORC-2026-945",
+      "clienteId": "CLI-DNGEK31",
+      "dataEmissao": "2026-07-10",
+      "validade": "2026-08-09",
+      "itens": [
+        {
+          "produtoId": "PRD-FQ1RBWK",
+          "quantidade": 1,
+          "valorUnitario": 19,
+          "desconto": 0
+        }
+      ],
+      "status": "aprovado",
+      "observacoes": ""
+    },
+    {
+      "id": "ORC-O8FJVL0",
+      "numero": "ORC-2026-346",
+      "clienteId": "CLI-BNS0K24",
+      "dataEmissao": "2026-07-10",
+      "validade": "2026-08-09",
+      "itens": [
+        {
+          "produtoId": "PRD-3JPJI1O",
+          "quantidade": 2,
+          "valorUnitario": 7,
+          "desconto": 0
+        }
+      ],
+      "status": "aprovado",
+      "observacoes": ""
+    },
+    {
+      "id": "ORC-TJM9J3M",
+      "numero": "ORC-2026-427",
+      "clienteId": "CLI-DNGEK31",
+      "dataEmissao": "2026-07-10",
+      "validade": "2026-08-09",
+      "itens": [
+        {
+          "produtoId": "PRD-S2EYB7O",
+          "quantidade": 1,
+          "valorUnitario": 15.9,
+          "desconto": 0
+        }
+      ],
+      "status": "aberto",
+      "observacoes": ""
+    },
+    {
+      "id": "ORC-20FC3DF",
+      "numero": "ORC-2026-695",
+      "clienteId": "CLI-S5QQXUD",
+      "dataEmissao": "2026-07-14",
+      "validade": "2026-08-13",
+      "itens": [
+        {
+          "produtoId": "PRD-127I9H2",
+          "quantidade": 1,
+          "valorUnitario": 13.9,
+          "desconto": 0
+        }
+      ],
+      "status": "aprovado",
+      "observacoes": ""
+    },
+    {
+      "id": "ORC-AEYJ4FH",
+      "numero": "ORC-2026-782",
+      "clienteId": "CLI-GCQK1M7",
+      "dataEmissao": "2026-07-14",
+      "validade": "2026-08-13",
+      "itens": [
+        {
+          "produtoId": "PRD-8PB8UPP",
+          "quantidade": 1,
+          "valorUnitario": 42.9,
+          "desconto": 0
+        }
+      ],
+      "status": "aberto",
+      "observacoes": ""
+    },
+    {
+      "id": "ORC-WVZMHLU",
+      "numero": "ORC-2026-931",
+      "clienteId": "CLI-BFPYALW",
+      "dataEmissao": "2026-07-19",
+      "validade": "2026-08-18",
+      "itens": [
+        {
+          "produtoId": "PRD-U73F1K8",
+          "quantidade": 2,
+          "valorUnitario": 12.9,
+          "desconto": 0
+        },
+        {
+          "produtoId": "PRD-UW6NBTK",
+          "quantidade": 1,
+          "valorUnitario": 16.9,
+          "desconto": 0
+        }
+      ],
+      "status": "aberto",
+      "observacoes": ""
+    }
+  ],
+  "vendas": [
+    {
+      "id": "VEN-7N9155Q",
+      "orcamentoId": "ORC-7QSQDAA",
+      "clienteId": "CLI-912IJWZ",
+      "data": "2026-06-30",
+      "itens": [
+        {
+          "produtoId": "PRD-IDHC6W8",
+          "quantidade": 1,
+          "valorUnitario": 19.9,
+          "desconto": 0
+        }
+      ],
+      "valorTotal": 19.9,
+      "formaPagamento": "PIX",
+      "status": "pago"
+    },
+    {
+      "id": "VEN-25FU4XZ",
+      "orcamentoId": "ORC-CIGSP5F",
+      "clienteId": "CLI-4SOVQG6",
+      "data": "2026-06-30",
+      "itens": [
+        {
+          "produtoId": "PRD-LQNHSJP",
+          "quantidade": 1,
+          "valorUnitario": 70,
+          "desconto": 0
+        }
+      ],
+      "valorTotal": 70,
+      "formaPagamento": "PIX",
+      "status": "pago"
+    },
+    {
+      "id": "VEN-YMX79FP",
+      "orcamentoId": "ORC-OR9K16C",
+      "clienteId": "CLI-GCQK1M7",
+      "data": "2026-07-03",
+      "itens": [
+        {
+          "produtoId": "PRD-2FBU9XR",
+          "quantidade": 1,
+          "valorUnitario": 30,
+          "desconto": 0
+        },
+        {
+          "produtoId": "PRD-GM175BY",
+          "quantidade": 2,
+          "valorUnitario": 12,
+          "desconto": 0
+        },
+        {
+          "produtoId": "PRD-LNSZOBA",
+          "quantidade": 1,
+          "valorUnitario": 15,
+          "desconto": 0
+        },
+        {
+          "produtoId": "PRD-2RAKTFE",
+          "quantidade": 1,
+          "valorUnitario": 10,
+          "desconto": 0
+        }
+      ],
+      "valorTotal": 79,
+      "formaPagamento": "PIX",
+      "status": "pago"
+    },
+    {
+      "id": "VEN-QXJ2FEC",
+      "orcamentoId": "ORC-WX6XOPO",
+      "clienteId": "CLI-TANDREO",
+      "data": "2026-07-08",
+      "itens": [
+        {
+          "produtoId": "PRD-DJ473TB",
+          "quantidade": 1,
+          "valorUnitario": 69,
+          "desconto": 0
+        }
+      ],
+      "valorTotal": 69,
+      "formaPagamento": "PIX",
+      "status": "pago"
+    },
+    {
+      "id": "VEN-RAYNUST",
+      "orcamentoId": "ORC-RTGH0AR",
+      "clienteId": "CLI-DNGEK31",
+      "data": "2026-07-10",
+      "itens": [
+        {
+          "produtoId": "PRD-FQ1RBWK",
+          "quantidade": 1,
+          "valorUnitario": 19,
+          "desconto": 0
+        }
+      ],
+      "valorTotal": 19,
+      "formaPagamento": "dinheiro",
+      "status": "pago"
+    },
+    {
+      "id": "VEN-FANXS6T",
+      "orcamentoId": "ORC-O8FJVL0",
+      "clienteId": "CLI-BNS0K24",
+      "data": "2026-07-10",
+      "itens": [
+        {
+          "produtoId": "PRD-3JPJI1O",
+          "quantidade": 2,
+          "valorUnitario": 7,
+          "desconto": 0
+        }
+      ],
+      "valorTotal": 14,
+      "formaPagamento": "PIX",
+      "status": "pago"
+    },
+    {
+      "id": "VEN-I93LWFN",
+      "orcamentoId": "ORC-20FC3DF",
+      "clienteId": "CLI-S5QQXUD",
+      "data": "2026-07-14",
+      "itens": [
+        {
+          "produtoId": "PRD-127I9H2",
+          "quantidade": 1,
+          "valorUnitario": 13.9,
+          "desconto": 0
+        }
+      ],
+      "valorTotal": 13.9,
+      "formaPagamento": "PIX",
+      "status": "pago"
+    },
+    {
+      "id": "VEN-UCOZ2DS",
+      "orcamentoId": "ORC-GYTRA0O",
+      "clienteId": "CLI-XVDNIZ5",
+      "data": "2026-07-20",
+      "itens": [
+        {
+          "produtoId": "PRD-38S364T",
+          "quantidade": 5,
+          "valorUnitario": 15.9,
+          "desconto": 0
+        },
+        {
+          "produtoId": "PRD-12T0Q6Z",
+          "quantidade": 10,
+          "valorUnitario": 11.9,
+          "desconto": 0
+        }
+      ],
+      "valorTotal": 198.5,
+      "formaPagamento": "PIX",
+      "status": "pago"
+    }
+  ],
+  "compras": [
+    {
+      "data": "2026-07-10",
+      "fornecedor": "Mercado Livre",
+      "filamentoId": "FIL-QJA8P1Y",
+      "quantidadeAdquirida": 1000,
+      "valorPago": 124.9,
+      "notaFiscal": "",
+      "observacoes": "pago com saldo da conta Elmaneko Mercado Pago",
+      "id": "COM-5ZU1FFB"
+    }
+  ],
+  "movimentacoes": [
+    {
+      "id": "MOV-GI7KH79",
+      "filamentoId": "FIL-0CBB8Y7",
+      "tipo": "entrada",
+      "quantidade": 1,
+      "data": "2026-06-25",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-EMC9PGS",
+      "filamentoId": "FIL-5QWJH9A",
+      "tipo": "entrada",
+      "quantidade": 200,
+      "data": "2026-06-25",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-YYS3G70",
+      "filamentoId": "FIL-0CBB8Y7",
+      "tipo": "entrada",
+      "quantidade": 999,
+      "data": "2026-06-25",
+      "descricao": "Ajuste manual de estoque. Novo saldo: 1000g"
+    },
+    {
+      "id": "MOV-60LOQYD",
+      "filamentoId": "FIL-FR162L2",
+      "tipo": "entrada",
+      "quantidade": 200,
+      "data": "2026-06-25",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-9XHDCH6",
+      "filamentoId": "FIL-BS7ZEXU",
+      "tipo": "entrada",
+      "quantidade": 1000,
+      "data": "2026-06-25",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-LWLRKUR",
+      "filamentoId": "FIL-423JBQT",
+      "tipo": "entrada",
+      "quantidade": 1000,
+      "data": "2026-06-25",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-I6D1K71",
+      "filamentoId": "FIL-NH2D1CT",
+      "tipo": "entrada",
+      "quantidade": 900,
+      "data": "2026-06-25",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-GANYY8S",
+      "filamentoId": "FIL-XA01XSA",
+      "tipo": "entrada",
+      "quantidade": 1000,
+      "data": "2026-06-25",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-K5589UH",
+      "filamentoId": "FIL-FZXT9AU",
+      "tipo": "entrada",
+      "quantidade": 100,
+      "data": "2026-06-25",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-6RDZ92V",
+      "filamentoId": "FIL-2OSWJ5Q",
+      "tipo": "entrada",
+      "quantidade": 900,
+      "data": "2026-06-25",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-IWVY2YA",
+      "filamentoId": "FIL-Q9XX4XM",
+      "tipo": "entrada",
+      "quantidade": 800,
+      "data": "2026-06-25",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-ILLP3TJ",
+      "filamentoId": "FIL-7MAKZ77",
+      "tipo": "entrada",
+      "quantidade": 900,
+      "data": "2026-06-25",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-8BXVQ8P",
+      "filamentoId": "FIL-0CBB8Y7",
+      "tipo": "saida",
+      "quantidade": 198,
+      "data": "2026-06-28",
+      "descricao": "Venda VEN-XLE51DS - Item: MONSTER ENERGY PORTA-LATA (Consumo de lote: PLA High Speed)"
+    },
+    {
+      "id": "MOV-4WUPI0F",
+      "filamentoId": "FIL-63TVGEJ",
+      "tipo": "entrada",
+      "quantidade": 1000,
+      "data": "2026-06-28",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-2P1RKYM",
+      "filamentoId": "FIL-5QWJH9A",
+      "tipo": "saida",
+      "quantidade": 90,
+      "data": "2026-06-30",
+      "descricao": "Venda VEN-7N9155Q - Item: Meu design de fidget de 10 estrelas (Consumo de lote: Petg Color White)"
+    },
+    {
+      "id": "MOV-D6HVVWS",
+      "filamentoId": "FIL-63TVGEJ",
+      "tipo": "saida",
+      "quantidade": 800,
+      "data": "2026-06-30",
+      "descricao": "Ajuste manual de estoque. Novo saldo: 200g"
+    },
+    {
+      "id": "MOV-Y7L9SVE",
+      "filamentoId": "FIL-0CBB8Y7",
+      "tipo": "saida",
+      "quantidade": 198,
+      "data": "2026-06-30",
+      "descricao": "Venda VEN-25FU4XZ - Item: MONSTER ENERGY PORTA-LATA (Consumo de lote: PLA High Speed)"
+    },
+    {
+      "id": "MOV-5EMOGQ6",
+      "filamentoId": "FIL-C5AH10A",
+      "tipo": "entrada",
+      "quantidade": 1000,
+      "data": "2026-06-30",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-HX52HJZ",
+      "filamentoId": "FIL-7KH0Y3L",
+      "tipo": "entrada",
+      "quantidade": 500,
+      "data": "2026-07-03",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-55CKR33",
+      "filamentoId": "FIL-0CBB8Y7",
+      "tipo": "saida",
+      "quantidade": 190,
+      "data": "2026-07-03",
+      "descricao": "Venda VEN-YMX79FP - Item: Prateleira de Parede e Porta-Chaves ArchLine (Consumo de lote: PLA High Speed)"
+    },
+    {
+      "id": "MOV-6AR0SMA",
+      "filamentoId": "FIL-0CBB8Y7",
+      "tipo": "saida",
+      "quantidade": 146,
+      "data": "2026-07-03",
+      "descricao": "Venda VEN-YMX79FP - Item: Vaso de Planta Canelado Moderno Japandi com drenagem (Consumo de lote: PLA High Speed)"
+    },
+    {
+      "id": "MOV-W4JHW87",
+      "filamentoId": "FIL-5QWJH9A",
+      "tipo": "saida",
+      "quantidade": 110,
+      "data": "2026-07-03",
+      "descricao": "Venda VEN-YMX79FP - Item: Letreiro Bíblico Ore e Confie (Lote esgotado: Petg Color White)"
+    },
+    {
+      "id": "MOV-YD5N71S",
+      "filamentoId": "FIL-FR162L2",
+      "tipo": "saida",
+      "quantidade": 14,
+      "data": "2026-07-03",
+      "descricao": "Venda VEN-YMX79FP - Item: Letreiro Bíblico Ore e Confie (Consumo de lote: PETG Branco Translucido)"
+    },
+    {
+      "id": "MOV-9PVUM94",
+      "filamentoId": "FIL-0CBB8Y7",
+      "tipo": "saida",
+      "quantidade": 98,
+      "data": "2026-07-03",
+      "descricao": "Venda VEN-YMX79FP - Item: Bandeja Prato Tigela Oval Contorno V5 - Design Japandi (Consumo de lote: PLA High Speed)"
+    },
+    {
+      "id": "MOV-14O8OLC",
+      "filamentoId": "FIL-0CBB8Y7",
+      "tipo": "saida",
+      "quantidade": 170,
+      "data": "2026-07-08",
+      "descricao": "Venda VEN-QXJ2FEC - Item:  Pikachu / NO AMS (Lote esgotado: PLA High Speed)"
+    },
+    {
+      "id": "MOV-3882UDD",
+      "filamentoId": "FIL-NH2D1CT",
+      "tipo": "saida",
+      "quantidade": 47,
+      "data": "2026-07-08",
+      "descricao": "Venda VEN-QXJ2FEC - Item:  Pikachu / NO AMS (Consumo de lote: PLA Red)"
+    },
+    {
+      "id": "MOV-IFNLEH9",
+      "filamentoId": "FIL-QJA8P1Y",
+      "tipo": "entrada",
+      "quantidade": 1000,
+      "data": "2026-07-09",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-QNQVTQ6",
+      "filamentoId": "FIL-NH2D1CT",
+      "tipo": "saida",
+      "quantidade": 19,
+      "data": "2026-07-10",
+      "descricao": "Venda VEN-RAYNUST - Item: Fofo chaveiro articulado do Banguela Fúria da Noite (Consumo de lote: PLA Red)"
+    },
+    {
+      "id": "MOV-LGOQEDV",
+      "filamentoId": "FIL-NH2D1CT",
+      "tipo": "saida",
+      "quantidade": 28,
+      "data": "2026-07-10",
+      "descricao": "Venda VEN-FANXS6T - Item: rato cego personagem shrek (Consumo de lote: PLA Red)"
+    },
+    {
+      "id": "MOV-E49VXKU",
+      "filamentoId": "FIL-QJA8P1Y",
+      "tipo": "entrada",
+      "quantidade": 1000,
+      "data": "2026-07-10",
+      "descricao": "Compra registrada (Nota Fiscal: N/A)",
+      "referenciaId": "COM-5ZU1FFB"
+    },
+    {
+      "id": "MOV-9S0ZXHJ",
+      "filamentoId": "FIL-NH2D1CT",
+      "tipo": "saida",
+      "quantidade": 20,
+      "data": "2026-07-14",
+      "descricao": "Venda VEN-I93LWFN - Item: Boneco famale figure (Consumo de lote: PLA Red)"
+    },
+    {
+      "id": "MOV-21P0EO0",
+      "filamentoId": "FIL-TSFFZV2",
+      "tipo": "entrada",
+      "quantidade": 1000,
+      "data": "2026-07-17",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-YIFRRSK",
+      "filamentoId": "FIL-IAAP60X",
+      "tipo": "entrada",
+      "quantidade": 200,
+      "data": "2026-07-20",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-QZRPWLD",
+      "filamentoId": "FIL-YRFVHCS",
+      "tipo": "entrada",
+      "quantidade": 1000,
+      "data": "2026-07-20",
+      "descricao": "Cadastro de lote com carga inicial"
+    },
+    {
+      "id": "MOV-4UVI8JV",
+      "filamentoId": "FIL-NH2D1CT",
+      "tipo": "saida",
+      "quantidade": 75,
+      "data": "2026-07-20",
+      "descricao": "Venda VEN-UCOZ2DS - Item: Chaveiro de Casa com porta-foto ou mensagem (Consumo de lote: PLA Red)"
+    },
+    {
+      "id": "MOV-IWKTUMI",
+      "filamentoId": "FIL-NH2D1CT",
+      "tipo": "saida",
+      "quantidade": 100,
+      "data": "2026-07-20",
+      "descricao": "Venda VEN-UCOZ2DS - Item:  CHAVEIRO GIRATÓRIO ALL BLACKS (Consumo de lote: PLA Red)"
+    }
+  ]
+}

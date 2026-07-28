@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Client } from '../types';
-import { Plus, Edit, Trash2, Search, User, Mail, Phone, MapPin, CreditCard } from 'lucide-react';
+import { Plus, Search, User, MessageCircle } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
 import ConfirmDialog from './ui/ConfirmDialog';
+import { DataList, ColumnDef } from './ui/DataList';
 
 export default function Clients() {
   const { useClientes, useAddCliente, useUpdateCliente, useDeleteCliente } = useData();
@@ -16,11 +17,7 @@ export default function Clients() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-
-  // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: '', name: '' });
-
-  // SEARCH STATE
   const [searchQuery, setSearchQuery] = useState('');
 
   // FORM FIELDS
@@ -29,8 +26,6 @@ export default function Clients() {
   const [whatsapp, setWhatsapp] = useState('');
   const [email, setEmail] = useState('');
   const [endereco, setEndereco] = useState('');
-
-  // Inline form error
   const [formError, setFormError] = useState('');
 
   const handleOpenAddModal = () => {
@@ -59,7 +54,6 @@ export default function Clients() {
     e.preventDefault();
     setFormError('');
 
-    // Apenas nome e whatsapp são obrigatórios
     if (!nome.trim()) {
       setFormError('O nome do cliente é obrigatório.');
       return;
@@ -81,23 +75,13 @@ export default function Clients() {
 
     if (editingClient) {
       editMutation.mutate(clientData, {
-        onSuccess: () => {
-          setIsModalOpen(false);
-          showToast('Cliente atualizado com sucesso!', 'success');
-        },
-        onError: () => {
-          showToast('Erro ao atualizar cliente. Tente novamente.', 'error');
-        }
+        onSuccess: () => { setIsModalOpen(false); showToast('Cliente atualizado com sucesso!', 'success'); },
+        onError: () => { showToast('Erro ao atualizar cliente. Tente novamente.', 'error'); }
       });
     } else {
       addMutation.mutate(clientData, {
-        onSuccess: () => {
-          setIsModalOpen(false);
-          showToast('Cliente cadastrado com sucesso!', 'success');
-        },
-        onError: () => {
-          showToast('Erro ao cadastrar cliente. Tente novamente.', 'error');
-        }
+        onSuccess: () => { setIsModalOpen(false); showToast('Cliente cadastrado com sucesso!', 'success'); },
+        onError: () => { showToast('Erro ao cadastrar cliente. Tente novamente.', 'error'); }
       });
     }
   };
@@ -108,29 +92,90 @@ export default function Clients() {
 
   const handleDeleteConfirm = () => {
     deleteMutation.mutate(confirmDialog.id, {
-      onSuccess: () => showToast('Cliente excluído com sucesso.', 'warning'),
-      onError: () => showToast('Erro ao excluir cliente.', 'error')
+      onSuccess: () => { showToast('Cliente excluído.', 'success'); },
+      onError: () => { showToast('Erro ao excluir cliente.', 'error'); }
     });
     setConfirmDialog({ open: false, id: '', name: '' });
   };
 
   const filteredClients = clients.filter(c => {
-    const query = searchQuery.toLowerCase();
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
     return (
-      c.nome.toLowerCase().includes(query) ||
-      (c.cpfCnpj || '').toLowerCase().includes(query) ||
-      (c.email || '').toLowerCase().includes(query) ||
-      c.whatsapp.includes(query)
+      c.nome.toLowerCase().includes(q) ||
+      (c.cpfCnpj || '').toLowerCase().includes(q) ||
+      (c.email || '').toLowerCase().includes(q) ||
+      c.whatsapp.includes(q)
     );
   });
 
-  return (
-    <div className="space-y-6" id="clients-module-container">
+  // ── Column definitions ──────────────────────────────────────
+  const mainColumns: ColumnDef<Client>[] = [
+    {
+      key: 'nome',
+      header: 'Cliente',
+      render: (c) => (
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-neutral-800 border border-neutral-700 rounded-lg flex items-center justify-center text-orange-400 font-bold text-sm shrink-0">
+            {c.nome.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <p className="font-semibold text-white text-sm leading-tight">{c.nome}</p>
+            {c.cpfCnpj && (
+              <p className="text-[11px] text-neutral-500 font-mono mt-0.5">{c.cpfCnpj}</p>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'whatsapp',
+      header: 'WhatsApp',
+      render: (c) => (
+        <a
+          href={`https://wa.me/${c.whatsapp.replace(/\D/g, '')}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 font-mono text-xs transition-colors"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MessageCircle size={13} />
+          {c.whatsapp}
+        </a>
+      ),
+    },
+    {
+      key: 'email',
+      header: 'E-mail',
+      render: (c) => (
+        <span className="text-xs font-mono text-neutral-300">
+          {c.email || <span className="italic text-neutral-600">—</span>}
+        </span>
+      ),
+    },
+  ];
 
-      {/* TOAST */}
+  const extraColumns: ColumnDef<Client>[] = [
+    {
+      key: 'cpfCnpj',
+      header: 'CPF / CNPJ',
+      render: (c) => (
+        <span className="text-neutral-300">{c.cpfCnpj || <span className="italic text-neutral-600">Não informado</span>}</span>
+      ),
+    },
+    {
+      key: 'endereco',
+      header: 'Endereço de Entrega',
+      render: (c) => (
+        <span className="text-neutral-300">{c.endereco || <span className="italic text-neutral-600">Não informado</span>}</span>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-5" id="clients-module-container">
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
 
-      {/* CONFIRM DIALOG */}
       <ConfirmDialog
         open={confirmDialog.open}
         title="Excluir Cliente"
@@ -140,207 +185,153 @@ export default function Clients() {
         onCancel={() => setConfirmDialog({ open: false, id: '', name: '' })}
       />
 
-      {/* HEADER BAR */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="clients-header">
+      {/* ── HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4" id="clients-header">
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Cadastro e Gestão de Clientes</h2>
-          <p className="text-sm text-neutral-400 mt-1">Gerencie a carteira de contatos para faturamento, rastreamento de frete e envio rápido de PDF via WhatsApp.</p>
+          <h2 className="text-xl font-bold text-white tracking-tight">Clientes / CRM</h2>
+          <p className="text-sm text-neutral-400 mt-1">Gerencie contatos para faturamento, orçamentos e envio de PDF via WhatsApp.</p>
         </div>
         <button
           onClick={handleOpenAddModal}
           id="add-new-client-btn"
-          className="py-2.5 px-4 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-md shadow-orange-600/10 flex items-center justify-center gap-2 hover:translate-y-[-1px] transition-all cursor-pointer"
+          className="py-2.5 px-4 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl shadow-md shadow-orange-600/10 flex items-center gap-2 hover:-translate-y-px transition-all cursor-pointer shrink-0"
         >
           <Plus size={18} />
-          Adicionar Cliente
+          Novo Cliente
         </button>
       </div>
 
-      {/* FILTER SEARCH INPUT */}
-      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex gap-3 items-center" id="clients-search-bar">
-        <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">
-            <Search size={16} />
-          </span>
-          <input
-            type="text"
-            placeholder="Pesquisar por nome, CPF/CNPJ, e-mail ou WhatsApp..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500"
-          />
-        </div>
+      {/* ── SEARCH BAR ── */}
+      <div className="relative" id="clients-search-bar">
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none" />
+        <input
+          id="clients-search-input"
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Pesquisar por nome, CPF/CNPJ, e-mail ou WhatsApp..."
+          className="w-full pl-10 pr-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 transition-colors"
+          aria-label="Pesquisar clientes"
+        />
       </div>
 
-      {/* CLIENTS CARD GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="clients-grid">
-        {filteredClients.length > 0 ? (
-          filteredClients.map(c => (
-            <div
-              key={c.id}
-              className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 hover:border-orange-500/20 transition-all duration-300 relative flex flex-col justify-between"
-              id={`client-card-${c.id}`}
-            >
-              <div>
-                {/* Title Card */}
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-2">
-                    <div className="w-9 h-9 bg-neutral-950 rounded-lg flex items-center justify-center text-orange-500 border border-neutral-800 font-bold">
-                      {c.nome.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-white line-clamp-1">{c.nome}</h3>
-                      <span className="text-[10px] text-neutral-500 font-mono flex items-center gap-1 mt-0.5">
-                        <CreditCard size={10} />
-                        {c.cpfCnpj || <span className="italic text-neutral-600">CPF não informado</span>}
-                      </span>
-                    </div>
-                  </div>
+      {/* ── LIST ── */}
+      <DataList<Client>
+        data={filteredClients}
+        columns={mainColumns}
+        extraColumns={extraColumns}
+        rowKey={(c) => c.id}
+        onEdit={handleOpenEditModal}
+        onDelete={(c) => handleDeleteRequest(c.id, c.nome)}
+        emptyMessage={
+          searchQuery
+            ? 'Nenhum cliente encontrado para esta pesquisa.'
+            : 'Nenhum cliente cadastrado. Clique em "Novo Cliente" para começar.'
+        }
+      />
 
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => handleOpenEditModal(c)}
-                      className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg transition-colors cursor-pointer"
-                      title="Editar Cliente"
-                      id={`edit-client-btn-${c.id}`}
-                    >
-                      <Edit size={14} />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteRequest(c.id, c.nome)}
-                      className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-red-500 rounded-lg transition-colors cursor-pointer"
-                      title="Excluir Cliente"
-                      id={`delete-client-btn-${c.id}`}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Info List */}
-                <div className="mt-4 space-y-2 text-xs font-mono text-neutral-300 pt-3 border-t border-neutral-800/60">
-                  <div className="flex items-center gap-2">
-                    <Mail size={13} className="text-neutral-500 shrink-0" />
-                    <span className="truncate">
-                      {c.email || <span className="italic text-neutral-600">E-mail não informado</span>}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Phone size={13} className="text-neutral-500 shrink-0" />
-                    <span>{c.whatsapp}</span>
-                  </div>
-                  <div className="flex items-start gap-2 pt-1">
-                    <MapPin size={13} className="text-neutral-500 mt-0.5 shrink-0" />
-                    <span className="line-clamp-2 text-neutral-400">{c.endereco || <span className="italic text-neutral-600">Sem endereço de entrega</span>}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* CRM LINK ACTIONS */}
-              <div className="mt-5 pt-3 border-t border-neutral-800/40 flex justify-end">
-                <a
-                  href={`https://wa.me/${c.whatsapp.replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/10 text-emerald-400 font-mono text-[10px] rounded-lg transition-colors"
-                >
-                  Abrir WhatsApp
-                </a>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="col-span-full py-20 text-center text-neutral-500 font-mono text-xs bg-neutral-900 border border-neutral-800 rounded-2xl">
-            {searchQuery ? 'Nenhum cliente atende aos filtros de pesquisa.' : 'Nenhum cliente cadastrado. Clique em "Adicionar Cliente" para começar.'}
-          </div>
-        )}
-      </div>
-
-      {/* --- CRM CLIENT DIALOG FORM --- */}
+      {/* ── FORM MODAL ── */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" id="client-form-modal">
+        <div
+          className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          id="client-form-modal"
+          aria-modal="true"
+          role="dialog"
+          aria-label={editingClient ? 'Editar Cliente' : 'Novo Cliente'}
+        >
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-white mb-5 flex items-center gap-2">
               <User size={20} className="text-orange-500" />
-              {editingClient ? 'Editar Informações do Cliente' : 'Cadastrar Novo Cliente'}
+              {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
             </h3>
 
-            <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs text-left">
-
-              {/* Inline form error */}
+            <form onSubmit={handleSubmit} className="space-y-4 text-xs" noValidate>
               {formError && (
-                <div className="p-3 bg-red-950/50 border border-red-800/60 text-red-300 text-xs rounded-lg">
+                <div role="alert" className="p-3 bg-red-950/50 border border-red-800/60 text-red-300 rounded-lg">
                   {formError}
                 </div>
               )}
 
               <div>
-                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome Completo / Razão Social *</label>
+                <label htmlFor="client-nome" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                  Nome Completo / Razão Social <span className="text-orange-500">*</span>
+                </label>
                 <input
+                  id="client-nome"
                   type="text"
                   required
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">CPF ou CNPJ <span className="text-neutral-600 normal-case">(opcional)</span></label>
+                <label htmlFor="client-cpf" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                  CPF ou CNPJ <span className="text-neutral-600 normal-case font-normal">(opcional)</span>
+                </label>
                 <input
+                  id="client-cpf"
                   type="text"
                   value={cpfCnpj}
                   onChange={(e) => setCpfCnpj(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">WhatsApp *</label>
+                  <label htmlFor="client-whatsapp" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                    WhatsApp <span className="text-orange-500">*</span>
+                  </label>
                   <input
+                    id="client-whatsapp"
                     type="tel"
                     required
                     value={whatsapp}
                     onChange={(e) => setWhatsapp(e.target.value)}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Email <span className="text-neutral-600 normal-case">(opcional)</span></label>
+                  <label htmlFor="client-email" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                    E-mail <span className="text-neutral-600 normal-case font-normal">(opcional)</span>
+                  </label>
                   <input
+                    id="client-email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Endereço de Entrega <span className="text-neutral-600 normal-case">(opcional)</span></label>
+                <label htmlFor="client-endereco" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                  Endereço de Entrega <span className="text-neutral-600 normal-case font-normal">(opcional)</span>
+                </label>
                 <textarea
+                  id="client-endereco"
                   value={endereco}
                   onChange={(e) => setEndereco(e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
+                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors resize-none"
                 />
               </div>
 
-              {/* ACTION CONTROL BUTTONS */}
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer"
+                  className="px-4 py-2 border border-neutral-700 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={addMutation.isPending || editMutation.isPending}
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer disabled:opacity-60"
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer disabled:opacity-60 transition-colors"
                 >
                   {addMutation.isPending || editMutation.isPending ? 'Salvando...' : 'Gravar Cadastro'}
                 </button>
@@ -349,7 +340,6 @@ export default function Clients() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS impressoras (
   marca TEXT NOT NULL,
   modelo TEXT NOT NULL,
   potencia_watts NUMERIC NOT NULL DEFAULT 0,
-  status TEXT NOT NULL DEFAULT 'Disponível',
+  status TEXT NOT NULL DEFAULT 'Ativa',
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS vendas (
   data DATE DEFAULT CURRENT_DATE,
   valor_total NUMERIC NOT NULL DEFAULT 0,
   forma_pagamento TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'Concluído',
+  status TEXT NOT NULL DEFAULT 'Pago',
   orcamento_origem_id UUID REFERENCES orcamentos(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );

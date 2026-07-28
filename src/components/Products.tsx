@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Product, BOMItem, Printer, Filament, EnergyTariff, FilamentType } from '../types';
-import { Plus, Edit, Trash2, List, ClipboardList, Info, DollarSign, PenTool, Flame, Sliders } from 'lucide-react';
+import { Plus, Search, ClipboardList, DollarSign, Sliders } from 'lucide-react';
 import { useData } from '../hooks/useData';
+import { DataList, ColumnDef } from './ui/DataList';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
 import ConfirmDialog from './ui/ConfirmDialog';
@@ -20,6 +21,7 @@ export default function Products() {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Form Fields
   const [nome, setNome] = useState('');
@@ -205,158 +207,127 @@ export default function Products() {
         </div>
       )}
 
-      {/* PRODUCTS GRID CARDS */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6" id="products-list-grid">
-        {products.length > 0 ? (
-          products.map(p => {
-            // CUSTO FILAMENTO (Regra do maior valor por tipo)
-            const filamentCost = calculateBOMCost(p.materials);
-
-            // CUSTO ENERGIA
-            const energyCost = calculateEnergyCost(p.tempoImpressao, p.impressoraPadraoId);
-
-            // CUSTO PRODUÇÃO TOTAL
-            const productionCost = filamentCost + energyCost + p.valorMaoDeObra;
-
-            // SUGGESTED SALES PRICE (Markup)
-            const suggestedPrice = productionCost * (1 + marginPercentage / 100);
-
-            const printerName = printers.find(pr => pr.id === p.impressoraPadraoId)?.nome || 'Impressora Indefinida';
-
-            return (
-              <div 
-                key={p.id} 
-                className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 hover:border-orange-500/20 transition-all duration-300 relative flex flex-col justify-between"
-                id={`product-card-${p.id}`}
-              >
-                <div>
-                  {/* Category and Title */}
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="text-[10px] font-mono uppercase bg-neutral-950 px-2 py-0.5 rounded text-neutral-400 border border-neutral-800">
-                        {p.categoria}
-                      </span>
-                      <h3 className="text-lg font-bold text-white mt-1.5">{p.nome}</h3>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleOpenEditModal(p)}
-                        className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg transition-colors cursor-pointer"
-                        title="Editar Ficha"
-                        id={`edit-prod-btn-${p.id}`}
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(p.id, p.nome)}
-                        className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-red-500 rounded-lg transition-colors cursor-pointer"
-                        title="Excluir Ficha"
-                        id={`delete-prod-btn-${p.id}`}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-neutral-400 mt-2 line-clamp-2">
-                    {p.descricao || <span className="text-neutral-600 italic">Sem descrição disponível.</span>}
-                  </p>
-
-                  {/* Ficha técnica BOM list */}
-                  <div className="mt-4 bg-neutral-950 p-3 rounded-xl border border-neutral-800/80 space-y-2">
-                    <h4 className="text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-bold flex items-center gap-1">
-                      <ClipboardList size={12} /> Materiais Necessários (BOM)
-                    </h4>
-                    
-                    <div className="space-y-1.5 text-xs font-mono">
-                      {p.materials.map((mat, mIdx) => {
-                        const maxRate = getMaxCostPerGram(mat.tipoFilamento);
-                        const itemCost = mat.quantidadeGrams * maxRate;
-                        return (
-                          <div key={mIdx} className="flex justify-between text-neutral-300 border-b border-neutral-900 pb-1 last:border-0 last:pb-0">
-                            <span>
-                              • {mat.quantidadeGrams}g de <strong className="text-white">{mat.tipoFilamento}</strong>
-                            </span>
-                            <span className="text-neutral-500 text-[10px]">
-                              Taxa: R$ {maxRate.toFixed(4)}/g → <strong className="text-orange-500">R$ {itemCost.toFixed(2)}</strong>
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Specs & Hardware */}
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs font-mono text-neutral-400 border-t border-neutral-800/60 pt-4">
-                    <div>
-                      <span>Impressora Padrão:</span>
-                      <div className="text-white font-semibold truncate mt-0.5">{printerName}</div>
-                    </div>
-                    <div>
-                      <span>Tempo de Manufatura:</span>
-                      <div className="text-white font-semibold mt-0.5">
-                        {p.tempoImpressao}h imp. {p.tempoAcabamento ? `+ ${p.tempoAcabamento}h acab.` : ''}
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* COST BREAKDOWN AND PRICE COMPONENT */}
-                <div className="border-t border-neutral-800/80 mt-5 pt-4 space-y-3">
-                  <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-mono uppercase text-neutral-500" id="pricing-breakdown-subtotals">
-                    <div className="bg-neutral-950 p-2 rounded-lg">
-                      <span>Insumos</span>
-                      <div className="text-xs text-white font-bold mt-1">R$ {filamentCost.toFixed(2)}</div>
-                    </div>
-                    <div className="bg-neutral-950 p-2 rounded-lg">
-                      <span>Energia</span>
-                      <div className="text-xs text-white font-bold mt-1">R$ {energyCost.toFixed(2)}</div>
-                    </div>
-                    <div className="bg-neutral-950 p-2 rounded-lg">
-                      <span>Mão Obra</span>
-                      <div className="text-xs text-white font-bold mt-1">R$ {p.valorMaoDeObra.toFixed(2)}</div>
-                    </div>
-                    <div className="bg-neutral-950 p-2 rounded-lg border border-orange-500/10">
-                      <span className="text-orange-400 font-bold">Custo Total</span>
-                      <div className="text-xs text-orange-500 font-black mt-1">R$ {productionCost.toFixed(2)}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center bg-orange-950/20 border border-orange-500/15 p-3 rounded-xl">
-                    <div className="flex items-center gap-1.5">
-                      <Sliders size={16} className="text-orange-500" />
-                      <div className="text-left">
-                        <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-wider">Margem de Lucro Sugerida</span>
-                        <div className="text-xs text-white font-bold font-mono">Markup de {marginPercentage}%</div>
-                      </div>
-                    </div>
-                    
-                    <div className="text-right">
-                      <span className="text-[10px] font-mono text-neutral-400 uppercase">Preço Venda Sugerido</span>
-                      <div className="text-lg font-black text-orange-400 font-mono">
-                        R$ {suggestedPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            );
-          })
-        ) : (
-          <div className="col-span-full py-20 text-center text-neutral-500 font-mono text-xs bg-neutral-900 border border-neutral-800 rounded-2xl">
-            Nenhum produto ou ficha técnica cadastrada ainda. Clique no botão acima para adicionar.
-          </div>
-        )}
+      {/* ── SEARCH BAR ── */}
+      <div className="relative">
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none" />
+        <input
+          id="products-search-input"
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Pesquisar por nome, categoria ou descrição..."
+          className="w-full pl-10 pr-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 transition-colors"
+          aria-label="Pesquisar produtos"
+        />
       </div>
+
+      {/* ── PRODUCT LIST ── */}
+      <DataList<Product>
+        data={(() => {
+          if (!searchQuery.trim()) return products;
+          const q = searchQuery.toLowerCase();
+          return products.filter(p =>
+            p.nome.toLowerCase().includes(q) ||
+            p.categoria.toLowerCase().includes(q) ||
+            (p.descricao || '').toLowerCase().includes(q)
+          );
+        })()}
+        rowKey={(p) => p.id}
+        onEdit={handleOpenEditModal}
+        onDelete={(p) => handleDelete(p.id, p.nome)}
+        emptyMessage={searchQuery ? 'Nenhum produto encontrado.' : 'Nenhum produto cadastrado.'}
+        columns={[
+          {
+            key: 'nome',
+            header: 'Produto / Peça',
+            render: (p) => (
+              <div>
+                <p className="font-semibold text-white text-sm">{p.nome}</p>
+                <span className="text-[11px] font-mono bg-neutral-800 px-1.5 py-0.5 rounded text-neutral-400 border border-neutral-700">
+                  {p.categoria}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: 'tempo',
+            header: 'Tempo',
+            align: 'right',
+            render: (p) => (
+              <span className="font-mono text-neutral-300 text-sm">
+                {p.tempoImpressao}h
+                {p.tempoAcabamento ? <span className="text-neutral-500"> +{p.tempoAcabamento}h</span> : null}
+              </span>
+            ),
+          },
+          {
+            key: 'custo',
+            header: 'Custo Total',
+            align: 'right',
+            render: (p) => {
+              const fc = calculateBOMCost(p.materials);
+              const ec = calculateEnergyCost(p.tempoImpressao, p.impressoraPadraoId);
+              const total = fc + ec + p.valorMaoDeObra;
+              return <span className="font-mono font-semibold text-white">R$ {total.toFixed(2)}</span>;
+            },
+          },
+          {
+            key: 'preco',
+            header: 'Preço Sugerido',
+            align: 'right',
+            render: (p) => {
+              const fc = calculateBOMCost(p.materials);
+              const ec = calculateEnergyCost(p.tempoImpressao, p.impressoraPadraoId);
+              const total = fc + ec + p.valorMaoDeObra;
+              const price = total * (1 + marginPercentage / 100);
+              return <span className="font-mono font-bold text-orange-400">R$ {price.toFixed(2)}</span>;
+            },
+          },
+        ]}
+        extraColumns={[
+          {
+            key: 'descricao',
+            header: 'Descrição',
+            render: (p) => <span className="text-neutral-300">{p.descricao || <span className="italic text-neutral-600">—</span>}</span>,
+          },
+          {
+            key: 'impressora',
+            header: 'Impressora Padrão',
+            render: (p) => <span className="text-neutral-300">{printers.find(pr => pr.id === p.impressoraPadraoId)?.nome || '—'}</span>,
+          },
+          {
+            key: 'insumos',
+            header: 'Custo Insumos',
+            render: (p) => <span className="text-neutral-300 font-mono">R$ {calculateBOMCost(p.materials).toFixed(2)}</span>,
+          },
+          {
+            key: 'energia',
+            header: 'Custo Energia',
+            render: (p) => <span className="text-neutral-300 font-mono">R$ {calculateEnergyCost(p.tempoImpressao, p.impressoraPadraoId).toFixed(2)}</span>,
+          },
+          {
+            key: 'mao_obra',
+            header: 'Mão de Obra',
+            render: (p) => <span className="text-neutral-300 font-mono">R$ {p.valorMaoDeObra.toFixed(2)}</span>,
+          },
+          {
+            key: 'bom',
+            header: 'Materiais (BOM)',
+            render: (p) => (
+              <span className="text-neutral-300">
+                {p.materials.map((m, i) => `${m.quantidadeGrams}g ${m.tipoFilamento}`).join(' · ')}
+              </span>
+            ),
+          },
+        ]}
+      />
 
       {/* PRODUCT / BOM DIALOG FORM */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in" id="product-form-modal">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto" id="product-form-modal" aria-modal="true" role="dialog">
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-2xl p-6 shadow-2xl relative my-8">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              < clipboard-list className="text-orange-500" />
+              <ClipboardList size={20} className="text-orange-500" />
               {editingProduct ? 'Editar Ficha Técnica do Produto' : 'Cadastrar Peça & Ficha Técnica (BOM)'}
             </h3>
 

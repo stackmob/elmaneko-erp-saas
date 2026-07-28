@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Printer } from '../types';
-import { Plus, Edit, Trash2, Zap, Cpu } from 'lucide-react';
+import { Plus, Search, Zap, Cpu } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
 import ConfirmDialog from './ui/ConfirmDialog';
+import { DataList, ColumnDef } from './ui/DataList';
 
 export default function Printers() {
   const { useImpressoras, useTarifas, useAddImpressora, useUpdateImpressora, useDeleteImpressora } = useData();
@@ -15,9 +16,10 @@ export default function Printers() {
   const deleteMutation = useDeleteImpressora();
   const { toast, showToast, hideToast } = useToast();
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: '', name: '' });
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPrinter, setEditingPrinter] = useState<Printer | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Form Fields
   const [nome, setNome] = useState('');
@@ -26,270 +28,248 @@ export default function Printers() {
   const [potenciaWatts, setPotenciaWatts] = useState(350);
   const [status, setStatus] = useState<'Ativa' | 'Manutenção' | 'Inativa'>('Ativa');
 
-  // Get current energy tariff
   const getCurrentTariffValue = (): number => {
-    if (tariffs.length === 0) return 0.85; // default fallback
+    if (tariffs.length === 0) return 0.85;
     const sorted = [...tariffs].sort((a, b) => new Date(b.dataInicio).getTime() - new Date(a.dataInicio).getTime());
     return sorted[0].valorKwh;
   };
-
   const currentTariffKwh = getCurrentTariffValue();
 
   const handleOpenAddModal = () => {
     setEditingPrinter(null);
-    setNome('');
-    setMarca('');
-    setModelo('');
-    setPotenciaWatts(350);
-    setStatus('Ativa');
+    setNome(''); setMarca(''); setModelo('');
+    setPotenciaWatts(350); setStatus('Ativa');
     setIsModalOpen(true);
   };
 
   const handleOpenEditModal = (p: Printer) => {
     setEditingPrinter(p);
-    setNome(p.nome);
-    setMarca(p.marca);
-    setModelo(p.modelo);
-    setPotenciaWatts(p.potenciaWatts);
-    setStatus(p.status);
+    setNome(p.nome); setMarca(p.marca); setModelo(p.modelo);
+    setPotenciaWatts(p.potenciaWatts); setStatus(p.status);
     setIsModalOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome || !marca || !modelo || potenciaWatts <= 0) {
-      alert('Por favor, informe todos os campos obrigatórios.');
+      showToast('Preencha todos os campos obrigatórios.', 'error');
       return;
     }
-
     const printerData: Printer = {
       id: editingPrinter ? editingPrinter.id : crypto.randomUUID(),
-      nome,
-      marca,
-      modelo,
+      nome, marca, modelo,
       potenciaWatts: Number(potenciaWatts),
       status
     };
-
-    const onSuccess = () => {
-      setIsModalOpen(false);
-      showToast(editingPrinter ? 'Impressora atualizada com sucesso!' : 'Impressora cadastrada com sucesso!', 'success');
-    };
+    const onSuccess = () => { setIsModalOpen(false); showToast(editingPrinter ? 'Impressora atualizada!' : 'Impressora cadastrada!', 'success'); };
     const onError = () => showToast('Erro ao salvar impressora.', 'error');
-
-    if (editingPrinter) {
-      editMutation.mutate(printerData, { onSuccess, onError });
-    } else {
-      addMutation.mutate(printerData, { onSuccess, onError });
-    }
-  };
-
-  const handleDelete = (id: string, name: string) => {
-    setConfirmDialog({ open: true, id, name });
+    editingPrinter ? editMutation.mutate(printerData, { onSuccess, onError }) : addMutation.mutate(printerData, { onSuccess, onError });
   };
 
   const handleDeleteConfirm = () => {
     deleteMutation.mutate(confirmDialog.id, {
       onSuccess: () => showToast('Impressora excluída.', 'warning'),
-      onError: () => showToast('Erro ao excluir impressora.', 'error')
+      onError: () => showToast('Erro ao excluir.', 'error')
     });
     setConfirmDialog({ open: false, id: '', name: '' });
   };
 
+  const filtered = printers.filter(p => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return p.nome.toLowerCase().includes(q) || p.marca.toLowerCase().includes(q) || p.modelo.toLowerCase().includes(q);
+  });
+
+  // ── Status badge helper ──
+  const statusBadge = (p: Printer) => (
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-mono font-bold rounded-full ${
+      p.status === 'Ativa' ? 'bg-emerald-950/60 border border-emerald-500/30 text-emerald-400' :
+      p.status === 'Manutenção' ? 'bg-amber-950/60 border border-amber-500/30 text-amber-400' :
+      'bg-neutral-950 border border-neutral-700 text-neutral-500'
+    }`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${
+        p.status === 'Ativa' ? 'bg-emerald-400' :
+        p.status === 'Manutenção' ? 'bg-amber-400' : 'bg-neutral-600'
+      }`} />
+      {p.status}
+    </span>
+  );
+
+  // ── Column definitions ──
+  const mainColumns: ColumnDef<Printer>[] = [
+    {
+      key: 'nome',
+      header: 'Impressora',
+      render: (p) => (
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-neutral-800 border border-neutral-700 rounded-lg flex items-center justify-center text-orange-400 shrink-0">
+            <Cpu size={15} />
+          </div>
+          <div>
+            <p className="font-semibold text-white text-sm">{p.nome}</p>
+            <p className="text-[11px] text-neutral-500 font-mono">{p.marca} · {p.modelo}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: statusBadge,
+    },
+    {
+      key: 'potencia',
+      header: 'Potência',
+      align: 'right',
+      render: (p) => (
+        <span className="font-mono text-white font-semibold text-sm">{p.potenciaWatts} <span className="text-neutral-500 text-xs font-normal">W</span></span>
+      ),
+    },
+    {
+      key: 'custo_hora',
+      header: 'Custo / Hora',
+      align: 'right',
+      render: (p) => {
+        const cost = (p.potenciaWatts / 1000) * currentTariffKwh;
+        return <span className="font-mono text-orange-400 font-semibold text-sm">R$ {cost.toFixed(4)}</span>;
+      },
+    },
+  ];
+
+  const extraColumns: ColumnDef<Printer>[] = [
+    {
+      key: 'consumo_kwh',
+      header: 'Consumo / Hora (kWh)',
+      render: (p) => <span className="text-neutral-300">{(p.potenciaWatts / 1000).toFixed(3)} kWh</span>,
+    },
+    {
+      key: 'custo_8h',
+      header: 'Custo Estimado 8h',
+      render: (p) => {
+        const cost = (p.potenciaWatts / 1000) * currentTariffKwh * 8;
+        return <span className="text-neutral-300 font-mono">R$ {cost.toFixed(2)}</span>;
+      },
+    },
+    {
+      key: 'custo_24h',
+      header: 'Custo Estimado 24h',
+      render: (p) => {
+        const cost = (p.potenciaWatts / 1000) * currentTariffKwh * 24;
+        return <span className="text-neutral-300 font-mono">R$ {cost.toFixed(2)}</span>;
+      },
+    },
+    {
+      key: 'id_ref',
+      header: 'ID Referência',
+      render: (p) => <span className="text-neutral-500 font-mono">{p.id.slice(0, 12)}…</span>,
+    },
+  ];
+
   return (
-    <div className="space-y-6" id="printers-module-container">
+    <div className="space-y-5" id="printers-module-container">
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
       <ConfirmDialog
         open={confirmDialog.open}
         title="Excluir Impressora"
-        description={`Tem certeza que deseja excluir "${confirmDialog.name}"? Ordens de produção associadas precisarão de atualização.`}
-        confirmLabel="Excluir Impressora"
+        description={`Tem certeza que deseja excluir "${confirmDialog.name}"?`}
+        confirmLabel="Excluir"
         onConfirm={handleDeleteConfirm}
         onCancel={() => setConfirmDialog({ open: false, id: '', name: '' })}
       />
-      
-      {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="printers-header">
+
+      {/* ── HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Cadastro de Impressoras 3D</h2>
-          <p className="text-sm text-neutral-400 mt-1">Gerencie seu maquinário 3D. Estime o consumo de energia em tempo real com base no valor de kWh vigente.</p>
+          <h2 className="text-xl font-bold text-white tracking-tight">Impressoras 3D</h2>
+          <p className="text-sm text-neutral-400 mt-1">Gerencie maquinário e estime custo de energia em tempo real.</p>
         </div>
         <button
           onClick={handleOpenAddModal}
           id="add-new-printer-btn"
-          className="py-2.5 px-4 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-md shadow-orange-600/10 flex items-center justify-center gap-2 hover:translate-y-[-1px] transition-all cursor-pointer"
+          className="py-2.5 px-4 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl flex items-center gap-2 hover:-translate-y-px transition-all cursor-pointer shrink-0"
         >
           <Plus size={18} />
-          Cadastrar Impressora
+          Nova Impressora
         </button>
       </div>
 
-      {/* DETAILED INFO CARD ABOUT ENERGY CALC */}
-      <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs font-mono" id="energy-info-banner">
-        <div className="flex items-center gap-2.5 text-neutral-300">
-          <Zap size={16} className="text-orange-500 animate-pulse" />
-          <span>Tarifa de energia atual em vigência: <strong className="text-white">R$ {currentTariffKwh.toFixed(4)} / kWh</strong>.</span>
-        </div>
-        <div className="text-neutral-500 text-[11px] uppercase tracking-wider">
-          Fórmula: Consumo kWh = (Watts × Horas) / 1000
-        </div>
+      {/* ── ENERGY INFO BANNER ── */}
+      <div className="px-4 py-3 bg-neutral-900 border border-neutral-800 rounded-xl flex items-center gap-2.5 text-xs font-mono text-neutral-300" id="energy-info-banner">
+        <Zap size={15} className="text-orange-500 shrink-0" />
+        Tarifa vigente: <strong className="text-white">R$ {currentTariffKwh.toFixed(4)} / kWh</strong>
+        <span className="ml-auto text-neutral-600 text-[10px] uppercase tracking-wider">Custo = (W × h) / 1000 × kWh</span>
       </div>
 
-      {/* GRID LISTING OF PRINTER CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="printers-grid">
-        {printers.length > 0 ? (
-          printers.map(p => {
-            // calculated metrics
-            const consumptionPerHourKwh = p.potenciaWatts / 1000;
-            const costPerHour = consumptionPerHourKwh * currentTariffKwh;
-
-            return (
-              <div 
-                key={p.id} 
-                className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 flex flex-col justify-between hover:border-orange-500/20 transition-all duration-300 relative overflow-hidden group"
-                id={`card-printer-${p.id}`}
-              >
-                {/* STATUS BAR (GLOWS IN BG) */}
-                <div className={`absolute top-0 left-0 right-0 h-1 ${
-                  p.status === 'Ativa' ? 'bg-emerald-500' :
-                  p.status === 'Manutenção' ? 'bg-amber-500' :
-                  'bg-neutral-700'
-                }`} />
-
-                <div>
-                  {/* Card Title & Badges */}
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-base font-bold text-white group-hover:text-orange-400 transition-colors">{p.nome}</h3>
-                      <p className="text-xs text-neutral-500 font-mono mt-0.5">{p.marca} • {p.modelo}</p>
-                    </div>
-                    
-                    <span className={`px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-full ${
-                      p.status === 'Ativa' ? 'bg-emerald-950/60 border border-emerald-500/20 text-emerald-400' :
-                      p.status === 'Manutenção' ? 'bg-amber-950/60 border border-amber-500/20 text-amber-400' :
-                      'bg-neutral-950 border border-neutral-800 text-neutral-500'
-                    }`}>
-                      {p.status}
-                    </span>
-                  </div>
-
-                  {/* Technical Specifications */}
-                  <div className="mt-5 space-y-2 font-mono text-xs text-neutral-400 border-t border-neutral-800/60 pt-4" id="printer-specifications">
-                    <div className="flex justify-between">
-                      <span>Potência Nominal:</span>
-                      <strong className="text-white">{p.potenciaWatts} W</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Consumo / Hora:</span>
-                      <strong className="text-white">{consumptionPerHourKwh.toFixed(3)} kWh</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Custo Energético / Hora:</span>
-                      <strong className="text-orange-500">R$ {costPerHour.toFixed(4)}</strong>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer Action Buttons */}
-                <div className="flex items-center justify-between border-t border-neutral-800/60 mt-5 pt-4">
-                  <div className="flex items-center gap-1.5 text-[10px] font-mono text-neutral-500">
-                    <Cpu size={12} />
-                    ID: {p.id.slice(0, 8)}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleOpenEditModal(p)}
-                      className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg transition-colors cursor-pointer"
-                      title="Editar Máquina"
-                      id={`edit-printer-btn-${p.id}`}
-                    >
-                      <Edit size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(p.id, p.nome)}
-                      className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-red-500 rounded-lg transition-colors cursor-pointer"
-                      title="Excluir Máquina"
-                      id={`delete-printer-btn-${p.id}`}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-            );
-          })
-        ) : (
-          <div className="col-span-full py-16 text-center text-neutral-500 font-mono text-xs bg-neutral-900 border border-neutral-800 rounded-2xl">
-            Nenhuma impressora 3D cadastrada. Clique em "Cadastrar Impressora" para começar.
-          </div>
-        )}
+      {/* ── SEARCH ── */}
+      <div className="relative">
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none" />
+        <input
+          id="printers-search-input"
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Pesquisar por nome, marca ou modelo..."
+          className="w-full pl-10 pr-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 transition-colors"
+          aria-label="Pesquisar impressoras"
+        />
       </div>
 
-      {/* FORM DIALOG */}
+      {/* ── LIST ── */}
+      <DataList<Printer>
+        data={filtered}
+        columns={mainColumns}
+        extraColumns={extraColumns}
+        rowKey={(p) => p.id}
+        onEdit={handleOpenEditModal}
+        onDelete={(p) => setConfirmDialog({ open: true, id: p.id, name: p.nome })}
+        emptyMessage={searchQuery ? 'Nenhuma impressora encontrada.' : 'Nenhuma impressora cadastrada.'}
+      />
+
+      {/* ── FORM MODAL ── */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" id="printer-form-modal">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4" id="printer-form-modal" aria-modal="true" role="dialog">
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-white mb-4">
-              {editingPrinter ? 'Editar Impressora' : 'Adicionar Impressora 3D'}
+            <h3 className="text-lg font-bold text-white mb-5">
+              {editingPrinter ? 'Editar Impressora' : 'Nova Impressora 3D'}
             </h3>
 
             <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
-              
               <div>
-                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome de Identificação *</label>
-                <input
-                  type="text"
-                  required
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                />
+                <label htmlFor="printer-nome" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                  Nome de Identificação <span className="text-orange-500">*</span>
+                </label>
+                <input id="printer-nome" type="text" required value={nome} onChange={(e) => setNome(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Marca *</label>
-                  <input
-                    type="text"
-                    required
-                    value={marca}
-                    onChange={(e) => setMarca(e.target.value)}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                  />
+                  <label htmlFor="printer-marca" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                    Marca <span className="text-orange-500">*</span>
+                  </label>
+                  <input id="printer-marca" type="text" required value={marca} onChange={(e) => setMarca(e.target.value)}
+                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors" />
                 </div>
-
                 <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Modelo *</label>
-                  <input
-                    type="text"
-                    required
-                    value={modelo}
-                    onChange={(e) => setModelo(e.target.value)}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                  />
+                  <label htmlFor="printer-modelo" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                    Modelo <span className="text-orange-500">*</span>
+                  </label>
+                  <input id="printer-modelo" type="text" required value={modelo} onChange={(e) => setModelo(e.target.value)}
+                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors" />
                 </div>
-
                 <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Potência Nominal (Watts) *</label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    value={potenciaWatts}
-                    onChange={(e) => setPotenciaWatts(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                  />
+                  <label htmlFor="printer-potencia" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                    Potência (W) <span className="text-orange-500">*</span>
+                  </label>
+                  <input id="printer-potencia" type="number" required min={1} value={potenciaWatts} onChange={(e) => setPotenciaWatts(Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors" />
                 </div>
-
                 <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Status Operacional *</label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as 'Ativa' | 'Manutenção' | 'Inativa')}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
-                  >
+                  <label htmlFor="printer-status" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                    Status <span className="text-orange-500">*</span>
+                  </label>
+                  <select id="printer-status" value={status} onChange={(e) => setStatus(e.target.value as 'Ativa' | 'Manutenção' | 'Inativa')}
+                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer transition-colors">
                     <option value="Ativa">Ativa</option>
                     <option value="Manutenção">Manutenção</option>
                     <option value="Inativa">Inativa</option>
@@ -297,35 +277,27 @@ export default function Printers() {
                 </div>
               </div>
 
-              {/* ESTIMATE CARD */}
+              {/* Live energy estimate */}
               <div className="p-3 bg-neutral-950 rounded-lg border border-neutral-800 space-y-1 text-[11px] font-mono text-neutral-400">
-                <span className="text-orange-500 font-bold block mb-1">📈 PREVISÃO DE ENERGIA OPERACIONAL:</span>
-                <p>• Consumo de energia: <span className="text-white">{(potenciaWatts / 1000).toFixed(3)} kWh por hora</span></p>
-                <p>• Custo estimado: <span className="text-white">R$ {((potenciaWatts / 1000) * currentTariffKwh).toFixed(4)} por hora de impressão</span></p>
+                <span className="text-orange-400 font-bold block mb-1">Previsão de Energia</span>
+                <p>Consumo: <span className="text-white">{(potenciaWatts / 1000).toFixed(3)} kWh / hora</span></p>
+                <p>Custo: <span className="text-white">R$ {((potenciaWatts / 1000) * currentTariffKwh).toFixed(4)} / hora</span></p>
               </div>
 
-              {/* ACTION BUTTONS */}
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer"
-                >
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 border border-neutral-700 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer transition-colors">
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer"
-                >
+                <button type="submit"
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer transition-colors">
                   Salvar Impressora
                 </button>
               </div>
-
             </form>
           </div>
         </div>
       )}
-
     </div>
   );
 }

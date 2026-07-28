@@ -1,0 +1,183 @@
+-- ============================================================
+-- ELMANEKO 3D ERP — SCRIPTS DE IMPORTAÇÃO (ETL)
+-- TELA / TABELA: 05A. PRODUTOS (CATÁLOGO)
+-- Registros a inserir: 75
+-- ============================================================
+
+INSERT INTO produtos (id, empresa_id, nome, categoria, descricao, imagem, tempo_impressao, impressora_padrao_id, tempo_acabamento, valor_mao_de_obra, observacoes)
+VALUES
+  ('fb8031ae-6ff5-4dba-88b6-153b952cafc3', '00000000-0000-0000-0000-000000000001', 'Empunhadura para Raspador Bambu', 'Suporte', '0.2mm layer, 20%+15% infill, walls OPTIMIZED 6+2', NULL, 2.2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('86eba8b1-35df-4b53-86e3-267eb6231c3e', '00000000-0000-0000-0000-000000000001', 'Suporte superior AMS Lite para Bambu Lab A1', 'Suporte', 'AMS Lite top mount (Update v1.1)', NULL, 7, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('25037d67-c6c6-47c3-821f-4ff93d3f42d2', '00000000-0000-0000-0000-000000000001', 'Chaveiros Smiley Daisy — Clicker Fidget', 'Lembrancinha', '0.2mm layer, 3 walls, 15% infill', NULL, 1.1, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('3337b8f2-9de8-402d-876f-b696c66a6cde', '00000000-0000-0000-0000-000000000001', 'Chaveiros Smiley Daisy — Clicker Fidget', 'Lembrancinha', '0.2mm layer, 3 walls, 15% infill', NULL, 0.2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 15, NULL),
+  ('19b6148b-b6eb-4dc8-8253-bed40df82bd4', '00000000-0000-0000-0000-000000000001', 'Gabinete Definitivo para Bobinas de Filamento - TIPO 01', 'Suporte', 'Latest version', NULL, 16, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('4101bd7c-1246-4b4b-85e2-6c2d472aa696', '00000000-0000-0000-0000-000000000001', 'Gabinete Definitivo para Bobinas de Filamento - TIPO 01', 'Suporte', 'Latest version', NULL, 15, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('aa5c38cb-c70f-4ed0-844f-68e22655cf78', '00000000-0000-0000-0000-000000000001', 'Gabinete Definitivo para Bobinas de Filamento - TIPO 01', 'Suporte', 'Latest version', NULL, 3, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('202504c8-b160-4e7f-8ce7-43009f56eb8a', '00000000-0000-0000-0000-000000000001', 'Gabinete Definitivo para Bobinas de Filamento - TIPO 01', 'Suporte', 'Latest version', NULL, 3, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('71d18f0d-e771-4f68-82b8-05d749d93529', '00000000-0000-0000-0000-000000000001', 'Gabinete Definitivo para Bobinas de Filamento - TIPO 01', 'Suporte', 'Latest version', NULL, 2.2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('d1309524-1591-4e3e-89a1-c6d3c374512e', '00000000-0000-0000-0000-000000000001', 'Gabinete Definitivo para Bobinas de Filamento - TIPO 01', 'Suporte', 'Latest version', NULL, 2.3, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('fe324524-859a-4c9f-84f1-b5d39a9d431f', '00000000-0000-0000-0000-000000000001', 'Chaveiros Smiley Daisy — Clicker Fidget', 'Lembrancinha', '0.2mm layer, 3 walls, 15% infill', NULL, 9.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('a7758352-ed1a-482c-8ab4-e335e71e529b', '00000000-0000-0000-0000-000000000001', 'Chaveiros Smiley Daisy — Clicker Fidget', 'Lembrancinha', '0.2mm layer, 3 walls, 15% infill', NULL, 3.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('56a0be22-8920-4511-8ebf-e3cc5952e67e', '00000000-0000-0000-0000-000000000001', 'A Base Impossível para Laptop v2 - Serve no A1 Mini!', 'Suporte', 'Fast - Stand with no cutout for TPU foot', NULL, 6.2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('762f78c3-bb5e-4592-81bd-1df3bb9e9081', '00000000-0000-0000-0000-000000000001', 'Suporte para Garrafas de Vinho', 'Decoração', '0.8mm nozzle, 0.4mm layer, 2 walls, 5% infill', NULL, 6.3, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('87ce3cd8-ecfb-4fce-8942-69cd978b6d27', '00000000-0000-0000-0000-000000000001', 'Um pequeno dragão branco', 'Brinquedo', 'Standard，42cm in length，0.2mm layer, 2 walls, 15% infill', NULL, 3.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('59b07322-d889-4f20-825a-bbee2826554b', '00000000-0000-0000-0000-000000000001', 'Meu design de fidget de 10 estrelas', 'Brinquedo', '0.24mm layer, 1 walls, 10% infill, 2 colors, both sides', NULL, 3, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('55a96fcd-d8bc-47db-858d-0361e9defc97', '00000000-0000-0000-0000-000000000001', 'Estátua do Homem-Aranha Noir | Base de Fan Art com Alto Detalhe', 'Brinquedo', '0.2mm layer, 2 walls, 15% infill', NULL, 5.2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('ed125cec-57da-4bf4-860e-acdd82264092', '00000000-0000-0000-0000-000000000001', 'Suporte para taças de vinho | Opções para 2, 3 ou 4 taças', 'Decoração', 'Fast print!', NULL, 1, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('308cc619-2050-4852-8c33-15d96a35ced6', '00000000-0000-0000-0000-000000000001', 'logo Zaya', 'Decoração', 'Placa1', NULL, 0.2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('cc79ceb6-4edf-49f2-8ed0-b4ba2c8a5226', '00000000-0000-0000-0000-000000000001', 'Caixa de Cartões', 'Brinquedo', 'Standard 0.2mm V2', NULL, 3.3, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('108c0afb-2be6-4f09-8a82-4e2c21d2d318', '00000000-0000-0000-0000-000000000001', 'Suporte Triplo para Vinhos', 'Decoração', '0.28mm layer, 3 walls, 6% infill', NULL, 4.7, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('1baaed13-4130-419a-8488-df6667e1e5fa', '00000000-0000-0000-0000-000000000001', 'Recipiente - gel de sílica', 'Suporte', '0.2mm layer, 2 walls, 15% infill', NULL, 4.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('9bcbdbaa-701d-4d02-8309-3a6d7c0e5472', '00000000-0000-0000-0000-000000000001', 'Bandeja Prato Tigela Oval Contorno V5 - Design Japandi', 'Decoração', 'Medium Plate Tray oval Bowl Contour V5 - Japandi Design', NULL, 3.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('3a47ff49-9b1d-4dbb-8aff-08294986da0f', '00000000-0000-0000-0000-000000000001', 'Suporte de Taças de Vinho Montado na Garrafa – 6 Taças', 'Decoração', '6 glasses version , 1-piece, print & enjoy (A1 & up)', NULL, 1.9, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('f3db461a-bdeb-4e22-8916-bbc4af4a2660', '00000000-0000-0000-0000-000000000001', 'Homem-Aranha / SEM AMS / COMPATÍVEL COM AMS', 'Brinquedo', 'NO AMS NEED MULTIPART', NULL, 0.2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('1649fae8-beaa-4ba8-8729-20d665cecf55', '00000000-0000-0000-0000-000000000001', 'Homem-Aranha / SEM AMS / COMPATÍVEL COM AMS', 'Brinquedo', 'NO AMS NEED MULTIPART', NULL, 4, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('1fdf2082-802f-49b8-87bb-f00f81bb2d82', '00000000-0000-0000-0000-000000000001', 'Homem-Aranha / SEM AMS / COMPATÍVEL COM AMS', 'Brinquedo', 'NO AMS NEED MULTIPART', NULL, 0.1, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('671c7a83-a485-457b-85bc-5330a80833ff', '00000000-0000-0000-0000-000000000001', 'Homem-Aranha / SEM AMS / COMPATÍVEL COM AMS', 'Brinquedo', 'NO AMS NEED MULTIPART', NULL, 4.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('23d550d4-1e50-4c15-874d-00932c05badd', '00000000-0000-0000-0000-000000000001', 'Bandeja com Borda de Corda - Decoração de Luxo Minimalista', 'Decoração', '0.2mm layer, 2 walls, 5% infill', NULL, 2.9, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('a75887b7-336c-4a9c-8793-627d16091cdd', '00000000-0000-0000-0000-000000000001', 'Porta-Velas Zen "Flor de Lótus"', 'Decoração', '0.2mm layer, 2 walls, 5% infill', NULL, 2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('b82436be-63d4-486e-817a-bafab0b0ae38', '00000000-0000-0000-0000-000000000001', 'Girador Estrela de Engrenagem Planetária – Fidget Sensorial', 'Brinquedo', '0.2mm layer, 2 walls, 15% infill', NULL, 3.1, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('c53f8eac-28aa-4b65-8157-ce614c44d935', '00000000-0000-0000-0000-000000000001', 'Vaso de Planta Canelado Moderno Japandi com drenagem', 'Decoração', 'Planter for Baby Plant - inner diameter 6,7 cm', NULL, 3.6, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('5ef35a72-746c-475d-8c52-6abf5ff50956', '00000000-0000-0000-0000-000000000001', 'Letreiro Bíblico Ore e Confie', 'Decoração', '0.2mm layer, 2 walls, 8% infill/ ', NULL, 5.6, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('7da5f617-b05b-4516-89ec-b96cb1cd3d6d', '00000000-0000-0000-0000-000000000001', 'Prateleira de Parede e Porta-Chaves ArchLine', 'Decoração', 'valor de venda 40,00', NULL, 8.6, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('b53d2173-7e80-472e-8760-74b797a39bee', '00000000-0000-0000-0000-000000000001', 'Suporte para vinho cobra', 'Decoração', '', NULL, 11.2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('050997c5-4963-4b4e-88f1-457b86901b66', '00000000-0000-0000-0000-000000000001', 'torção fidget dançarino estelar', 'Brinquedo', '', NULL, 3, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 0, NULL),
+  ('0f44a0d2-3029-4e96-8e35-7cc0fb72eadc', '00000000-0000-0000-0000-000000000001', ' Pikachu / NO AMS', 'Brinquedo', '', NULL, 7, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 10, NULL),
+  ('660f2451-630c-4fb0-8149-b05bdb2aabb8', '00000000-0000-0000-0000-000000000001', 'Shadow Sombra — Clássico', 'Brinquedo', '', NULL, 5.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 15, NULL),
+  ('72639c6c-10a4-4205-87ad-f827f5ed5664', '00000000-0000-0000-0000-000000000001', 'Dragonair – Modelo em Várias Partes (Não Requer AMS', 'Brinquedo', '', NULL, 9.9, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 15, NULL),
+  ('d54991ce-c6ed-48f8-80a6-6efae9eb2259', '00000000-0000-0000-0000-000000000001', 'MONSTER ENERGY PORTA-LATA', 'suporte de latinha monster, completo tampa e chaveiro', '', NULL, 7.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 15, NULL),
+  ('563d7f57-f970-499d-8b39-befc13d827ee', '00000000-0000-0000-0000-000000000001', 'MONSTER ENERGY PORTA-LATA DE FELPA', 'Suporte lata Monster Moleton', '', NULL, 9.4, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 10, NULL),
+  ('ba34dad7-1eab-414f-8b6b-3fcea9980ea1', '00000000-0000-0000-0000-000000000001', 'chaveiro Monster', 'Suporte', '', NULL, 0.2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('54684f36-6ba0-4f24-824f-663a5f84a366', '00000000-0000-0000-0000-000000000001', 'Blobtopus - Polvo Articulado Grudento e Torcido', 'Brinquedo', 'No-AMS / Multipart Version/ 34,90 COR SOLIDA E 39,90 COLORIDO', NULL, 6.6, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 10, NULL),
+  ('50188fe5-5506-4024-86f9-962382179bf8', '00000000-0000-0000-0000-000000000001', 'Homem-Aranha / SEM AMS / COMPATÍVEL COM AMS', 'Brinquedo', '', NULL, 7.7, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 10, NULL),
+  ('a1cd77b1-7fc5-4e5d-8906-6ed6aa43023b', '00000000-0000-0000-0000-000000000001', 'Fofo chaveiro articulado do Banguela Fúria da Noite', 'chaveiro Articulado Banguela', 'chaveiro Articulado Banguela / valor de venda 18,90', NULL, 1.4, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('1ee370a5-340f-472e-81ad-f3b0257812d9', '00000000-0000-0000-0000-000000000001', 'Chaveiro de Dragão Fúria da Luz Articulado', 'chaveiro Articulado namorada do Banguela', 'chaveiro da namorada do banguela/ valor de venda 14,90', NULL, 1.4, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('38577a2d-2200-47f2-8737-9e2dbbec42fd', '00000000-0000-0000-0000-000000000001', 'Chaveiro Pokébola', 'chaveiro Chaveiro Pokébola', 'Chaveiro Pokébola/ valor de venda 15,90', NULL, 1, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('bad2d7b7-7e74-48eb-80e1-fe01c1a44883', '00000000-0000-0000-0000-000000000001', 'Coleção de Clickers de Pokebola, AMS ', 'chaveiro pokebola de click', 'Coleção de Clickers de Pokebola, AMS / chaveiro click/ valor de venda 19,90', NULL, 1.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 10, NULL),
+  ('bc5bfc5d-4125-4f8f-81a9-f8d80a1838f2', '00000000-0000-0000-0000-000000000001', 'Abridor de Latas de Botão 32MM', 'chaveiro botton', '0.2mm camada, 2 paredes, 15% de preenchimento/ VALOR DE VENDA 3.50', NULL, 0.2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 2, NULL),
+  ('21151d8a-5642-4f89-89b6-36378e4e9801', '00000000-0000-0000-0000-000000000001', ' CHAVEIRO GIRATÓRIO ALL BLACKS', 'chaveiro giratorio bottons', '0.2mm de camada, 3 paredes, 10% de preenchimento/ valor de venda 11,90
+
+', NULL, 0.3, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('e742d3b7-c66d-4a23-826a-3aa57afb980e', '00000000-0000-0000-0000-000000000001', 'Virgem Maria Minimalista (Q_Craft)', 'Decoração', '0.16mm camada, 3 paredes, 15% de preenchimento/ preço informado 29,90
+', NULL, 2.3, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 10, NULL),
+  ('3e3a6359-3ad8-470a-807d-c95ffccf4d66', '00000000-0000-0000-0000-000000000001', 'Ornamento da Sagrada Família em Oração', 'Decoração', '0.2mm camada, 2 paredes, 15% de preenchimento
+', NULL, 13, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('6bb89782-6a43-4b29-8500-af47a04a954d', '00000000-0000-0000-0000-000000000001', 'Crucifixo com suporte', 'Decoração Crucifixo', 'Chris1974/ informado preco de venda 34,90
+', NULL, 4, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 9, NULL),
+  ('6ab5dcaa-fefd-4cc7-8ea8-8743c8499c6c', '00000000-0000-0000-0000-000000000001', 'Sagrada Família', 'decoracao sagrada familia com suporte de pe e em S', '0.2mm camada, 2 paredes, 15% de preenchimento/ Informado preço de venda 50,00
+', NULL, 3.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 15, NULL),
+  ('9427aaee-621d-4a84-8e77-f52ec5427671', '00000000-0000-0000-0000-000000000001', 'Leque stray kids Coleção de personagens', 'Brinquedo', 'straykids leque - 0.12mm camada, 3 paredes, 100% preenchimento/ valor de venda 25,90
+', NULL, 5.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('729fcd11-c99d-49b1-8083-d108587f4ff9', '00000000-0000-0000-0000-000000000001', 'Chaveiro de Casa com porta-foto ou mensagem', 'chaveiro botton', '0.16mm camada, 2 paredes, 15% de preenchimento/ valor de venda 15,90
+', NULL, 1.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('d6633ef5-7c21-41b1-8353-c4b549b2a11d', '00000000-0000-0000-0000-000000000001', 'Chaveiro Polaroid / Instax - (Sem cola / Suportes)', 'chaveiro para foto personalizado', '0.2mm camada, 2 paredes, 15% de preenchimento/ valor de venda 19,90
+', NULL, 0.4, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 10, NULL),
+  ('c95d8ec9-1ff0-4bcb-8111-f57a371caea1', '00000000-0000-0000-0000-000000000001', 'Fidget de Ovo de Dragão Texturizado e Giratório', 'Brinquedo/ Ovo de Dragão', '1 Ovo de Dragão Escamado Torcido Texturizado Anti-Estresse/ valor de venda 32,00
+', NULL, 8, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('d65ac690-2dd7-4ffd-8986-bde189be982f', '00000000-0000-0000-0000-000000000001', 'rato cego personagem shrek', 'Brinquedo', 'rato cego personagem shrek/ STL salvo na pasta D, Elmaneko ', NULL, 2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 3, NULL),
+  ('8d32c56f-3978-467c-895e-fc9889b3f2a2', '00000000-0000-0000-0000-000000000001', 'Torre de Rabanetes de Balé 2', 'Brinquedo', 'Altura da camada de 0.16mm, 2 paredes, 15% de preenchimento - Valor de venda 39,90', NULL, 5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 10, NULL),
+  ('305e47a9-b10b-49e9-8e44-c5844113f0e4', '00000000-0000-0000-0000-000000000001', 'Boneco famale figure', 'Brinquedo', 'valor de venda com uma cor 13,90', NULL, 1.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('e505e8fa-cbb8-46c4-8873-1c95c8710abb', '00000000-0000-0000-0000-000000000001', 'Caixa para Dois Baralhos de Cartas - Edição Snaplock', 'Brinquedo', 'Esta é uma caixa com fecho tipo snaplock que comporta dois baralhos de cartas de bicicleta.
+Preco de venda 42,90', NULL, 4.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('a5910168-36eb-41c8-8487-0016ea99efed', '00000000-0000-0000-0000-000000000001', 'Chaveiro Esqueleto Flexível Sorridente', 'CHAVEIRO', 'Chaveiro Esqueleto Flexível Sorridente/ Valor de venda 12,90', NULL, 0.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('19e81800-f880-42f9-8acd-dab9dbfa4367', '00000000-0000-0000-0000-000000000001', 'Kimono taekwondo', 'CHAVEIRO', 'CHAVEIRO Kimono taekwondo/ VALOR DE VENDA 16,90', NULL, 1.2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('c42c3152-a2cf-4047-8cb3-4f8677cd72bf', '00000000-0000-0000-0000-000000000001', 'Chaveiro raposa click', 'chaveiro click', 'Raposa - Coleção Animais Apaixonados/ valor 15,90', NULL, 1.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('bb52039a-d7e0-41dc-8d2a-d28234d994a6', '00000000-0000-0000-0000-000000000001', 'Aparador de livros Leão e Cruz', 'Aparador de Livros', 'Aparador de livros Leão e Cruz/ valor de venda 49,00', NULL, 10.4, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 3, NULL),
+  ('22690559-ed2b-421a-81fe-f7bdf0f5b40a', '00000000-0000-0000-0000-000000000001', 'Expositor de chaveiros - Porta-chaveiros', 'Suporte', '10 galhos/ 0.2mm layer, 3 walls, 15% infill/ valor de venda 32,90', NULL, 4, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('60896681-b5e8-4253-852f-2067d484fa94', '00000000-0000-0000-0000-000000000001', 'Suporte de Exibição para Chaveiros', 'Suporte', 'com 4 galhos/FAST PRINT (0.28mm layer, 2 walls, 15% infill)/ valor de venda 25,90', NULL, 2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('35d5b42e-a115-4de9-8eae-ba159a70e48e', '00000000-0000-0000-0000-000000000001', 'Jogo de Equilíbrio Dinossauro', 'Brinquedo', 'A1 mini,X1,X1 Carbon,X1E,H2D,P1S,P1P,A1,H2D Pro,H2S,P2S,H2C,X2D,A2L/ brinquedo de equilíbrio/ valor de venda 29,90
+', NULL, 4.2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 5, NULL),
+  ('35455716-71e3-420d-8d0d-1782f32c8e0b', '00000000-0000-0000-0000-000000000001', 'Cacho de Uva', 'Decoração', 'Uvas - Fruta Falsa - Decoração/A1 mini,X1,H2S,A1,X1E,X1 Carbon,P1S,P2S,H2D Pro,H2D,P1P,X2D,H2C,A2L/ valor de venda 19,90
+', NULL, 3.2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 4, NULL),
+  ('a7714ef0-2e76-458b-8a84-57b37bc4a311', '00000000-0000-0000-0000-000000000001', 'Folha para o cacho de uva', 'Decoração', 'Galho de Videira 3D ou Videira Flexível/0.16mm camada, 2 paredes, 15% de preenchimento/ valor de venda  5,00
+', NULL, 0.1, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 3, NULL),
+  ('b64d02d0-b961-47ac-87ee-b95b4a8fe082', '00000000-0000-0000-0000-000000000001', 'Pão Redondo Miniatura', 'Decoração', 'Bico de 0,2 mm, camada de 0,1 mm, 4 paredes, 15% de preenchimento/ valor de venda 30,90
+', NULL, 4, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 4, NULL),
+  ('d8a2628e-89b6-4e48-80b9-089546a43c5f', '00000000-0000-0000-0000-000000000001', 'Letreiro Ele Vive', 'Decoração', 'Letreiro Ele Vive _ 0.2mm layer, 2 walls, 15% infill/ valor de venda sem a bandeija 30,9
+', NULL, 3.5, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 1, NULL),
+  ('d7e0a069-67a3-4b78-87a7-64f2fc7bc789', '00000000-0000-0000-0000-000000000001', 'Coroa de Espinhos de Jesus Cristo', 'Decoração', '0,08 mm camada, 2 paredes, 15% de preenchimento/ valor de venda 6,90
+', NULL, 2.2, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 2, NULL),
+  ('6de76c62-1cc9-4124-81d2-b0a50f8c8049', '00000000-0000-0000-0000-000000000001', 'Letreiro Foi por Amor', 'Decoração', 'Letreiro "Foi por Amor" - Sem AMS/ valor de venda', NULL, 5.6, '6e45c61c-7162-480b-8984-d8d09f0105d4', 0, 2, NULL)
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================
+-- TELA / TABELA: 05B. MATERIAIS DA FICHA TÉCNICA BOM (produto_materiais)
+-- ============================================================
+
+INSERT INTO produto_materiais (empresa_id, produto_id, tipo_filamento, filamento_id, quantidade_grams)
+VALUES
+  ('00000000-0000-0000-0000-000000000001', 'fb8031ae-6ff5-4dba-88b6-153b952cafc3', 'PETG', 'any', 42),
+  ('00000000-0000-0000-0000-000000000001', '86eba8b1-35df-4b53-86e3-267eb6231c3e', 'PETG', 'any', 148),
+  ('00000000-0000-0000-0000-000000000001', '25037d67-c6c6-47c3-821f-4ff93d3f42d2', 'PETG', 'any', 18),
+  ('00000000-0000-0000-0000-000000000001', '3337b8f2-9de8-402d-876f-b696c66a6cde', 'PETG', 'any', 5),
+  ('00000000-0000-0000-0000-000000000001', '19b6148b-b6eb-4dc8-8253-bed40df82bd4', 'PETG', 'any', 404),
+  ('00000000-0000-0000-0000-000000000001', '4101bd7c-1246-4b4b-85e2-6c2d472aa696', 'PETG', 'any', 204),
+  ('00000000-0000-0000-0000-000000000001', 'aa5c38cb-c70f-4ed0-844f-68e22655cf78', 'PETG', 'any', 54),
+  ('00000000-0000-0000-0000-000000000001', '202504c8-b160-4e7f-8ce7-43009f56eb8a', 'PETG', 'any', 48),
+  ('00000000-0000-0000-0000-000000000001', '71d18f0d-e771-4f68-82b8-05d749d93529', 'PETG', 'any', 36),
+  ('00000000-0000-0000-0000-000000000001', 'd1309524-1591-4e3e-89a1-c6d3c374512e', 'PETG', 'any', 36),
+  ('00000000-0000-0000-0000-000000000001', 'fe324524-859a-4c9f-84f1-b5d39a9d431f', 'PETG', 'any', 196),
+  ('00000000-0000-0000-0000-000000000001', 'a7758352-ed1a-482c-8ab4-e335e71e529b', 'PETG', 'any', 55),
+  ('00000000-0000-0000-0000-000000000001', '56a0be22-8920-4511-8ebf-e3cc5952e67e', 'PETG', 'any', 168),
+  ('00000000-0000-0000-0000-000000000001', '762f78c3-bb5e-4592-81bd-1df3bb9e9081', 'PLA', 'any', 320),
+  ('00000000-0000-0000-0000-000000000001', '87ce3cd8-ecfb-4fce-8942-69cd978b6d27', 'PETG', 'any', 40),
+  ('00000000-0000-0000-0000-000000000001', '59b07322-d889-4f20-825a-bbee2826554b', 'PETG', 'any', 90),
+  ('00000000-0000-0000-0000-000000000001', '55a96fcd-d8bc-47db-858d-0361e9defc97', 'PETG', 'any', 75),
+  ('00000000-0000-0000-0000-000000000001', 'ed125cec-57da-4bf4-860e-acdd82264092', 'PLA', 'any', 35),
+  ('00000000-0000-0000-0000-000000000001', '308cc619-2050-4852-8c33-15d96a35ced6', 'PETG', 'any', 2),
+  ('00000000-0000-0000-0000-000000000001', 'cc79ceb6-4edf-49f2-8ed0-b4ba2c8a5226', 'PETG', 'any', 88),
+  ('00000000-0000-0000-0000-000000000001', '108c0afb-2be6-4f09-8a82-4e2c21d2d318', 'PLA', 'any', 191),
+  ('00000000-0000-0000-0000-000000000001', '1baaed13-4130-419a-8488-df6667e1e5fa', 'PETG', 'any', 61),
+  ('00000000-0000-0000-0000-000000000001', '9bcbdbaa-701d-4d02-8309-3a6d7c0e5472', 'PLA', 'any', 98),
+  ('00000000-0000-0000-0000-000000000001', '3a47ff49-9b1d-4dbb-8aff-08294986da0f', 'PLA', 'any', 52),
+  ('00000000-0000-0000-0000-000000000001', 'f3db461a-bdeb-4e22-8916-bbc4af4a2660', 'PLA', 'any', 1),
+  ('00000000-0000-0000-0000-000000000001', '1649fae8-beaa-4ba8-8729-20d665cecf55', 'PLA', 'any', 100),
+  ('00000000-0000-0000-0000-000000000001', '1fdf2082-802f-49b8-87bb-f00f81bb2d82', 'PLA', 'any', 1),
+  ('00000000-0000-0000-0000-000000000001', '671c7a83-a485-457b-85bc-5330a80833ff', 'PLA', 'any', 109),
+  ('00000000-0000-0000-0000-000000000001', '23d550d4-1e50-4c15-874d-00932c05badd', 'PLA', 'any', 100),
+  ('00000000-0000-0000-0000-000000000001', 'a75887b7-336c-4a9c-8793-627d16091cdd', 'PLA', 'any', 1),
+  ('00000000-0000-0000-0000-000000000001', 'b82436be-63d4-486e-817a-bafab0b0ae38', 'PLA', 'any', 38),
+  ('00000000-0000-0000-0000-000000000001', 'c53f8eac-28aa-4b65-8157-ce614c44d935', 'PLA', 'any', 73),
+  ('00000000-0000-0000-0000-000000000001', '5ef35a72-746c-475d-8c52-6abf5ff50956', 'PETG', 'any', 124),
+  ('00000000-0000-0000-0000-000000000001', '7da5f617-b05b-4516-89ec-b96cb1cd3d6d', 'PLA', 'any', 190),
+  ('00000000-0000-0000-0000-000000000001', 'b53d2173-7e80-472e-8760-74b797a39bee', 'PLA', 'any', 445),
+  ('00000000-0000-0000-0000-000000000001', '050997c5-4963-4b4e-88f1-457b86901b66', 'PLA', 'any', 100),
+  ('00000000-0000-0000-0000-000000000001', '0f44a0d2-3029-4e96-8e35-7cc0fb72eadc', 'PLA', 'any', 217),
+  ('00000000-0000-0000-0000-000000000001', '660f2451-630c-4fb0-8149-b05bdb2aabb8', 'PLA', 'any', 86),
+  ('00000000-0000-0000-0000-000000000001', '72639c6c-10a4-4205-87ad-f827f5ed5664', 'PLA', 'any', 120),
+  ('00000000-0000-0000-0000-000000000001', 'd54991ce-c6ed-48f8-80a6-6efae9eb2259', 'PLA', 'any', 198),
+  ('00000000-0000-0000-0000-000000000001', '563d7f57-f970-499d-8b39-befc13d827ee', 'PLA', 'any', 198),
+  ('00000000-0000-0000-0000-000000000001', 'ba34dad7-1eab-414f-8b6b-3fcea9980ea1', 'PLA', 'any', 1),
+  ('00000000-0000-0000-0000-000000000001', '54684f36-6ba0-4f24-824f-663a5f84a366', 'PETG', 'any', 84),
+  ('00000000-0000-0000-0000-000000000001', '50188fe5-5506-4024-86f9-962382179bf8', 'PLA', 'any', 240),
+  ('00000000-0000-0000-0000-000000000001', 'a1cd77b1-7fc5-4e5d-8906-6ed6aa43023b', 'PLA', 'any', 19),
+  ('00000000-0000-0000-0000-000000000001', '1ee370a5-340f-472e-81ad-f3b0257812d9', 'PLA', 'any', 16),
+  ('00000000-0000-0000-0000-000000000001', '38577a2d-2200-47f2-8737-9e2dbbec42fd', 'PLA', 'any', 18),
+  ('00000000-0000-0000-0000-000000000001', 'bad2d7b7-7e74-48eb-80e1-fe01c1a44883', 'PLA', 'any', 17),
+  ('00000000-0000-0000-0000-000000000001', 'bc5bfc5d-4125-4f8f-81a9-f8d80a1838f2', 'PETG', 'any', 1),
+  ('00000000-0000-0000-0000-000000000001', '21151d8a-5642-4f89-89b6-36378e4e9801', 'PLA', 'any', 10),
+  ('00000000-0000-0000-0000-000000000001', 'e742d3b7-c66d-4a23-826a-3aa57afb980e', 'PLA', 'any', 41),
+  ('00000000-0000-0000-0000-000000000001', '3e3a6359-3ad8-470a-807d-c95ffccf4d66', 'PLA', 'any', 500),
+  ('00000000-0000-0000-0000-000000000001', '6bb89782-6a43-4b29-8500-af47a04a954d', 'PETG', 'any', 120),
+  ('00000000-0000-0000-0000-000000000001', '6ab5dcaa-fefd-4cc7-8ea8-8743c8499c6c', 'PLA', 'any', 80),
+  ('00000000-0000-0000-0000-000000000001', '9427aaee-621d-4a84-8e77-f52ec5427671', 'PLA', 'any', 65),
+  ('00000000-0000-0000-0000-000000000001', '729fcd11-c99d-49b1-8083-d108587f4ff9', 'PLA', 'any', 15),
+  ('00000000-0000-0000-0000-000000000001', 'd6633ef5-7c21-41b1-8353-c4b549b2a11d', 'PLA', 'any', 20),
+  ('00000000-0000-0000-0000-000000000001', 'c95d8ec9-1ff0-4bcb-8111-f57a371caea1', 'PETG', 'any', 116),
+  ('00000000-0000-0000-0000-000000000001', 'd65ac690-2dd7-4ffd-8986-bde189be982f', 'PLA', 'any', 14),
+  ('00000000-0000-0000-0000-000000000001', '8d32c56f-3978-467c-895e-fc9889b3f2a2', 'PLA', 'any', 100),
+  ('00000000-0000-0000-0000-000000000001', '305e47a9-b10b-49e9-8e44-c5844113f0e4', 'PLA', 'any', 20),
+  ('00000000-0000-0000-0000-000000000001', 'e505e8fa-cbb8-46c4-8873-1c95c8710abb', 'PLA', 'any', 145),
+  ('00000000-0000-0000-0000-000000000001', 'a5910168-36eb-41c8-8487-0016ea99efed', 'PLA', 'any', 12),
+  ('00000000-0000-0000-0000-000000000001', '19e81800-f880-42f9-8acd-dab9dbfa4367', 'PLA', 'any', 30),
+  ('00000000-0000-0000-0000-000000000001', 'c42c3152-a2cf-4047-8cb3-4f8677cd72bf', 'PLA', 'any', 30),
+  ('00000000-0000-0000-0000-000000000001', 'bb52039a-d7e0-41dc-8d2a-d28234d994a6', 'PLA', 'any', 172),
+  ('00000000-0000-0000-0000-000000000001', '22690559-ed2b-421a-81fe-f7bdf0f5b40a', 'PLA', 'any', 100),
+  ('00000000-0000-0000-0000-000000000001', '60896681-b5e8-4253-852f-2067d484fa94', 'PLA', 'any', 60),
+  ('00000000-0000-0000-0000-000000000001', '35d5b42e-a115-4de9-8eae-ba159a70e48e', 'PLA', 'any', 90),
+  ('00000000-0000-0000-0000-000000000001', '35455716-71e3-420d-8d0d-1782f32c8e0b', 'PLA', 'any', 51),
+  ('00000000-0000-0000-0000-000000000001', 'a7714ef0-2e76-458b-8a84-57b37bc4a311', 'PLA', 'any', 1),
+  ('00000000-0000-0000-0000-000000000001', 'b64d02d0-b961-47ac-87ee-b95b4a8fe082', 'PLA', 'any', 100),
+  ('00000000-0000-0000-0000-000000000001', 'd8a2628e-89b6-4e48-80b9-089546a43c5f', 'PLA', 'any', 125),
+  ('00000000-0000-0000-0000-000000000001', 'd7e0a069-67a3-4b78-87a7-64f2fc7bc789', 'PLA', 'any', 9),
+  ('00000000-0000-0000-0000-000000000001', '6de76c62-1cc9-4124-81d2-b0a50f8c8049', 'PLA', 'any', 183);
