@@ -63,8 +63,9 @@ export default function Products() {
     return maxRate;
   };
 
-  // Helper to calculate BOM costs for UI
-  const calculateBOMCost = (materials: BOMItem[]): number => {
+  // Helper to calculate BOM costs safely for UI
+  const calculateBOMCost = (materials?: BOMItem[]): number => {
+    if (!materials || !Array.isArray(materials)) return 0;
     return materials.reduce((acc, item) => {
       const maxRate = getMaxCostPerGram(item.tipoFilamento);
       return acc + (item.quantidadeGrams * maxRate);
@@ -133,12 +134,16 @@ export default function Products() {
     setTempoAcabamento(p.tempoAcabamento || 0);
     setValorMaoDeObra(p.valorMaoDeObra);
     setObservacoes(p.observacoes || '');
-    setFormMaterials(p.materials.map(m => ({ ...m })));
+    
+    const mats = Array.isArray(p.materials) && p.materials.length > 0 
+      ? p.materials.map(m => ({ ...m })) 
+      : [{ tipoFilamento: 'PLA' as FilamentType, filamentoId: 'any', quantidadeGrams: 100 }];
+    setFormMaterials(mats);
     
     const loadedMargin = p.margemLucro !== undefined ? p.margemLucro : 100;
     setMarginPercentage(loadedMargin);
 
-    const bCost = calculateBOMCost(p.materials);
+    const bCost = calculateBOMCost(mats);
     const eCost = calculateEnergyCost(p.tempoImpressao, p.impressoraPadraoId);
     const tCost = bCost + eCost + p.valorMaoDeObra;
 
@@ -239,6 +244,17 @@ export default function Products() {
     setConfirmDialog({ open: false, id: '', name: '' });
   };
 
+  // Filtered Products Search Computation
+  const filteredProducts = products.filter(p => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (p.nome && p.nome.toLowerCase().includes(q)) ||
+      (p.categoria && p.categoria.toLowerCase().includes(q)) ||
+      (p.descricao && p.descricao.toLowerCase().includes(q))
+    );
+  });
+
   return (
     <div className="space-y-6" id="products-module-container">
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
@@ -274,15 +290,23 @@ export default function Products() {
         </div>
       )}
 
+      {/* SEARCH BAR */}
+      <div className="relative" id="products-search-bar">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Pesquisar peça por nome, categoria ou descrição..."
+          className="w-full pl-10 pr-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 transition-colors"
+          aria-label="Pesquisar produtos"
+        />
+      </div>
+
       {/* PRODUCT LIST */}
-      <DataList
-        title="Peças & Produtos Cadastrados"
-        items={products}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        searchFields={['nome', 'categoria', 'descricao']}
-        onEdit={handleOpenEditModal}
-        onDelete={(p) => handleDelete(p.id, p.nome)}
+      <DataList<Product>
+        data={filteredProducts}
+        rowKey={(p) => p.id}
         columns={[
           {
             key: 'nome',
@@ -370,13 +394,19 @@ export default function Products() {
           {
             key: 'bom',
             header: 'Materiais (BOM)',
-            render: (p) => (
-              <span className="text-neutral-300">
-                {p.materials.map((m, i) => `${m.quantidadeGrams}g ${m.tipoFilamento}`).join(' · ')}
-              </span>
-            ),
+            render: (p) => {
+              const mats = Array.isArray(p.materials) ? p.materials : [];
+              return (
+                <span className="text-neutral-300">
+                  {mats.length > 0 ? mats.map((m, i) => `${m.quantidadeGrams}g ${m.tipoFilamento}`).join(' · ') : 'Sem insumos'}
+                </span>
+              );
+            },
           },
         ]}
+        onEdit={handleOpenEditModal}
+        onDelete={(p) => handleDelete(p.id, p.nome)}
+        emptyMessage={searchQuery ? 'Nenhuma peça encontrada para a pesquisa.' : 'Nenhuma peça cadastrada ainda.'}
       />
 
       {/* PRODUCT / BOM DIALOG FORM MODAL */}

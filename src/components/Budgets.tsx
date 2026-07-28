@@ -97,7 +97,8 @@ export default function Budgets() {
     if (p.precoVenda && p.precoVenda > 0) {
       return p.precoVenda;
     }
-    const filamentCost = p.materials.reduce((acc, mat) => {
+    const mats = Array.isArray(p.materials) ? p.materials : [];
+    const filamentCost = mats.reduce((acc, mat) => {
       const maxRate = getMaxCostPerGram(mat.tipoFilamento);
       return acc + (mat.quantidadeGrams * maxRate);
     }, 0);
