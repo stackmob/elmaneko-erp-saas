@@ -55,6 +55,7 @@ export interface Purchase {
   categoriaItem?: PurchaseCategory;
   descricaoItem?: string;
   quantidade?: number; // quantity of items/units
+  unidadeMedida?: SupplyUnit;
   filamentoId?: string;
   quantidadeAdquirida?: number; // in grams if filament
   valorPago: number;

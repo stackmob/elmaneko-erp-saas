@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Purchase, PurchaseCategory, Filament, SupplyItem } from '../types';
+import { Purchase, PurchaseCategory, SupplyUnit, Filament, SupplyItem } from '../types';
 import { Plus, ShoppingCart, Calendar, Building, DollarSign, FileText, Search, Tag, Package, Cpu, Wrench, Box, Sparkles, Filter, CheckCircle2 } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
@@ -26,6 +26,7 @@ export default function Purchases() {
   const [categoriaItem, setCategoriaItem] = useState<PurchaseCategory>('Filamento');
   const [descricaoItem, setDescricaoItem] = useState('');
   const [quantidade, setQuantidade] = useState(1);
+  const [unidadeMedida, setUnidadeMedida] = useState<SupplyUnit>('un');
   const [quantidadeAdquirida, setQuantidadeAdquirida] = useState(1000); // grams if filament
   const [fornecedor, setFornecedor] = useState('');
   const [valorPago, setValorPago] = useState(120.00);
@@ -60,6 +61,7 @@ export default function Purchases() {
     setCategoriaItem('Filamento');
     setDescricaoItem('');
     setQuantidade(1);
+    setUnidadeMedida('g');
     setQuantidadeAdquirida(1000);
     setFornecedor('');
     setValorPago(120.00);
@@ -84,6 +86,9 @@ export default function Purchases() {
         setInsumoId('');
         setCategoriaItem('Filamento');
         setDescricaoItem(fil.nome);
+        setUnidadeMedida('g');
+        setQuantidade(1000);
+        setQuantidadeAdquirida(1000);
         if (fil.fornecedor) setFornecedor(fil.fornecedor);
         if (fil.valorCompra) setValorPago(fil.valorCompra);
       }
@@ -95,8 +100,10 @@ export default function Purchases() {
         setFilamentoId('');
         setCategoriaItem(ins.categoria);
         setDescricaoItem(ins.nome);
+        setUnidadeMedida(ins.unidadeMedida || 'un');
+        setQuantidade(1);
         if (ins.fornecedorPadrao) setFornecedor(ins.fornecedorPadrao);
-        if (ins.custoUnitarioPadrao) setValorPago(ins.custoUnitarioPadrao * quantidade);
+        if (ins.custoUnitarioPadrao) setValorPago(ins.custoUnitarioPadrao);
       }
     }
   };
@@ -113,6 +120,13 @@ export default function Purchases() {
       return;
     }
 
+    // Determine weight in grams for filaments
+    let grams = 0;
+    if (categoriaItem === 'Filamento') {
+      if (unidadeMedida === 'Kg') grams = Number(quantidade) * 1000;
+      else grams = Number(quantidade);
+    }
+
     const newPurchase: Purchase = {
       id: crypto.randomUUID(),
       data,
@@ -121,8 +135,9 @@ export default function Purchases() {
       filamentoId: filamentoId || undefined,
       categoriaItem,
       descricaoItem,
-      quantidade: categoriaItem !== 'Filamento' ? Number(quantidade) : 1,
-      quantidadeAdquirida: categoriaItem === 'Filamento' ? Number(quantidadeAdquirida) : 0,
+      quantidade: Number(quantidade),
+      unidadeMedida,
+      quantidadeAdquirida: categoriaItem === 'Filamento' ? (grams > 0 ? grams : Number(quantidadeAdquirida)) : 0,
       valorPago: Number(valorPago),
       notaFiscal,
       observacoes,
@@ -194,7 +209,7 @@ export default function Purchases() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="purchases-header">
         <div>
           <h2 className="text-xl font-bold text-white tracking-tight">Controle de Compras & Entrada de Insumos</h2>
-          <p className="text-sm text-neutral-400 mt-1">Selecione o item do catálogo para registrar aquisições e incrementar automaticamente o estoque de insumos e filamentos.</p>
+          <p className="text-sm text-neutral-400 mt-1">Registre compras com seleção de unidades flexíveis (MT, UN, KG, G, CX, RL, PCT, L) e atualização instantânea de estoque.</p>
         </div>
         <button
           onClick={handleOpenModal}
@@ -286,7 +301,7 @@ export default function Purchases() {
                 <th className="py-4 px-4 font-semibold">Categoria</th>
                 <th className="py-4 px-4 font-semibold">Item / Insumo Comprado</th>
                 <th className="py-4 px-4 font-semibold">Fornecedor</th>
-                <th className="py-4 px-4 font-semibold text-right">Qtd / Peso</th>
+                <th className="py-4 px-4 font-semibold text-right">Qtd & Unidade</th>
                 <th className="py-4 px-4 font-semibold text-right">Valor Pago</th>
                 <th className="py-4 px-4 font-semibold">Nota Fiscal</th>
                 <th className="py-4 px-4 font-semibold">Observações</th>
@@ -299,6 +314,7 @@ export default function Purchases() {
                   const IconComp = catBadge.icon;
                   const filamentObj = filaments.find((f) => f.id === p.filamentoId);
                   const supplyObj = supplies.find((s) => s.id === p.insumoId);
+                  const displayUnit = p.unidadeMedida ? p.unidadeMedida.toUpperCase() : ((p.categoriaItem || 'Filamento') === 'Filamento' ? 'G' : 'UN');
 
                   return (
                     <tr key={p.id} className="hover:bg-neutral-800/10 transition-colors">
@@ -349,11 +365,12 @@ export default function Purchases() {
                       </td>
 
                       <td className="py-3.5 px-4 text-right font-bold text-white">
-                        {(p.categoriaItem || 'Filamento') === 'Filamento' ? (
-                          <span>{p.quantidadeAdquirida || 0} <span className="text-xs font-normal text-neutral-400">g</span></span>
-                        ) : (
-                          <span>{p.quantidade || 1} <span className="text-xs font-normal text-neutral-400">un</span></span>
-                        )}
+                        <span>
+                          {p.quantidade || p.quantidadeAdquirida || 1}{' '}
+                          <span className="text-xs font-semibold text-orange-400 bg-orange-950/40 px-1.5 py-0.5 rounded border border-orange-500/20">
+                            {displayUnit}
+                          </span>
+                        </span>
                       </td>
 
                       <td className="py-3.5 px-4 text-right font-bold text-orange-400">
@@ -459,32 +476,38 @@ export default function Purchases() {
                   />
                 </div>
 
-                {/* Quantity or Weight */}
-                {categoriaItem === 'Filamento' ? (
+                {/* Quantity & Flexible Unit Selector (MT, UN, KG, G, CX, RL, PCT, L) */}
+                <div className="col-span-2 grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Massa Adquirida (g) *</label>
-                    <input
-                      type="number"
-                      required
-                      min={1}
-                      value={quantidadeAdquirida}
-                      onChange={(e) => setQuantidadeAdquirida(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Quantidade (Unidades) *</label>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Qtd. Adquirida *</label>
                     <input
                       type="number"
                       required
                       min={1}
                       value={quantidade}
                       onChange={(e) => setQuantidade(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold"
                     />
                   </div>
-                )}
+
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Unidade de Medida *</label>
+                    <select
+                      value={unidadeMedida}
+                      onChange={(e) => setUnidadeMedida(e.target.value as SupplyUnit)}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer font-bold"
+                    >
+                      <option value="un">UN (Unidade)</option>
+                      <option value="Kg">KG (Quilo)</option>
+                      <option value="g">G (Grama)</option>
+                      <option value="metro">MT (Metro)</option>
+                      <option value="caixa">CX (Caixa)</option>
+                      <option value="rolo">RL (Rolo)</option>
+                      <option value="pacote">PCT (Pacote)</option>
+                      <option value="litro">L (Litro)</option>
+                    </select>
+                  </div>
+                </div>
 
                 {/* Fornecedor */}
                 <div>
@@ -514,7 +537,7 @@ export default function Purchases() {
                 </div>
 
                 {/* Nota Fiscal */}
-                <div>
+                <div className="col-span-2 sm:col-span-1">
                   <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nota Fiscal (opcional)</label>
                   <input
                     type="text"
