@@ -21,12 +21,24 @@ export interface Filament {
   observacoes?: string;
 }
 
+export type PurchaseCategory = 
+  | 'Filamento'
+  | 'Cola / Adesivo'
+  | 'Embalagem / Caixas'
+  | 'Acessórios / Componentes'
+  | 'Impressoras 3D'
+  | 'Peças de Manutenção / Peças de Impressoras'
+  | 'Outros Insumos';
+
 export interface Purchase {
   id: string;
   data: string;
   fornecedor: string;
-  filamentoId: string;
-  quantidadeAdquirida: number; // in grams
+  categoriaItem?: PurchaseCategory;
+  descricaoItem?: string;
+  quantidade?: number; // quantity of items/units
+  filamentoId?: string;
+  quantidadeAdquirida?: number; // in grams if filament
   valorPago: number;
   notaFiscal?: string;
   observacoes?: string;
@@ -67,6 +79,7 @@ export interface Product {
   materials: BOMItem[];
   tempoAcabamento?: number; // in hours
   valorMaoDeObra: number; // Standard labor cost
+  outrasDespesas?: number; // Secondary supplies (cola, embalagem, parafusos, acessórios)
   margemLucro?: number; // % profit margin
   overPercent?: number; // % overhead / extra markup
   precoVenda?: number; // Final selling price in R$

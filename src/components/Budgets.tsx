@@ -104,7 +104,7 @@ export default function Budgets() {
     }, 0);
     // rough power estimate (350W average)
     const kwhCost = (350 * p.tempoImpressao) / 1000 * 0.85;
-    const prodCost = filamentCost + kwhCost + p.valorMaoDeObra;
+    const prodCost = filamentCost + kwhCost + p.valorMaoDeObra + (p.outrasDespesas || 0);
     const marginPct = p.margemLucro !== undefined ? p.margemLucro : 100;
     const overPct = p.overPercent !== undefined ? p.overPercent : 0;
     const marginMultiplier = 1 + ((marginPct + overPct) / 100);

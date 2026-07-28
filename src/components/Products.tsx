@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Product, BOMItem, Printer, Filament, EnergyTariff, FilamentType } from '../types';
-import { Plus, Search, ClipboardList, DollarSign, Sliders, Trash2, X, Image as ImageIcon, FileText, ExternalLink, Paperclip, Upload } from 'lucide-react';
+import { Plus, Search, ClipboardList, DollarSign, Sliders, Trash2, X, Image as ImageIcon, FileText, ExternalLink, Paperclip, Upload, PackageCheck } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { DataList, ColumnDef } from './ui/DataList';
 import { useToast } from '../hooks/useToast';
@@ -35,6 +35,7 @@ export default function Products() {
   const [impressoraPadraoId, setImpressoraPadraoId] = useState('');
   const [tempoAcabamento, setTempoAcabamento] = useState(0.5); // hours
   const [valorMaoDeObra, setValorMaoDeObra] = useState(30.00);
+  const [outrasDespesas, setOutrasDespesas] = useState(0.00); // Embalagem, cola, parafusos, acessórios
   const [observacoes, setObservacoes] = useState('');
   
   // Pricing & Separated Margins (Margem % e Over %)
@@ -84,10 +85,10 @@ export default function Products() {
     return consumptionKwh * currentTariff;
   };
 
-  // Calculate manufacturing cost
+  // Calculate total manufacturing cost (BOM + Energy + Labor + Secondary Expenses)
   const costBOM = calculateBOMCost(formMaterials);
   const costEnergy = calculateEnergyCost(tempoImpressao, impressoraPadraoId);
-  const costTotal = costBOM + costEnergy + Number(valorMaoDeObra);
+  const costTotal = costBOM + costEnergy + Number(valorMaoDeObra) + Number(outrasDespesas);
 
   // Dynamic price & margin handlers
   const handleMarginChange = (newMargin: number) => {
@@ -159,6 +160,7 @@ export default function Products() {
     setImpressoraPadraoId(defaultPrinter);
     setTempoAcabamento(0.5);
     setValorMaoDeObra(30.00);
+    setOutrasDespesas(0.00);
     setObservacoes('');
     const defaultMaterials = [{ tipoFilamento: 'PLA' as FilamentType, filamentoId: 'any', quantidadeGrams: 100 }];
     setFormMaterials(defaultMaterials);
@@ -166,7 +168,7 @@ export default function Products() {
     const initBOM = defaultMaterials.reduce((acc, item) => acc + (item.quantidadeGrams * getMaxCostPerGram(item.tipoFilamento)), 0);
     const prObj = printers.find(p => p.id === defaultPrinter);
     const initEnergy = prObj ? ((prObj.potenciaWatts * 4) / 1000) * currentTariff : 0;
-    const initTotal = initBOM + initEnergy + 30.00;
+    const initTotal = initBOM + initEnergy + 30.00 + 0.00;
     
     setMarginPercentage(100);
     setOverPercent(0);
@@ -188,6 +190,7 @@ export default function Products() {
     setImpressoraPadraoId(p.impressoraPadraoId);
     setTempoAcabamento(p.tempoAcabamento || 0);
     setValorMaoDeObra(p.valorMaoDeObra);
+    setOutrasDespesas(p.outrasDespesas || 0);
     setObservacoes(p.observacoes || '');
     
     const mats = Array.isArray(p.materials) && p.materials.length > 0 
@@ -202,7 +205,7 @@ export default function Products() {
 
     const bCost = calculateBOMCost(mats);
     const eCost = calculateEnergyCost(p.tempoImpressao, p.impressoraPadraoId);
-    const tCost = bCost + eCost + p.valorMaoDeObra;
+    const tCost = bCost + eCost + p.valorMaoDeObra + (p.outrasDespesas || 0);
 
     if (p.precoVenda && p.precoVenda > 0) {
       setPrecoVenda(p.precoVenda);
@@ -219,7 +222,7 @@ export default function Products() {
     setFormMaterials(list);
     if (!isCustomPriceManual) {
       const newBOM = calculateBOMCost(list);
-      const newTot = newBOM + costEnergy + Number(valorMaoDeObra);
+      const newTot = newBOM + costEnergy + Number(valorMaoDeObra) + Number(outrasDespesas);
       setPrecoVenda(newTot * (1 + (marginPercentage + overPercent) / 100));
     }
   };
@@ -230,7 +233,7 @@ export default function Products() {
     setFormMaterials(list);
     if (!isCustomPriceManual) {
       const newBOM = calculateBOMCost(list);
-      const newTot = newBOM + costEnergy + Number(valorMaoDeObra);
+      const newTot = newBOM + costEnergy + Number(valorMaoDeObra) + Number(outrasDespesas);
       setPrecoVenda(newTot * (1 + (marginPercentage + overPercent) / 100));
     }
   };
@@ -248,7 +251,7 @@ export default function Products() {
     setFormMaterials(list);
     if (!isCustomPriceManual) {
       const newBOM = calculateBOMCost(list);
-      const newTot = newBOM + costEnergy + Number(valorMaoDeObra);
+      const newTot = newBOM + costEnergy + Number(valorMaoDeObra) + Number(outrasDespesas);
       setPrecoVenda(newTot * (1 + (marginPercentage + overPercent) / 100));
     }
   };
@@ -274,6 +277,7 @@ export default function Products() {
       materials: formMaterials,
       tempoAcabamento: Number(tempoAcabamento),
       valorMaoDeObra: Number(valorMaoDeObra),
+      outrasDespesas: Number(outrasDespesas),
       margemLucro: Number(marginPercentage),
       overPercent: Number(overPercent),
       precoVenda: Number(precoVenda),
@@ -413,7 +417,7 @@ export default function Products() {
             render: (p) => {
               const fc = calculateBOMCost(p.materials);
               const ec = calculateEnergyCost(p.tempoImpressao, p.impressoraPadraoId);
-              const total = fc + ec + p.valorMaoDeObra;
+              const total = fc + ec + p.valorMaoDeObra + (p.outrasDespesas || 0);
               return <span className="font-mono font-semibold text-white">R$ {total.toFixed(2)}</span>;
             },
           },
@@ -424,7 +428,7 @@ export default function Products() {
             render: (p) => {
               const fc = calculateBOMCost(p.materials);
               const ec = calculateEnergyCost(p.tempoImpressao, p.impressoraPadraoId);
-              const totalCost = fc + ec + p.valorMaoDeObra;
+              const totalCost = fc + ec + p.valorMaoDeObra + (p.outrasDespesas || 0);
               const marginPct = p.margemLucro !== undefined ? p.margemLucro : 100;
               const overPct = p.overPercent !== undefined ? p.overPercent : 0;
               const finalPrice = (p.precoVenda && p.precoVenda > 0) 
@@ -469,6 +473,11 @@ export default function Products() {
             key: 'mao_obra',
             header: 'Mão de Obra',
             render: (p) => <span className="text-neutral-300 font-mono">R$ {p.valorMaoDeObra.toFixed(2)}</span>,
+          },
+          {
+            key: 'outras_despesas',
+            header: 'Outras Despesas (Insumos Secundários)',
+            render: (p) => <span className="text-neutral-300 font-mono">R$ {(p.outrasDespesas || 0).toFixed(2)}</span>,
           },
           {
             key: 'bom',
@@ -675,10 +684,10 @@ export default function Products() {
                   </div>
                 </div>
 
-                {/* MANUFACTURING TIME & LABOR COST */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4">
+                {/* MANUFACTURING TIME, LABOR COST & SECONDARY EXPENSES */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
                   <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Tempo Impressão (Horas) *</label>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Tempo Impressão (h) *</label>
                     <input
                       type="number"
                       required
@@ -690,7 +699,7 @@ export default function Products() {
                         setTempoImpressao(val);
                         if (!isCustomPriceManual) {
                           const nrg = calculateEnergyCost(val, impressoraPadraoId);
-                          const tot = costBOM + nrg + Number(valorMaoDeObra);
+                          const tot = costBOM + nrg + Number(valorMaoDeObra) + Number(outrasDespesas);
                           setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
                         }
                       }}
@@ -707,7 +716,7 @@ export default function Products() {
                         setImpressoraPadraoId(pid);
                         if (!isCustomPriceManual) {
                           const nrg = calculateEnergyCost(tempoImpressao, pid);
-                          const tot = costBOM + nrg + Number(valorMaoDeObra);
+                          const tot = costBOM + nrg + Number(valorMaoDeObra) + Number(outrasDespesas);
                           setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
                         }
                       }}
@@ -722,7 +731,7 @@ export default function Products() {
                   </div>
 
                   <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Tempo Acabamento (h)</label>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Acabamento (h)</label>
                     <input
                       type="number"
                       step="0.1"
@@ -745,11 +754,34 @@ export default function Products() {
                         const val = Number(e.target.value);
                         setValorMaoDeObra(val);
                         if (!isCustomPriceManual) {
-                          const tot = costBOM + costEnergy + val;
+                          const tot = costBOM + costEnergy + val + Number(outrasDespesas);
                           setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
                         }
                       }}
                       className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  {/* Outras Despesas (Cola, Embalagem, Parafusos, Acessórios) */}
+                  <div>
+                    <label className="block text-orange-400 mb-1 uppercase tracking-wider font-bold text-[11px]" title="Cola, embalagens, caixas, parafusos, insertos, etc.">
+                      Outras Despesas (R$)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={outrasDespesas}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setOutrasDespesas(val);
+                        if (!isCustomPriceManual) {
+                          const tot = costBOM + costEnergy + Number(valorMaoDeObra) + val;
+                          setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
+                        }
+                      }}
+                      placeholder="Embalagem, cola..."
+                      className="w-full px-3 py-2 bg-neutral-950 border border-orange-500/40 rounded-lg text-orange-300 font-mono text-xs focus:outline-none focus:border-orange-500"
                     />
                   </div>
                 </div>
@@ -848,31 +880,38 @@ export default function Products() {
                     </span>
                   </div>
                   
-                  {/* Cost Breakdown */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-xs">
-                    <div className="bg-neutral-900 p-2.5 rounded border border-neutral-850">
+                  {/* Cost Breakdown (5 cards including Outras Despesas) */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono text-xs">
+                    <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
                       <span className="text-neutral-500 uppercase text-[9px] block">Insumos (BOM)</span>
                       <strong className="text-white text-xs">
                         R$ {costBOM.toFixed(2)}
                       </strong>
                     </div>
 
-                    <div className="bg-neutral-900 p-2.5 rounded border border-neutral-850">
+                    <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
                       <span className="text-neutral-500 uppercase text-[9px] block">Energia</span>
                       <strong className="text-white text-xs">
                         R$ {costEnergy.toFixed(2)}
                       </strong>
                     </div>
 
-                    <div className="bg-neutral-900 p-2.5 rounded border border-neutral-850">
+                    <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
                       <span className="text-neutral-500 uppercase text-[9px] block">Mão de Obra</span>
                       <strong className="text-white text-xs">
                         R$ {Number(valorMaoDeObra).toFixed(2)}
                       </strong>
                     </div>
 
-                    <div className="bg-orange-950/30 p-2.5 rounded border border-orange-500/20">
-                      <span className="text-orange-400 uppercase text-[9px] block">Custo Total Fabricação</span>
+                    <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
+                      <span className="text-neutral-500 uppercase text-[9px] block">Outras Despesas</span>
+                      <strong className="text-white text-xs">
+                        R$ {Number(outrasDespesas).toFixed(2)}
+                      </strong>
+                    </div>
+
+                    <div className="col-span-2 sm:col-span-1 bg-orange-950/30 p-2 rounded border border-orange-500/20">
+                      <span className="text-orange-400 uppercase text-[9px] block">Custo Total</span>
                       <strong className="text-orange-400 text-xs font-black">
                         R$ {costTotal.toFixed(2)}
                       </strong>

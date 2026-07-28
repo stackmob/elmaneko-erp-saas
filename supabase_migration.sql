@@ -132,6 +132,7 @@ ALTER TABLE produtos ADD COLUMN IF NOT EXISTS preco_venda NUMERIC DEFAULT 0;
 ALTER TABLE produtos ADD COLUMN IF NOT EXISTS pdf_projeto TEXT;
 ALTER TABLE produtos ADD COLUMN IF NOT EXISTS pdf_projeto_nome TEXT;
 ALTER TABLE produtos ADD COLUMN IF NOT EXISTS link_projeto TEXT;
+ALTER TABLE produtos ADD COLUMN IF NOT EXISTS outras_despesas NUMERIC DEFAULT 0;
 
 -- 8. PRODUTO MATERIAIS (BOM - Bill of Materials)
 CREATE TABLE IF NOT EXISTS produto_materiais (
@@ -214,6 +215,9 @@ CREATE TABLE IF NOT EXISTS compras (
   empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
   data DATE DEFAULT CURRENT_DATE,
   fornecedor TEXT NOT NULL,
+  categoria_item TEXT DEFAULT 'Filamento',
+  descricao_item TEXT,
+  quantidade NUMERIC DEFAULT 1,
   filamento_id UUID REFERENCES filamentos(id) ON DELETE SET NULL,
   quantidade_adquirida NUMERIC NOT NULL DEFAULT 0,
   valor_pago NUMERIC NOT NULL DEFAULT 0,
@@ -221,6 +225,10 @@ CREATE TABLE IF NOT EXISTS compras (
   observacoes TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE compras ADD COLUMN IF NOT EXISTS categoria_item TEXT DEFAULT 'Filamento';
+ALTER TABLE compras ADD COLUMN IF NOT EXISTS descricao_item TEXT;
+ALTER TABLE compras ADD COLUMN IF NOT EXISTS quantidade NUMERIC DEFAULT 1;
 
 -- ============================================================
 -- SEGURANÇA: HABILITAR RLS EM TODAS AS TABELAS
