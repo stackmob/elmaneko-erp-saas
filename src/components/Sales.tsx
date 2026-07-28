@@ -2,11 +2,23 @@ import React, { useState } from 'react';
 import { Sale, Client, Product, Filament } from '../types';
 import { 
   DollarSign, Calendar, User, TrendingUp, AlertCircle, CheckCircle, 
-  XCircle, Filter, ShoppingBag, Eye, CreditCard, ChevronRight, Trash2 
+  XCircle, Filter, ShoppingBag, Eye, CreditCard, ChevronRight, Trash2,
+  ArrowUpDown, RotateCcw
 } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
+
+// Helper to format ISO YYYY-MM-DD date to DD/MM/YYYY
+const formatDateBR = (dateStr?: string): string => {
+  if (!dateStr) return '';
+  const cleanDate = dateStr.split('T')[0];
+  const parts = cleanDate.split('-');
+  if (parts.length === 3 && parts[0].length === 4) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+};
 
 export default function Sales() {
   const { useVendas, useClientes, useProdutos, useUpdateVenda, useDeleteVenda, useOrcamentos, useUpdateOrcamento } = useData();
@@ -19,10 +31,15 @@ export default function Sales() {
   const updateOrcamentoMutation = useUpdateOrcamento();
   const { toast, showToast, hideToast } = useToast();
 
-  // FILTERS
+  // FILTERS & SORT STATES
   const [filterClient, setFilterClient] = useState('todos');
   const [filterPayment, setFilterPayment] = useState('todos');
   const [filterStatus, setFilterStatus] = useState('todos');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [minValor, setMinValor] = useState('');
+  const [maxValor, setMaxValor] = useState('');
+  const [sortBy, setSortBy] = useState<'data_desc' | 'data_asc' | 'cliente_asc' | 'cliente_desc' | 'valor_desc' | 'valor_asc'>('data_desc');
 
   // KPIS
   const paidSales = sales.filter(s => s.statusPagamento === 'Pago');
@@ -33,13 +50,39 @@ export default function Sales() {
   const totalPendenteVal = pendingSales.reduce((acc, s) => acc + s.valorTotal, 0);
   const averageTicket = paidSales.length > 0 ? totalFaturadoVal / paidSales.length : 0;
 
-  // Filter Sales list
-  const filteredSales = sales.filter(s => {
+  // Filter & Sort Sales list
+  const filteredAndSortedSales = sales.filter(s => {
     const matchesClient = filterClient === 'todos' || s.clienteId === filterClient;
     const matchesPayment = filterPayment === 'todos' || s.formaPagamento === filterPayment;
     const matchesStatus = filterStatus === 'todos' || s.statusPagamento === filterStatus;
-    return matchesClient && matchesPayment && matchesStatus;
+    const matchesStartDate = !startDate || s.dataVenda >= startDate;
+    const matchesEndDate = !endDate || s.dataVenda <= endDate;
+    const matchesMinVal = minValor === '' || s.valorTotal >= Number(minValor);
+    const matchesMaxVal = maxValor === '' || s.valorTotal <= Number(maxValor);
+
+    return matchesClient && matchesPayment && matchesStatus && matchesStartDate && matchesEndDate && matchesMinVal && matchesMaxVal;
+  }).sort((a, b) => {
+    const clientA = (clients.find(c => c.id === a.clienteId)?.nome || '').toLowerCase();
+    const clientB = (clients.find(c => c.id === b.clienteId)?.nome || '').toLowerCase();
+
+    switch (sortBy) {
+      case 'data_desc':
+        return b.dataVenda.localeCompare(a.dataVenda) || b.numero.localeCompare(a.numero);
+      case 'data_asc':
+        return a.dataVenda.localeCompare(b.dataVenda) || a.numero.localeCompare(b.numero);
+      case 'cliente_asc':
+        return clientA.localeCompare(clientB);
+      case 'cliente_desc':
+        return clientB.localeCompare(clientA);
+      case 'valor_desc':
+        return b.valorTotal - a.valorTotal;
+      case 'valor_asc':
+        return a.valorTotal - b.valorTotal;
+      default:
+        return b.dataVenda.localeCompare(a.dataVenda);
+    }
   });
+
   const handleDeleteSale = (s: Sale) => {
     if (confirm(`Deseja realmente excluir a venda ${s.numero}? O orçamento de origem voltará a ficar PENDENTE.`)) {
       deleteVendaMutation.mutate(s.id);
@@ -117,54 +160,142 @@ export default function Sales() {
         </div>
       </div>
 
-      {/* FILTER BAR ROW */}
-      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex flex-col md:flex-row gap-3 items-center" id="sales-filters">
-        <span className="text-xs font-mono uppercase text-neutral-400 flex items-center gap-1.5 shrink-0">
-          <Filter size={14} /> Filtros de Auditoria:
-        </span>
-
-        {/* Cliente Filter */}
-        <div className="flex-1 w-full">
-          <select
-            value={filterClient}
-            onChange={(e) => setFilterClient(e.target.value)}
-            className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-xs text-neutral-300 focus:outline-none cursor-pointer"
-          >
-            <option value="todos">Filtrar por Todos os Clientes</option>
-            {clients.map(cl => (
-              <option key={cl.id} value={cl.id}>{cl.nome}</option>
-            ))}
-          </select>
+      {/* FILTER & SORT BAR ROW */}
+      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3" id="sales-filters">
+        <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
+          <span className="text-xs font-mono font-bold uppercase text-neutral-300 flex items-center gap-1.5">
+            <Filter size={14} className="text-orange-500" /> Filtros e Ordenação de Vendas
+          </span>
+          {(filterClient !== 'todos' || filterPayment !== 'todos' || filterStatus !== 'todos' || startDate || endDate || minValor !== '' || maxValor !== '' || sortBy !== 'data_desc') && (
+            <button
+              onClick={() => {
+                setFilterClient('todos');
+                setFilterPayment('todos');
+                setFilterStatus('todos');
+                setStartDate('');
+                setEndDate('');
+                setMinValor('');
+                setMaxValor('');
+                setSortBy('data_desc');
+              }}
+              className="text-[11px] font-mono text-orange-400 hover:text-orange-300 flex items-center gap-1 cursor-pointer"
+            >
+              <RotateCcw size={12} /> Limpar Filtros
+            </button>
+          )}
         </div>
 
-        {/* Forma de Pagamento */}
-        <div className="w-full md:w-56">
-          <select
-            value={filterPayment}
-            onChange={(e) => setFilterPayment(e.target.value)}
-            className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-xs text-neutral-300 focus:outline-none cursor-pointer"
-          >
-            <option value="todos">Formas de Pagamento (Todas)</option>
-            <option value="Pix">Pix</option>
-            <option value="Cartão de Crédito">Cartão de Crédito</option>
-            <option value="Cartão de Débito">Cartão de Débito</option>
-            <option value="Boleto">Boleto Bancário</option>
-            <option value="Dinheiro">Dinheiro</option>
-          </select>
-        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-2.5 font-mono text-xs">
+          {/* Cliente */}
+          <div>
+            <label className="block text-[10px] text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Cliente</label>
+            <select
+              value={filterClient}
+              onChange={(e) => setFilterClient(e.target.value)}
+              className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-200 focus:outline-none focus:border-orange-500 cursor-pointer"
+            >
+              <option value="todos">Todos Clientes</option>
+              {clients.map(cl => (
+                <option key={cl.id} value={cl.id}>{cl.nome}</option>
+              ))}
+            </select>
+          </div>
 
-        {/* Status de Pagamento */}
-        <div className="w-full md:w-48">
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-xs text-neutral-300 focus:outline-none cursor-pointer"
-          >
-            <option value="todos">Qualquer Status</option>
-            <option value="Pago">Pago (Liquidado)</option>
-            <option value="Pendente">Pendente (Aberto)</option>
-            <option value="Cancelado">Cancelado</option>
-          </select>
+          {/* Forma de Pagamento */}
+          <div>
+            <label className="block text-[10px] text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Meio Pgto</label>
+            <select
+              value={filterPayment}
+              onChange={(e) => setFilterPayment(e.target.value)}
+              className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-200 focus:outline-none focus:border-orange-500 cursor-pointer"
+            >
+              <option value="todos">Todas Formas</option>
+              <option value="Pix">Pix</option>
+              <option value="Cartão de Crédito">Cartão de Crédito</option>
+              <option value="Cartão de Débito">Cartão de Débito</option>
+              <option value="Boleto">Boleto Bancário</option>
+              <option value="Dinheiro">Dinheiro</option>
+            </select>
+          </div>
+
+          {/* Status Pagamento */}
+          <div>
+            <label className="block text-[10px] text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Status</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-200 focus:outline-none focus:border-orange-500 cursor-pointer"
+            >
+              <option value="todos">Qualquer Status</option>
+              <option value="Pago">Pago (Liquidado)</option>
+              <option value="Pendente">Pendente (Aberto)</option>
+              <option value="Cancelado">Cancelado</option>
+            </select>
+          </div>
+
+          {/* Data De / Até */}
+          <div>
+            <label className="block text-[10px] text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Data De</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-200 focus:outline-none focus:border-orange-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Data Até</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-200 focus:outline-none focus:border-orange-500"
+            />
+          </div>
+
+          {/* Valor Range */}
+          <div className="flex gap-1.5">
+            <div className="flex-1">
+              <label className="block text-[10px] text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Val. Mín</label>
+              <input
+                type="number"
+                placeholder="R$ 0"
+                value={minValor}
+                onChange={(e) => setMinValor(e.target.value)}
+                className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-200 focus:outline-none focus:border-orange-500"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-[10px] text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Val. Máx</label>
+              <input
+                type="number"
+                placeholder="R$ Max"
+                value={maxValor}
+                onChange={(e) => setMaxValor(e.target.value)}
+                className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-200 focus:outline-none focus:border-orange-500"
+              />
+            </div>
+          </div>
+
+          {/* Ordenar Por */}
+          <div>
+            <label className="block text-[10px] text-orange-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
+              <ArrowUpDown size={10} /> Ordenar Por
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-bold focus:outline-none focus:border-orange-500 cursor-pointer"
+            >
+              <option value="data_desc">Data (Mais Recentes)</option>
+              <option value="data_asc">Data (Mais Antigos)</option>
+              <option value="cliente_asc">Cliente (A-Z)</option>
+              <option value="cliente_desc">Cliente (Z-A)</option>
+              <option value="valor_desc">Valor (Maior p/ Menor)</option>
+              <option value="valor_asc">Valor (Menor p/ Maior)</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -185,8 +316,8 @@ export default function Sales() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-800/60 text-sm text-neutral-300">
-              {filteredSales.length > 0 ? (
-                [...filteredSales].sort((a,b)=>b.numero.localeCompare(a.numero)).map(s => {
+              {filteredAndSortedSales.length > 0 ? (
+                filteredAndSortedSales.map(s => {
                   const client = clients.find(cl => cl.id === s.clienteId);
 
                   return (
@@ -195,7 +326,7 @@ export default function Sales() {
                         {s.numero}
                       </td>
                       <td className="py-3.5 px-4 font-mono text-xs text-neutral-400 whitespace-nowrap">
-                        {s.dataVenda}
+                        {formatDateBR(s.dataVenda)}
                       </td>
                       <td className="py-3.5 px-4">
                         {client ? (

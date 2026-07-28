@@ -2,11 +2,23 @@ import React, { useState } from 'react';
 import { Budget, Client, Product, BudgetItem, Sale, Filament } from '../types';
 import { 
   Plus, Edit, Trash2, FileText, Calendar, User, 
-  DollarSign, Check, ChevronRight, Share2, Download, Eye, X, Printer, Percent, CheckCircle2 
+  DollarSign, Check, ChevronRight, Share2, Download, Eye, X, Printer, Percent, CheckCircle2,
+  Filter, ArrowUpDown, RotateCcw
 } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
+
+// Helper to format ISO YYYY-MM-DD date to DD/MM/YYYY
+const formatDateBR = (dateStr?: string): string => {
+  if (!dateStr) return '';
+  const cleanDate = dateStr.split('T')[0];
+  const parts = cleanDate.split('-');
+  if (parts.length === 3 && parts[0].length === 4) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+};
 
 export default function Budgets() {
   const { useOrcamentos, useClientes, useProdutos, useFilamentos, useEmpresa, useAddOrcamento, useUpdateOrcamento, useDeleteOrcamento, useAddVenda, useVendas } = useData();
@@ -32,6 +44,15 @@ export default function Budgets() {
   const [conversionBudget, setConversionBudget] = useState<Budget | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'Pix' | 'Cartão de Crédito' | 'Cartão de Débito' | 'Boleto' | 'Dinheiro'>('Pix');
   const [isSubmittingSale, setIsSubmittingSale] = useState(false);
+
+  // FILTER & SORT STATES
+  const [filterClient, setFilterClient] = useState('todos');
+  const [filterStatus, setFilterStatus] = useState('todos');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [minValor, setMinValor] = useState('');
+  const [maxValor, setMaxValor] = useState('');
+  const [sortBy, setSortBy] = useState<'data_desc' | 'data_asc' | 'cliente_asc' | 'cliente_desc' | 'valor_desc' | 'valor_asc'>('data_desc');
 
   // Helper check if budget is already invoiced (status === Faturado or has associated Sale)
   const isBudgetInvoiced = (b: Budget): boolean => {
@@ -224,11 +245,49 @@ export default function Budgets() {
     const client = clients.find(c => c.id === b.clienteId);
     if (!client) return;
     
-    const text = `Olá ${client.nome}! Segue o link de faturamento de seu orçamento da ELMANEKO 3D:\n\n*Orçamento:* ${b.numero}\n*Validade:* ${b.validade}\n*Total:* R$ ${calculateTotal(b.itens, b.descontoGeral).toFixed(2)}\n\nAgradecemos a preferência!`;
+    const text = `Olá ${client.nome}! Segue o link de faturamento de seu orçamento da ELMANEKO 3D:\n\n*Orçamento:* ${b.numero}\n*Validade:* ${formatDateBR(b.validade)}\n*Total:* R$ ${calculateTotal(b.itens, b.descontoGeral).toFixed(2)}\n\nAgradecemos a preferência!`;
     const encoded = encodeURIComponent(text);
     const link = `https://wa.me/${client.whatsapp.replace(/\D/g, '')}?text=${encoded}`;
     window.open(link, '_blank');
   };
+
+  // FILTER & SORT COMPUTATION
+  const filteredAndSortedBudgets = budgets.filter(b => {
+    const invoiced = isBudgetInvoiced(b);
+    const effectiveStatus = invoiced ? 'Faturado' : b.status;
+    const totalVal = calculateTotal(b.itens, b.descontoGeral);
+
+    if (filterClient !== 'todos' && b.clienteId !== filterClient) return false;
+    if (filterStatus !== 'todos' && effectiveStatus !== filterStatus) return false;
+    if (startDate && b.dataEmissao < startDate) return false;
+    if (endDate && b.dataEmissao > endDate) return false;
+    if (minValor !== '' && totalVal < Number(minValor)) return false;
+    if (maxValor !== '' && totalVal > Number(maxValor)) return false;
+
+    return true;
+  }).sort((a, b) => {
+    const clientA = (clients.find(c => c.id === a.clienteId)?.nome || '').toLowerCase();
+    const clientB = (clients.find(c => c.id === b.clienteId)?.nome || '').toLowerCase();
+    const totalA = calculateTotal(a.itens, a.descontoGeral);
+    const totalB = calculateTotal(b.itens, b.descontoGeral);
+
+    switch (sortBy) {
+      case 'data_desc':
+        return b.dataEmissao.localeCompare(a.dataEmissao) || b.numero.localeCompare(a.numero);
+      case 'data_asc':
+        return a.dataEmissao.localeCompare(b.dataEmissao) || a.numero.localeCompare(b.numero);
+      case 'cliente_asc':
+        return clientA.localeCompare(clientB);
+      case 'cliente_desc':
+        return clientB.localeCompare(clientA);
+      case 'valor_desc':
+        return totalB - totalA;
+      case 'valor_asc':
+        return totalA - totalB;
+      default:
+        return b.dataEmissao.localeCompare(a.dataEmissao);
+    }
+  });
 
   return (
     <div className="space-y-6" id="budgets-module-container">
@@ -257,6 +316,130 @@ export default function Budgets() {
         </div>
       )}
 
+      {/* FILTER & SORT CONTROL BAR */}
+      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3" id="budgets-filters-bar">
+        <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
+          <span className="text-xs font-mono font-bold uppercase text-neutral-300 flex items-center gap-1.5">
+            <Filter size={14} className="text-orange-500" /> Filtros e Ordenação de Orçamentos
+          </span>
+          {(filterClient !== 'todos' || filterStatus !== 'todos' || startDate || endDate || minValor !== '' || maxValor !== '' || sortBy !== 'data_desc') && (
+            <button
+              onClick={() => {
+                setFilterClient('todos');
+                setFilterStatus('todos');
+                setStartDate('');
+                setEndDate('');
+                setMinValor('');
+                setMaxValor('');
+                setSortBy('data_desc');
+              }}
+              className="text-[11px] font-mono text-orange-400 hover:text-orange-300 flex items-center gap-1 cursor-pointer"
+            >
+              <RotateCcw size={12} /> Limpar Filtros
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 font-mono text-xs">
+          {/* Cliente */}
+          <div>
+            <label className="block text-[10px] text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Cliente</label>
+            <select
+              value={filterClient}
+              onChange={(e) => setFilterClient(e.target.value)}
+              className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-200 focus:outline-none focus:border-orange-500 cursor-pointer"
+            >
+              <option value="todos">Todos os Clientes</option>
+              {clients.map(c => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="block text-[10px] text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Situação</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-200 focus:outline-none focus:border-orange-500 cursor-pointer"
+            >
+              <option value="todos">Todos os Status</option>
+              <option value="Aberto">Aberto</option>
+              <option value="Enviado">Enviado</option>
+              <option value="Aprovado">Aprovado</option>
+              <option value="Faturado">Faturado</option>
+              <option value="Rejeitado">Rejeitado</option>
+              <option value="Expirado">Expirado</option>
+            </select>
+          </div>
+
+          {/* Data Início / Fim */}
+          <div>
+            <label className="block text-[10px] text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Data De</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-200 focus:outline-none focus:border-orange-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Data Até</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-200 focus:outline-none focus:border-orange-500"
+            />
+          </div>
+
+          {/* Valor Range */}
+          <div className="flex gap-1.5">
+            <div className="flex-1">
+              <label className="block text-[10px] text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Val. Mín</label>
+              <input
+                type="number"
+                placeholder="R$ 0"
+                value={minValor}
+                onChange={(e) => setMinValor(e.target.value)}
+                className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-200 focus:outline-none focus:border-orange-500"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-[10px] text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Val. Máx</label>
+              <input
+                type="number"
+                placeholder="R$ Max"
+                value={maxValor}
+                onChange={(e) => setMaxValor(e.target.value)}
+                className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-200 focus:outline-none focus:border-orange-500"
+              />
+            </div>
+          </div>
+
+          {/* Ordenar por */}
+          <div>
+            <label className="block text-[10px] text-orange-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
+              <ArrowUpDown size={10} /> Ordenar Por
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-bold focus:outline-none focus:border-orange-500 cursor-pointer"
+            >
+              <option value="data_desc">Data (Mais Recentes)</option>
+              <option value="data_asc">Data (Mais Antigos)</option>
+              <option value="cliente_asc">Cliente (A-Z)</option>
+              <option value="cliente_desc">Cliente (Z-A)</option>
+              <option value="valor_desc">Valor (Maior p/ Menor)</option>
+              <option value="valor_asc">Valor (Menor p/ Maior)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       {/* LIST OF BUDGETS */}
       <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-xl" id="budgets-table-wrapper">
         <div className="overflow-x-auto">
@@ -273,8 +456,8 @@ export default function Budgets() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-800/60 text-sm text-neutral-300">
-              {budgets.length > 0 ? (
-                [...budgets].sort((a,b)=>b.numero.localeCompare(a.numero)).map(b => {
+              {filteredAndSortedBudgets.length > 0 ? (
+                filteredAndSortedBudgets.map(b => {
                   const client = clients.find(c => c.id === b.clienteId);
                   const itemsCount = b.itens.reduce((acc, it) => acc + it.quantidade, 0);
                   const totalVal = calculateTotal(b.itens, b.descontoGeral);
@@ -289,8 +472,8 @@ export default function Budgets() {
                         {client ? client.nome : <span className="text-red-400">Cliente removido</span>}
                       </td>
                       <td className="py-3.5 px-4 font-mono text-xs">
-                        <div className="text-neutral-400">{b.dataEmissao}</div>
-                        <div className="text-neutral-500 text-[10px]">Expira: {b.validade}</div>
+                        <div className="text-neutral-400">{formatDateBR(b.dataEmissao)}</div>
+                        <div className="text-neutral-500 text-[10px]">Expira: {formatDateBR(b.validade)}</div>
                       </td>
                       <td className="py-3.5 px-4 text-right font-mono font-semibold">
                         {itemsCount} peças
@@ -718,8 +901,8 @@ export default function Budgets() {
                 <div className="text-right">
                   <h3 className="text-lg font-black text-orange-500">PROPOSTA COMERCIAL</h3>
                   <p className="text-xs font-mono text-neutral-500 mt-1">Número: <strong className="text-neutral-900">{pdfPreviewBudget.numero}</strong></p>
-                  <p className="text-xs font-mono text-neutral-500">Data: {pdfPreviewBudget.dataEmissao}</p>
-                  <p className="text-xs font-mono text-neutral-500">Vencimento: {pdfPreviewBudget.validade}</p>
+                  <p className="text-xs font-mono text-neutral-500">Data: {formatDateBR(pdfPreviewBudget.dataEmissao)}</p>
+                  <p className="text-xs font-mono text-neutral-500">Vencimento: {formatDateBR(pdfPreviewBudget.validade)}</p>
                 </div>
               </div>
 
