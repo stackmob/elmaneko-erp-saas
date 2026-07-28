@@ -126,7 +126,7 @@ export interface Budget {
   itens: BudgetItem[];
   descontoGeral: number; // flat discount
   observacoes?: string;
-  status: 'Aberto' | 'Enviado' | 'Aprovado' | 'Rejeitado' | 'Expirado';
+  status: 'Aberto' | 'Enviado' | 'Aprovado' | 'Faturado' | 'Rejeitado' | 'Expirado';
 }
 
 export interface SaleItem {
@@ -191,3 +191,23 @@ export interface OperationLog {
   resultado: 'Sucesso' | 'Erro';
   detalhes?: string;
 }
+
+export interface Company {
+  id: string;
+  nome: string;               // Nome Fantasia
+  razaoSocial?: string;       // Razão Social (ex: ELMANEKO 3D LTDA)
+  cnpj?: string;              // CNPJ ou CPF da empresa
+  inscricaoEstadual?: string; // Inscrição Estadual/Municipal
+  telefone?: string;          // Telefone de contato principal
+  whatsapp?: string;          // WhatsApp comercial
+  email?: string;             // E-mail comercial
+  endereco?: string;          // Endereço completo (Rua, Nº, Bairro, Cidade - UF, CEP)
+  responsavel?: string;       // Nome do gestor/responsável emissor dos relatórios
+  cargoResponsavel?: string;  // Cargo do responsável (ex: Gestor Administrativo)
+  pixChave?: string;          // Chave PIX para constar em propostas comerciais
+  pixTipo?: string;           // Tipo de Chave PIX (ex: CNPJ, Email, Celular, Chave Aleatória)
+  slogan?: string;            // Subtítulo/Slogan da empresa
+  logotipoUrl?: string;       // URL ou Base64 da logo
+  observacoes?: string;
+}
+

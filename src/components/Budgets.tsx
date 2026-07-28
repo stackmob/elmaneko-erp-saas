@@ -2,18 +2,19 @@ import React, { useState } from 'react';
 import { Budget, Client, Product, BudgetItem, Sale, Filament } from '../types';
 import { 
   Plus, Edit, Trash2, FileText, Calendar, User, 
-  DollarSign, Check, ChevronRight, Share2, Download, Eye, X, Printer, Percent 
+  DollarSign, Check, ChevronRight, Share2, Download, Eye, X, Printer, Percent, CheckCircle2 
 } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
 
 export default function Budgets() {
-  const { useOrcamentos, useClientes, useProdutos, useFilamentos, useAddOrcamento, useUpdateOrcamento, useDeleteOrcamento, useAddVenda } = useData();
+  const { useOrcamentos, useClientes, useProdutos, useFilamentos, useEmpresa, useAddOrcamento, useUpdateOrcamento, useDeleteOrcamento, useAddVenda } = useData();
   const { data: budgets = [] } = useOrcamentos();
   const { data: clients = [] } = useClientes();
   const { data: products = [] } = useProdutos();
   const { data: filaments = [] } = useFilamentos();
+  const { data: company } = useEmpresa();
   const addMutation = useAddOrcamento();
   const editMutation = useUpdateOrcamento();
   const deleteMutation = useDeleteOrcamento();
@@ -183,9 +184,14 @@ export default function Budgets() {
     };
 
     addVendaMutation.mutate(novaVenda);
-    editMutation.mutate({ ...conversionBudget, status: 'Aprovado' });
+    editMutation.mutate({ ...conversionBudget, status: 'Faturado' });
     setConversionBudget(null);
-    showToast('Orçamento convertido em Venda com sucesso!', 'success');
+    showToast(`Orçamento ${conversionBudget.numero} faturado com sucesso! Venda gerada.`, 'success');
+  };
+
+  const handleApproveBudget = (b: Budget) => {
+    editMutation.mutate({ ...b, status: 'Aprovado' });
+    showToast(`Orçamento ${b.numero} marcado como Aprovado!`, 'success');
   };
 
   // WhatsApp share generator helper
@@ -268,6 +274,7 @@ export default function Budgets() {
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <span className={`px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-full ${
+                          b.status === 'Faturado' ? 'bg-purple-950/80 border border-purple-500/40 text-purple-300' :
                           b.status === 'Aprovado' ? 'bg-emerald-950/60 border border-emerald-500/20 text-emerald-400' :
                           b.status === 'Enviado' ? 'bg-blue-950/60 border border-blue-500/20 text-blue-400' :
                           b.status === 'Aberto' ? 'bg-orange-950/60 border border-orange-500/20 text-orange-400' :
@@ -300,16 +307,35 @@ export default function Budgets() {
                             <Share2 size={15} />
                           </button>
 
-                          {/* CONVERT TO SALE */}
+                          {/* BOTÃO APROVAR (Se ainda não aprovado/faturado) */}
+                          {b.status !== 'Aprovado' && b.status !== 'Faturado' && (
+                            <button
+                              onClick={() => handleApproveBudget(b)}
+                              className="px-2 py-1 bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-600 hover:text-white font-mono font-bold text-[10px] rounded flex items-center gap-0.5 transition-all cursor-pointer"
+                              title="Aprovar Orçamento"
+                              id={`approve-btn-${b.id}`}
+                            >
+                              <CheckCircle2 size={11} /> Aprovar
+                            </button>
+                          )}
+
+                          {/* BOTÃO FATURAR (Se aprovado) */}
                           {b.status === 'Aprovado' && (
                             <button
                               onClick={() => setConversionBudget(b)}
-                              className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[10px] rounded flex items-center gap-0.5 cursor-pointer"
-                              title="Faturar Orçamento (Venda)"
+                              className="px-2 py-1 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono font-bold text-[10px] rounded flex items-center gap-0.5 cursor-pointer shadow-md shadow-orange-600/20"
+                              title="Faturar Orçamento (Gerar Venda)"
                               id={`convert-btn-${b.id}`}
                             >
-                              <Check size={11} /> Faturar
+                              <DollarSign size={11} /> Faturar
                             </button>
+                          )}
+
+                          {/* STATUS FATURADO (Não permite faturar novamente) */}
+                          {b.status === 'Faturado' && (
+                            <span className="px-2 py-0.5 bg-purple-950/40 border border-purple-500/30 text-purple-300 font-mono font-bold text-[10px] rounded flex items-center gap-1" title="Este orçamento já foi faturado">
+                              <Check size={11} /> Faturado
+                            </span>
                           )}
 
                           {/* EDIT / DELETE */}
@@ -351,8 +377,8 @@ export default function Budgets() {
 
       {/* --- FORM MODAL (NEW / EDIT BUDGET) --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in" id="budget-form-modal">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-2xl p-6 shadow-2xl relative my-8">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="budget-form-modal">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-2xl p-5 sm:p-6 shadow-2xl relative my-auto max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <FileText className="text-orange-500" />
               {editingBudget ? `Editar Orçamento ${editingBudget.numero}` : 'Gerar Orçamento Comercial'}
@@ -360,7 +386,7 @@ export default function Budgets() {
 
             <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs text-left">
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 
                 {/* Cliente */}
                 <div>
@@ -387,6 +413,7 @@ export default function Budgets() {
                     <option value="Aberto">Aberto</option>
                     <option value="Enviado">Enviado (Aguardando cliente)</option>
                     <option value="Aprovado">Aprovado pelo Cliente</option>
+                    <option value="Faturado">Faturado (Venda Realizada)</option>
                     <option value="Rejeitado">Rejeitado</option>
                     <option value="Expirado">Expirado</option>
                   </select>
@@ -548,8 +575,8 @@ export default function Budgets() {
 
       {/* --- CONVERSION TO SALE CONFIRMATION MODAL --- */}
       {conversionBudget && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" id="conversion-to-sale-modal">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl text-left">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="conversion-to-sale-modal">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-sm p-5 sm:p-6 shadow-2xl text-left max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-1.5">
               <Check className="text-emerald-500 animate-bounce" /> Faturar Orçamento {conversionBudget.numero}
             </h3>
@@ -627,18 +654,28 @@ export default function Budgets() {
               <div className="flex justify-between items-start border-b-2 border-orange-500 pb-6">
                 <div>
                   <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 bg-gradient-to-tr from-orange-600 to-amber-500 rounded-lg flex items-center justify-center text-white font-black">
-                      E
+                    <div className="w-10 h-10 bg-gradient-to-tr from-orange-600 to-amber-500 rounded-lg flex items-center justify-center text-white font-black text-sm">
+                      {company?.nome ? company.nome[0] : 'E'}
                     </div>
                     <div>
-                      <h2 className="text-xl font-black tracking-tight text-neutral-900">ELMANEKO 3D</h2>
-                      <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">Impressão 3D de Alta Fidelidade</p>
+                      <h2 className="text-xl font-black tracking-tight text-neutral-900">
+                        {company?.nome || 'ELMANEKO 3D'}
+                      </h2>
+                      <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
+                        {company?.slogan || 'Impressão 3D de Alta Fidelidade'}
+                      </p>
                     </div>
                   </div>
                   <div className="text-xs text-neutral-500 mt-3 space-y-0.5">
-                    <p>ELMANEKO 3D LTDA • CNPJ: 12.345.678/0001-99</p>
-                    <p>Rua da Extrusora, 3D - Parque Tecnológico, SP</p>
-                    <p>Email: contato@elmaneko3d.com • Tel: (11) 3333-3333</p>
+                    <p className="font-semibold text-neutral-800">
+                      {company?.razaoSocial || company?.nome || 'ELMANEKO 3D LTDA'} 
+                      {company?.cnpj ? ` • CNPJ: ${company.cnpj}` : ''}
+                    </p>
+                    {company?.endereco && <p>{company.endereco}</p>}
+                    <p>
+                      {company?.email ? `Email: ${company.email}` : ''} 
+                      {(company?.telefone || company?.whatsapp) ? ` • Tel: ${company?.telefone || company?.whatsapp}` : ''}
+                    </p>
                   </div>
                 </div>
 
@@ -716,7 +753,7 @@ export default function Budgets() {
               </div>
 
               {/* VALUE CALCULATOR SHEET FOOTER */}
-              <div className="mt-8 flex justify-end border-t border-neutral-300 pt-4">
+              <div className="mt-8 flex flex-col items-end border-t border-neutral-300 pt-4">
                 <div className="w-64 text-xs space-y-1.5 font-mono text-neutral-600">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
@@ -733,15 +770,25 @@ export default function Budgets() {
                     <strong className="text-orange-600 font-black text-base">R$ {total.toFixed(2)}</strong>
                   </div>
                 </div>
+
+                {company?.pixChave && (
+                  <div className="w-full mt-4 p-3 bg-neutral-50 rounded-xl border border-neutral-200 text-neutral-800 text-xs font-mono text-left">
+                    <span className="font-bold text-orange-600 block">Dados para Pagamento via PIX:</span>
+                    <span>Chave ({company.pixTipo || 'CNPJ'}): <strong>{company.pixChave}</strong></span>
+                  </div>
+                )}
               </div>
 
               {/* SIGNATURE SECTION & COMPLIANCE */}
               <div className="mt-12 grid grid-cols-2 gap-8 border-t border-neutral-200 pt-8 text-center text-[10px] text-neutral-500">
                 <div className="space-y-4">
                   <div className="h-10 border-b border-neutral-300 flex items-end justify-center">
-                    <span className="font-mono text-[9px] text-neutral-400">ELMANEKO 3D SYSTEM EMISSION</span>
+                    <span className="font-mono text-[9px] text-neutral-400">EMISSOR DIGITAL • {company?.nome || 'ELMANEKO 3D'}</span>
                   </div>
-                  <p>Guilherme Braga<br /><strong>Gestor Administrativo</strong></p>
+                  <p>
+                    <strong className="text-neutral-900">{company?.responsavel || 'Guilherme Braga'}</strong><br />
+                    <span>{company?.cargoResponsavel || 'Gestor Administrativo'}</span>
+                  </p>
                 </div>
                 
                 <div className="space-y-4">

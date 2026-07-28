@@ -154,7 +154,7 @@ export function DataList<T>({
                           colSpan={mainCols.length + (hasActions ? 2 : 1)}
                           className="px-4 py-3 border-t border-neutral-800/40"
                         >
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-xs font-mono">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-xs font-mono">
                             {extraColumns.map(col => (
                               <div key={col.key} className="space-y-1">
                                 <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-semibold">

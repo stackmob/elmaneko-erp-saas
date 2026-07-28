@@ -374,8 +374,8 @@ export default function Filaments() {
 
       {/* 3. MODAL FOR NEW/EDIT FILAMENT */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in" id="filament-form-modal">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="filament-form-modal">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <span className="w-2.5 h-2.5 bg-orange-500 rounded-full animate-ping" />
               {editingFilament ? 'Editar Filamento / Bobina' : 'Cadastrar Novo Filamento'}
@@ -383,7 +383,7 @@ export default function Filaments() {
 
             <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="col-span-2">
                   <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome do Produto *</label>
                   <input

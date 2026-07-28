@@ -2,16 +2,22 @@ import React, { useState } from 'react';
 import { Sale, Client, Product, Filament } from '../types';
 import { 
   DollarSign, Calendar, User, TrendingUp, AlertCircle, CheckCircle, 
-  XCircle, Filter, ShoppingBag, Eye, CreditCard, ChevronRight 
+  XCircle, Filter, ShoppingBag, Eye, CreditCard, ChevronRight, Trash2 
 } from 'lucide-react';
 import { useData } from '../hooks/useData';
+import { useToast } from '../hooks/useToast';
+import Toast from './ui/Toast';
 
 export default function Sales() {
-  const { useVendas, useClientes, useProdutos, useUpdateVenda } = useData();
+  const { useVendas, useClientes, useProdutos, useUpdateVenda, useDeleteVenda, useOrcamentos, useUpdateOrcamento } = useData();
   const { data: sales = [] } = useVendas();
   const { data: clients = [] } = useClientes();
   const { data: products = [] } = useProdutos();
-  const updateVendaMutation = useUpdateVenda ? useUpdateVenda() : { mutate: () => {} };
+  const { data: budgets = [] } = useOrcamentos();
+  const updateVendaMutation = useUpdateVenda();
+  const deleteVendaMutation = useDeleteVenda();
+  const updateOrcamentoMutation = useUpdateOrcamento();
+  const { toast, showToast, hideToast } = useToast();
 
   // FILTERS
   const [filterClient, setFilterClient] = useState('todos');
@@ -34,9 +40,23 @@ export default function Sales() {
     const matchesStatus = filterStatus === 'todos' || s.statusPagamento === filterStatus;
     return matchesClient && matchesPayment && matchesStatus;
   });
+  const handleDeleteSale = (s: Sale) => {
+    if (confirm(`Deseja realmente excluir a venda ${s.numero}? O orçamento de origem voltará a ficar PENDENTE.`)) {
+      deleteVendaMutation.mutate(s.id);
+      if (s.orcamentoOrigemId) {
+        const origBudget = budgets.find(b => b.id === s.orcamentoOrigemId);
+        if (origBudget) {
+          updateOrcamentoMutation.mutate({ ...origBudget, status: 'Aberto' });
+        }
+      }
+      showToast(`Venda ${s.numero} excluída com sucesso! Orçamento de origem retornado para o status Pendente.`, 'success');
+    }
+  };
 
   return (
     <div className="space-y-6" id="sales-module-container">
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
+      
       
       {/* HEADER ROW */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="sales-header">
@@ -47,7 +67,7 @@ export default function Sales() {
       </div>
 
       {/* SALES KPIS BOARD */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-fade-in" id="sales-kpis">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 animate-fade-in" id="sales-kpis">
         {/* Total Faturado */}
         <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
           <div className="flex justify-between items-center text-[10px] font-mono uppercase text-neutral-400">
@@ -216,34 +236,44 @@ export default function Sales() {
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        {s.statusPagamento === 'Pendente' ? (
-                          <div className="flex justify-center gap-1">
-                            <button
-                              onClick={() => {
-                                if (confirm(`Confirmar recebimento do pagamento do pedido ${s.numero}?`)) {
-                                  updateVendaMutation.mutate({ ...s, statusPagamento: 'Pago' });
-                                }
-                              }}
-                              className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] rounded cursor-pointer"
-                              id={`pay-sale-btn-${s.id}`}
-                            >
-                              Confirmar Pgto
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (confirm(`Tem certeza de que deseja cancelar a venda ${s.numero}?`)) {
-                                  updateVendaMutation.mutate({ ...s, statusPagamento: 'Cancelado' });
-                                }
-                              }}
-                              className="px-2 py-0.5 bg-neutral-950 border border-neutral-800 hover:text-red-500 text-neutral-500 text-[10px] rounded cursor-pointer"
-                              id={`cancel-sale-btn-${s.id}`}
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-[10px] font-mono text-neutral-500 italic">Lançamento Fechado</span>
-                        )}
+                        <div className="flex items-center justify-center gap-1.5">
+                          {s.statusPagamento === 'Pendente' && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Confirmar recebimento do pagamento do pedido ${s.numero}?`)) {
+                                    updateVendaMutation.mutate({ ...s, statusPagamento: 'Pago' });
+                                    showToast(`Pagamento da venda ${s.numero} confirmado!`, 'success');
+                                  }
+                                }}
+                                className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] rounded cursor-pointer"
+                                id={`pay-sale-btn-${s.id}`}
+                              >
+                                Confirmar Pgto
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Tem certeza de que deseja cancelar a venda ${s.numero}?`)) {
+                                    updateVendaMutation.mutate({ ...s, statusPagamento: 'Cancelado' });
+                                    showToast(`Venda ${s.numero} cancelada.`, 'error');
+                                  }
+                                }}
+                                className="px-2 py-0.5 bg-neutral-950 border border-neutral-800 hover:text-red-500 text-neutral-500 text-[10px] rounded cursor-pointer"
+                                id={`cancel-sale-btn-${s.id}`}
+                              >
+                                Cancelar
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => handleDeleteSale(s)}
+                            className="p-1 hover:bg-neutral-800 text-neutral-400 hover:text-red-400 rounded transition-colors cursor-pointer"
+                            title="Excluir Venda (Retorna orçamento a Pendente)"
+                            id={`delete-sale-btn-${s.id}`}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

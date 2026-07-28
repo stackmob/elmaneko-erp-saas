@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { Filament, Purchase, Printer, EnergyTariff, Product, ProductionOrder, Budget, Sale, Client } from '../types';
+import { Filament, Purchase, Printer, EnergyTariff, Product, ProductionOrder, Budget, Sale, Client, Company } from '../types';
 
 const DEFAULT_DEMO_EMPRESA_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -18,6 +18,62 @@ const isValidUuid = (id?: string): boolean => {
   if (!id) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 };
+
+const DEFAULT_COMPANY_DATA: Company = {
+  id: DEFAULT_DEMO_EMPRESA_ID,
+  nome: 'ELMANEKO 3D',
+  razaoSocial: 'ELMANEKO 3D LTDA',
+  cnpj: '12.345.678/0001-99',
+  inscricaoEstadual: 'ISENTO',
+  telefone: '(11) 3333-3333',
+  whatsapp: '(11) 99999-9999',
+  email: 'contato@elmaneko3d.com',
+  endereco: 'Rua da Extrusora, 3D - Parque Tecnológico, SP',
+  responsavel: 'Guilherme Braga',
+  cargoResponsavel: 'Gestor Administrativo',
+  pixChave: '12.345.678/0001-99',
+  pixTipo: 'CNPJ',
+  slogan: 'Impressão 3D de Alta Fidelidade',
+  observacoes: 'Documentos e propostas emitidos via ELMANEKO 3D ERP HUD'
+};
+
+const mapEmpresaFromDB = (row: any): Company => ({
+  id: row.id,
+  nome: row.nome || 'ELMANEKO 3D',
+  razaoSocial: row.razao_social || row.nome || 'ELMANEKO 3D LTDA',
+  cnpj: row.cnpj || '',
+  inscricaoEstadual: row.inscricao_estadual || '',
+  telefone: row.telefone || '',
+  whatsapp: row.whatsapp || '',
+  email: row.email || '',
+  endereco: row.endereco || '',
+  responsavel: row.responsavel || '',
+  cargoResponsavel: row.cargo_responsavel || '',
+  pixChave: row.pix_chave || '',
+  pixTipo: row.pix_tipo || 'CNPJ',
+  slogan: row.slogan || '',
+  logotipoUrl: row.logotipo_url || '',
+  observacoes: row.observacoes || ''
+});
+
+const mapEmpresaToDB = (comp: Partial<Company>) => ({
+  nome: comp.nome,
+  razao_social: comp.razaoSocial,
+  cnpj: comp.cnpj,
+  inscricao_estadual: comp.inscricaoEstadual,
+  telefone: comp.telefone,
+  whatsapp: comp.whatsapp,
+  email: comp.email,
+  endereco: comp.endereco,
+  responsavel: comp.responsavel,
+  cargo_responsavel: comp.cargoResponsavel,
+  pix_chave: comp.pixChave,
+  pix_tipo: comp.pixTipo,
+  slogan: comp.slogan,
+  logotipo_url: comp.logotipoUrl,
+  observacoes: comp.observacoes
+});
+
 
 // ============================================================================
 // LOCAL STORAGE CACHE HELPERS (Resiliência & Fallback Offline/RLS)
@@ -846,6 +902,21 @@ export const useData = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vendas', activeTenant] }),
   });
 
+  const useDeleteVenda = () => useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        await supabase.from('vendas').delete().eq('id', id);
+      } catch (err) {
+        console.error('[useData] Exceção ao excluir venda:', err);
+      }
+      removeFromLocalCache('vendas', id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendas', activeTenant] });
+      queryClient.invalidateQueries({ queryKey: ['orcamentos', activeTenant] });
+    },
+  });
+
   // --- PRODUÇÕES ---
   const useProducoes = () => useQuery({
     queryKey: ['producoes', activeTenant],
@@ -1004,15 +1075,85 @@ export const useData = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['orcamentos', activeTenant] }),
   });
 
+  // ============================================================================
+  // CADASTRO E PERFIL DA EMPRESA (MULTI-TENANT & RELATÓRIOS)
+  // ============================================================================
+  const useEmpresa = () => useQuery({
+    queryKey: ['empresa', activeTenant],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('empresas')
+          .select('*')
+          .eq('id', activeTenant)
+          .maybeSingle();
+
+        if (data && !error) {
+          const mapped = mapEmpresaFromDB(data);
+          localStorage.setItem('elmaneko_cache_empresa', JSON.stringify(mapped));
+          return mapped;
+        }
+      } catch (e) {
+        console.warn('[useData] Erro ao buscar empresa no Supabase:', e);
+      }
+      
+      try {
+        const cached = localStorage.getItem('elmaneko_cache_empresa');
+        if (cached) return JSON.parse(cached) as Company;
+      } catch (e) {}
+
+      return { ...DEFAULT_COMPANY_DATA, id: activeTenant };
+    }
+  });
+
+  const useUpdateEmpresa = () => useMutation({
+    mutationFn: async (updatedCompany: Company) => {
+      let itemSalvo = { ...updatedCompany };
+      try {
+        const payload = mapEmpresaToDB(updatedCompany);
+        const { data, error } = await supabase
+          .from('empresas')
+          .update(payload)
+          .eq('id', activeTenant)
+          .select()
+          .single();
+
+        if (data && !error) {
+          itemSalvo = mapEmpresaFromDB(data);
+        } else {
+          // Se a linha ainda não existe, tenta fazer um upsert com id
+          const { data: upsertData, error: upsertErr } = await supabase
+            .from('empresas')
+            .upsert({ id: activeTenant, ...payload })
+            .select()
+            .single();
+
+          if (upsertData && !upsertErr) {
+            itemSalvo = mapEmpresaFromDB(upsertData);
+          } else {
+            console.warn('[useData] Atualização Supabase falhou, mantendo em cache local:', error?.message || upsertErr?.message);
+          }
+        }
+      } catch (err) {
+        console.error('[useData] Exceção ao atualizar empresa:', err);
+      }
+      localStorage.setItem('elmaneko_cache_empresa', JSON.stringify(itemSalvo));
+      return itemSalvo;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['empresa', activeTenant] }),
+  });
+
   return {
+    useEmpresa, useUpdateEmpresa,
     useFilamentos, useAddFilamento, useUpdateFilamento, useDeleteFilamento,
     useCompras, useAddCompra,
     useImpressoras, useAddImpressora, useUpdateImpressora, useDeleteImpressora,
     useClientes, useAddCliente, useUpdateCliente, useDeleteCliente,
     useTarifas, useAddTarifa,
     useProdutos, useAddProduto, useUpdateProduto, useDeleteProduto,
-    useVendas, useAddVenda, useUpdateVenda,
+    useVendas, useAddVenda, useUpdateVenda, useDeleteVenda,
     useProducoes, useAddProducao, useUpdateProducao,
     useOrcamentos, useAddOrcamento, useUpdateOrcamento, useDeleteOrcamento
   };
 };
+

@@ -404,22 +404,22 @@ export default function Production() {
         </div>
         
         {/* Navigation Tabs */}
-        <div className="flex bg-neutral-950 p-1 rounded-xl border border-neutral-800/80 font-mono text-xs">
+        <div className="flex overflow-x-auto no-scrollbar bg-neutral-950 p-1 rounded-xl border border-neutral-800/80 font-mono text-xs max-w-full">
           <button
             onClick={() => { setActiveTab('historico'); setFormError(''); }}
-            className={`px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${activeTab === 'historico' ? 'bg-orange-600 text-white' : 'text-neutral-400 hover:text-white'}`}
+            className={`px-3.5 sm:px-4 py-2 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === 'historico' ? 'bg-orange-600 text-white' : 'text-neutral-400 hover:text-white'}`}
           >
             Histórico Queue
           </button>
           <button
             onClick={() => { setActiveTab('nova'); setFormError(''); }}
-            className={`px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${activeTab === 'nova' ? 'bg-orange-600 text-white' : 'text-neutral-400 hover:text-white'}`}
+            className={`px-3.5 sm:px-4 py-2 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === 'nova' ? 'bg-orange-600 text-white' : 'text-neutral-400 hover:text-white'}`}
           >
             Nova Produção
           </button>
           <button
             onClick={() => { setActiveTab('relatorios'); setFormError(''); }}
-            className={`px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${activeTab === 'relatorios' ? 'bg-orange-600 text-white' : 'text-neutral-400 hover:text-white'}`}
+            className={`px-3.5 sm:px-4 py-2 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === 'relatorios' ? 'bg-orange-600 text-white' : 'text-neutral-400 hover:text-white'}`}
           >
             Relatório Custos
           </button>
@@ -452,7 +452,7 @@ export default function Production() {
             )}
 
             <form onSubmit={handleCreateProduction} className="space-y-4 font-mono text-xs">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 
                 {/* Produto */}
                 <div className="col-span-2 md:col-span-1">
@@ -669,7 +669,7 @@ export default function Production() {
         <div className="space-y-4 animate-fade-in" id="historico-producao-wrapper">
           
           {/* SEARCH & FILTER BAR */}
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 grid grid-cols-1 md:grid-cols-5 gap-3" id="historico-filters">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3" id="historico-filters">
             {/* Product Select */}
             <div>
               <select
@@ -857,7 +857,7 @@ export default function Production() {
         <div className="space-y-6 animate-fade-in" id="relatorios-financeiros-wrapper">
           
           {/* SEARCH & FILTER CONTROLS FOR DYNAMIC RELATÓRIOS */}
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 grid grid-cols-1 md:grid-cols-4 gap-3" id="relatorio-filters">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3" id="relatorio-filters">
             <div>
               <label className="block text-[10px] font-mono uppercase text-neutral-500 mb-1">Filtrar por Peça</label>
               <select
@@ -908,7 +908,7 @@ export default function Production() {
           </div>
 
           {/* DYNAMIC METRICS BOARD */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4" id="relatorios-indicators">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" id="relatorios-indicators">
             
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
               <h4 className="text-[10px] font-mono uppercase text-neutral-400">Total Manufaturado</h4>

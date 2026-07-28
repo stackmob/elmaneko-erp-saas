@@ -3,7 +3,7 @@
 -- Execute este script no SQL Editor do Supabase
 -- ============================================================
 
--- 1. EMPRESAS (Multi-Tenant)
+-- 1. EMPRESAS (Multi-Tenant & Perfil Emissor)
 CREATE TABLE IF NOT EXISTS empresas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nome TEXT NOT NULL,
@@ -11,9 +11,36 @@ CREATE TABLE IF NOT EXISTS empresas (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS razao_social TEXT;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS inscricao_estadual TEXT;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS telefone TEXT;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS whatsapp TEXT;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS endereco TEXT;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS responsavel TEXT;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS cargo_responsavel TEXT;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS pix_chave TEXT;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS pix_tipo TEXT DEFAULT 'CNPJ';
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS slogan TEXT;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS logotipo_url TEXT;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS observacoes TEXT;
+
 -- Garantir Empresa Demo Padrão
-INSERT INTO empresas (id, nome)
-VALUES ('00000000-0000-0000-0000-000000000001', 'Empresa Demo ELMANEKO-3D')
+INSERT INTO empresas (id, nome, razao_social, cnpj, email, telefone, whatsapp, endereco, responsavel, cargo_responsavel, pix_chave, slogan)
+VALUES (
+  '00000000-0000-0000-0000-000000000001', 
+  'ELMANEKO 3D',
+  'ELMANEKO 3D LTDA',
+  '12.345.678/0001-99',
+  'contato@elmaneko3d.com',
+  '(11) 3333-3333',
+  '(11) 99999-9999',
+  'Rua da Extrusora, 3D - Parque Tecnológico, SP',
+  'Guilherme Braga',
+  'Gestor Administrativo',
+  '12.345.678/0001-99',
+  'Impressão 3D de Alta Fidelidade'
+)
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. USUÁRIO -> EMPRESA

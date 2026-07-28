@@ -265,7 +265,7 @@ export default function Dashboard() {
           <Flame size={14} /> Estatísticas Operacionais de Produção (MÓDULO PRODUÇÃO)
         </h3>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 text-center">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4 text-center">
           <div className="p-3 bg-neutral-950 border border-neutral-800 rounded-xl" id="prod-month-count">
             <div className="text-[11px] font-mono text-neutral-500 uppercase">Ordens Mês</div>
             <div className="text-lg font-black text-white mt-1">{monthProdCount}</div>

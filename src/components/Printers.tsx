@@ -227,8 +227,8 @@ export default function Printers() {
 
       {/* ── FORM MODAL ── */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4" id="printer-form-modal" aria-modal="true" role="dialog">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="printer-form-modal" aria-modal="true" role="dialog">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-white mb-5">
               {editingPrinter ? 'Editar Impressora' : 'Nova Impressora 3D'}
             </h3>
@@ -242,7 +242,7 @@ export default function Printers() {
                   className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label htmlFor="printer-marca" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
                     Marca <span className="text-orange-500">*</span>

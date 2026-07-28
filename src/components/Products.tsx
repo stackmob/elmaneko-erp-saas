@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Product, BOMItem, Printer, Filament, EnergyTariff, FilamentType } from '../types';
-import { Plus, Search, ClipboardList, DollarSign, Sliders } from 'lucide-react';
+import { Plus, Search, ClipboardList, DollarSign, Sliders, Trash2 } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { DataList, ColumnDef } from './ui/DataList';
 import { useToast } from '../hooks/useToast';
@@ -324,8 +324,8 @@ export default function Products() {
 
       {/* PRODUCT / BOM DIALOG FORM */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto" id="product-form-modal" aria-modal="true" role="dialog">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-2xl p-6 shadow-2xl relative my-8">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="product-form-modal" aria-modal="true" role="dialog">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-2xl p-5 sm:p-6 shadow-2xl relative my-auto max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <ClipboardList size={20} className="text-orange-500" />
               {editingProduct ? 'Editar Ficha Técnica do Produto' : 'Cadastrar Peça & Ficha Técnica (BOM)'}
@@ -333,7 +333,7 @@ export default function Products() {
 
             <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome da Peça / Produto acabado *</label>
                   <input
@@ -513,7 +513,7 @@ export default function Products() {
               <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-3">
                 <h4 className="text-xs font-bold text-orange-500 uppercase tracking-wider">Detalhamento de Custos Provisórios</h4>
                 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs font-mono">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-xs font-mono">
                   <div className="bg-neutral-900 p-3 rounded border border-neutral-850">
                     <span className="text-neutral-500 uppercase text-[9px] block">Custo de Insumo (BOM)</span>
                     <strong className="text-white text-sm">
