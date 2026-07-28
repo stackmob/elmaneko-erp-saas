@@ -264,6 +264,8 @@ const mapProductFromDB = (row: any): Product => ({
   impressoraPadraoId: row.impressora_padrao_id || '',
   tempoAcabamento: Number(row.tempo_acabamento || 0),
   valorMaoDeObra: Number(row.valor_mao_de_obra || 0),
+  margemLucro: Number(row.margem_lucro !== undefined && row.margem_lucro !== null ? row.margem_lucro : 100),
+  precoVenda: Number(row.preco_venda || 0),
   observacoes: row.observacoes || '',
   // Carregado via JOIN com tabela produto_materiais
   materials: (row.produto_materiais || []).map((m: any) => ({
@@ -284,6 +286,8 @@ const mapProductToDB = (p: Partial<Product>, empresaId: string) => {
     impressora_padrao_id: isValidUuid(p.impressoraPadraoId) ? p.impressoraPadraoId : null,
     tempo_acabamento: Number(p.tempoAcabamento || 0),
     valor_mao_de_obra: Number(p.valorMaoDeObra || 0),
+    margem_lucro: Number(p.margemLucro !== undefined ? p.margemLucro : 100),
+    preco_venda: Number(p.precoVenda || 0),
     observacoes: p.observacoes || null
   };
   if (isValidUuid(p.id)) {

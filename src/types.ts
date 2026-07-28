@@ -64,6 +64,8 @@ export interface Product {
   materials: BOMItem[];
   tempoAcabamento?: number; // in hours
   valorMaoDeObra: number; // Standard labor cost
+  margemLucro?: number; // % markup/over (e.g. 100 for 100%)
+  precoVenda?: number; // Selling price in R$
   observacoes?: string;
 }
 

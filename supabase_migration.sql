@@ -116,9 +116,14 @@ CREATE TABLE IF NOT EXISTS produtos (
   impressora_padrao_id UUID REFERENCES impressoras(id) ON DELETE SET NULL,
   tempo_acabamento NUMERIC NOT NULL DEFAULT 0,
   valor_mao_de_obra NUMERIC NOT NULL DEFAULT 0,
+  margem_lucro NUMERIC DEFAULT 100,
+  preco_venda NUMERIC DEFAULT 0,
   observacoes TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE produtos ADD COLUMN IF NOT EXISTS margem_lucro NUMERIC DEFAULT 100;
+ALTER TABLE produtos ADD COLUMN IF NOT EXISTS preco_venda NUMERIC DEFAULT 0;
 
 -- 8. PRODUTO MATERIAIS (BOM - Bill of Materials)
 CREATE TABLE IF NOT EXISTS produto_materiais (

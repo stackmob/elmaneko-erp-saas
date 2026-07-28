@@ -92,8 +92,11 @@ export default function Budgets() {
     return max;
   };
 
-  // Suggested product price helper (Cost + 100% margin)
+  // Suggested product price helper (Cost + saved margin/price)
   const getProductSuggestedPrice = (p: Product): number => {
+    if (p.precoVenda && p.precoVenda > 0) {
+      return p.precoVenda;
+    }
     const filamentCost = p.materials.reduce((acc, mat) => {
       const maxRate = getMaxCostPerGram(mat.tipoFilamento);
       return acc + (mat.quantidadeGrams * maxRate);
@@ -101,7 +104,8 @@ export default function Budgets() {
     // rough power estimate (350W average)
     const kwhCost = (350 * p.tempoImpressao) / 1000 * 0.85;
     const prodCost = filamentCost + kwhCost + p.valorMaoDeObra;
-    return Number((prodCost * 2).toFixed(2)); // markup 100%
+    const marginMultiplier = 1 + ((p.margemLucro !== undefined ? p.margemLucro : 100) / 100);
+    return Number((prodCost * marginMultiplier).toFixed(2));
   };
 
   const handleProductSelectionChange = (index: number, pId: string) => {
