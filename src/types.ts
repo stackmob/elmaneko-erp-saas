@@ -21,6 +21,23 @@ export interface Filament {
   observacoes?: string;
 }
 
+export type SupplyUnit = 'g' | 'Kg' | 'un' | 'caixa' | 'rolo' | 'pacote' | 'metro' | 'litro';
+
+export interface SupplyItem {
+  id: string;
+  nome: string;
+  categoria: PurchaseCategory;
+  unidadeMedida: SupplyUnit;
+  quantidadeEstoque: number;
+  estoqueMinimo: number;
+  custoUnitarioPadrao: number;
+  fornecedorPadrao?: string;
+  tipoFilamento?: FilamentType;
+  cor?: string;
+  filamentoId?: string;
+  observacoes?: string;
+}
+
 export type PurchaseCategory = 
   | 'Filamento'
   | 'Cola / Adesivo'
@@ -34,6 +51,7 @@ export interface Purchase {
   id: string;
   data: string;
   fornecedor: string;
+  insumoId?: string;
   categoriaItem?: PurchaseCategory;
   descricaoItem?: string;
   quantidade?: number; // quantity of items/units

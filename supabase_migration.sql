@@ -230,6 +230,27 @@ ALTER TABLE compras ADD COLUMN IF NOT EXISTS categoria_item TEXT DEFAULT 'Filame
 ALTER TABLE compras ADD COLUMN IF NOT EXISTS descricao_item TEXT;
 ALTER TABLE compras ADD COLUMN IF NOT EXISTS quantidade NUMERIC DEFAULT 1;
 
+-- 13.5 INSUMOS (MATERIAIS DIVERSOS)
+CREATE TABLE IF NOT EXISTS insumos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  nome TEXT NOT NULL,
+  categoria TEXT NOT NULL DEFAULT 'Cola / Adesivo',
+  unidade_medida TEXT DEFAULT 'un',
+  quantidade_estoque NUMERIC DEFAULT 0,
+  estoque_minimo NUMERIC DEFAULT 5,
+  custo_unitario_padrao NUMERIC DEFAULT 0,
+  fornecedor_padrao TEXT,
+  tipo_filamento TEXT,
+  cor TEXT,
+  filamento_id UUID REFERENCES filamentos(id) ON DELETE SET NULL,
+  observacoes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE compras ADD COLUMN IF NOT EXISTS insumo_id UUID REFERENCES insumos(id) ON DELETE SET NULL;
+ALTER TABLE insumos ENABLE ROW LEVEL SECURITY;
+
 -- ============================================================
 -- SEGURANÇA: HABILITAR RLS EM TODAS AS TABELAS
 -- ============================================================

@@ -12,6 +12,7 @@ import Production from './components/Production';
 import Budgets from './components/Budgets';
 import Sales from './components/Sales';
 import Clients from './components/Clients';
+import Supplies from './components/Supplies';
 import BackupModule from './components/Backup';
 import CompanyModule from './components/Company';
 
@@ -20,7 +21,7 @@ import {
   LayoutDashboard, Users, Layers, ShoppingBag, Cpu, 
   Zap, FolderHeart, PlayCircle, FileCheck, DollarSign, LogOut, Shield, 
   AlertTriangle, Loader2, PanelLeftClose, PanelLeftOpen, Sparkles, Building2,
-  Menu, X
+  Menu, X, Package
 } from 'lucide-react';
 
 import { useAuth } from './context/AuthContext';
@@ -58,6 +59,7 @@ export default function App() {
     { id: 'dashboard', label: 'Dashboard HUD', icon: LayoutDashboard },
     { id: 'clients', label: 'Clientes (CRM)', icon: Users },
     { id: 'filaments', label: 'Estoque Filamentos', icon: Layers },
+    { id: 'supplies', label: 'Catálogo de Insumos', icon: Package },
     { id: 'purchases', label: 'Compras Insumos', icon: ShoppingBag },
     { id: 'printers', label: 'Impressoras 3D', icon: Cpu },
     { id: 'tariffs', label: 'Tarifa de Energia', icon: Zap },
@@ -215,6 +217,7 @@ export default function App() {
           {currentView === 'dashboard' && <Dashboard />}
           {currentView === 'clients' && <Clients />}
           {currentView === 'filaments' && <Filaments />}
+          {currentView === 'supplies' && <Supplies />}
           {currentView === 'purchases' && <Purchases />}
           {currentView === 'printers' && <Printers />}
           {currentView === 'tariffs' && <EnergyTariffModule />}

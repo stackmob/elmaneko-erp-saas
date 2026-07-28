@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { Purchase, PurchaseCategory, Filament } from '../types';
-import { Plus, ShoppingCart, Calendar, Building, DollarSign, FileText, Search, Tag, Package, Cpu, Wrench, Box, Sparkles, Filter } from 'lucide-react';
+import { Purchase, PurchaseCategory, Filament, SupplyItem } from '../types';
+import { Plus, ShoppingCart, Calendar, Building, DollarSign, FileText, Search, Tag, Package, Cpu, Wrench, Box, Sparkles, Filter, CheckCircle2 } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
+import SearchableSelect, { SelectOption } from './ui/SearchableSelect';
 
 export default function Purchases() {
-  const { useCompras, useFilamentos, useAddCompra } = useData();
+  const { useCompras, useFilamentos, useInsumos, useAddCompra } = useData();
   const { data: purchases = [] } = useCompras();
   const { data: filaments = [] } = useFilamentos();
+  const { data: supplies = [] } = useInsumos();
   const addMutation = useAddCompra();
   const { toast, showToast, hideToast } = useToast();
 
@@ -18,28 +20,85 @@ export default function Purchases() {
   
   // Form fields
   const [data, setData] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedItemId, setSelectedItemId] = useState<string>(''); // Selected supply or filament ID
+  const [insumoId, setInsumoId] = useState<string>('');
+  const [filamentoId, setFilamentoId] = useState<string>('');
   const [categoriaItem, setCategoriaItem] = useState<PurchaseCategory>('Filamento');
   const [descricaoItem, setDescricaoItem] = useState('');
   const [quantidade, setQuantidade] = useState(1);
+  const [quantidadeAdquirida, setQuantidadeAdquirida] = useState(1000); // grams if filament
   const [fornecedor, setFornecedor] = useState('');
-  const [filamentoId, setFilamentoId] = useState('');
-  const [quantidadeAdquirida, setQuantidadeAdquirida] = useState(1000);
   const [valorPago, setValorPago] = useState(120.00);
   const [notaFiscal, setNotaFiscal] = useState('');
   const [observacoes, setObservacoes] = useState('');
 
+  // Prepare options for SearchableSelect combobox
+  const searchableOptions: SelectOption[] = [
+    // 1. Filaments
+    ...filaments.map((f) => ({
+      id: `fil_${f.id}`,
+      label: f.nome,
+      sublabel: `Filamento ${f.tipo} - ${f.cor} • Est: ${f.quantidadeDisponivel}g`,
+      category: 'Filamento',
+      badge: 'Filamento',
+    })),
+    // 2. Supplies / Insumos
+    ...supplies.map((s) => ({
+      id: `ins_${s.id}`,
+      label: s.nome,
+      sublabel: `${s.categoria} • Est: ${s.quantidadeEstoque} ${s.unidadeMedida}`,
+      category: s.categoria,
+      badge: s.categoria,
+    })),
+  ];
+
   const handleOpenModal = () => {
     setData(new Date().toISOString().split('T')[0]);
+    setSelectedItemId('');
+    setInsumoId('');
+    setFilamentoId('');
     setCategoriaItem('Filamento');
     setDescricaoItem('');
     setQuantidade(1);
-    setFornecedor('');
-    setFilamentoId(filaments.length > 0 ? filaments[0].id : '');
     setQuantidadeAdquirida(1000);
+    setFornecedor('');
     setValorPago(120.00);
     setNotaFiscal('');
     setObservacoes('');
     setIsModalOpen(true);
+  };
+
+  const handleSelectItemChange = (id: string) => {
+    setSelectedItemId(id);
+    if (!id) {
+      setInsumoId('');
+      setFilamentoId('');
+      return;
+    }
+
+    if (id.startsWith('fil_')) {
+      const realId = id.replace('fil_', '');
+      const fil = filaments.find((f) => f.id === realId);
+      if (fil) {
+        setFilamentoId(realId);
+        setInsumoId('');
+        setCategoriaItem('Filamento');
+        setDescricaoItem(fil.nome);
+        if (fil.fornecedor) setFornecedor(fil.fornecedor);
+        if (fil.valorCompra) setValorPago(fil.valorCompra);
+      }
+    } else if (id.startsWith('ins_')) {
+      const realId = id.replace('ins_', '');
+      const ins = supplies.find((s) => s.id === realId);
+      if (ins) {
+        setInsumoId(realId);
+        setFilamentoId('');
+        setCategoriaItem(ins.categoria);
+        setDescricaoItem(ins.nome);
+        if (ins.fornecedorPadrao) setFornecedor(ins.fornecedorPadrao);
+        if (ins.custoUnitarioPadrao) setValorPago(ins.custoUnitarioPadrao * quantidade);
+      }
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -49,13 +108,8 @@ export default function Purchases() {
       return;
     }
 
-    if (categoriaItem === 'Filamento' && !filamentoId) {
-      showToast('Selecione o filamento a ser creditado no estoque.', 'error');
-      return;
-    }
-
-    if (categoriaItem !== 'Filamento' && !descricaoItem) {
-      showToast('Informe a descrição do item ou insumo adquirido.', 'error');
+    if (!descricaoItem && !filamentoId && !insumoId) {
+      showToast('Selecione um item do catálogo ou digite a descrição do produto.', 'error');
       return;
     }
 
@@ -63,27 +117,28 @@ export default function Purchases() {
       id: crypto.randomUUID(),
       data,
       fornecedor,
+      insumoId: insumoId || undefined,
+      filamentoId: filamentoId || undefined,
       categoriaItem,
-      descricaoItem: categoriaItem !== 'Filamento' ? descricaoItem : undefined,
+      descricaoItem,
       quantidade: categoriaItem !== 'Filamento' ? Number(quantidade) : 1,
-      filamentoId: categoriaItem === 'Filamento' ? filamentoId : undefined,
       quantidadeAdquirida: categoriaItem === 'Filamento' ? Number(quantidadeAdquirida) : 0,
       valorPago: Number(valorPago),
       notaFiscal,
-      observacoes
+      observacoes,
     };
 
     addMutation.mutate(newPurchase, {
       onSuccess: () => {
         setIsModalOpen(false);
         showToast(
-          categoriaItem === 'Filamento'
-            ? 'Compra salva e estoque de filamento creditado!'
+          categoriaItem === 'Filamento' || insumoId
+            ? 'Compra registrada e estoque atualizado no catálogo!'
             : 'Compra registrada com sucesso!',
           'success'
         );
       },
-      onError: () => showToast('Erro ao registrar compra.', 'error')
+      onError: () => showToast('Erro ao registrar compra.', 'error'),
     });
   };
 
@@ -108,24 +163,27 @@ export default function Purchases() {
   };
 
   // Filtering Computation
-  const filteredPurchases = purchases.filter(p => {
+  const filteredPurchases = purchases.filter((p) => {
     const catMatch = selectedCategoryFilter === 'all' || (p.categoriaItem || 'Filamento') === selectedCategoryFilter;
     if (!catMatch) return false;
 
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
-    const filamentObj = filaments.find(f => f.id === p.filamentoId);
+    const filamentObj = filaments.find((f) => f.id === p.filamentoId);
+    const supplyObj = supplies.find((s) => s.id === p.insumoId);
+
     return (
       (p.fornecedor && p.fornecedor.toLowerCase().includes(q)) ||
       (p.descricaoItem && p.descricaoItem.toLowerCase().includes(q)) ||
       (p.notaFiscal && p.notaFiscal.toLowerCase().includes(q)) ||
-      (filamentObj && filamentObj.nome.toLowerCase().includes(q))
+      (filamentObj && filamentObj.nome.toLowerCase().includes(q)) ||
+      (supplyObj && supplyObj.nome.toLowerCase().includes(q))
     );
   });
 
   const totalSpent = filteredPurchases.reduce((acc, p) => acc + p.valorPago, 0);
   const totalFilamentGrams = filteredPurchases
-    .filter(p => (p.categoriaItem || 'Filamento') === 'Filamento')
+    .filter((p) => (p.categoriaItem || 'Filamento') === 'Filamento')
     .reduce((acc, p) => acc + (p.quantidadeAdquirida || 0), 0);
 
   return (
@@ -135,8 +193,8 @@ export default function Purchases() {
       {/* HEADER ACTIONS */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="purchases-header">
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Controle de Compras & Gestão de Insumos</h2>
-          <p className="text-sm text-neutral-400 mt-1">Registre aquisições de filamentos, embalagens, colas, acessórios, peças de manutenção e impressoras 3D.</p>
+          <h2 className="text-xl font-bold text-white tracking-tight">Controle de Compras & Entrada de Insumos</h2>
+          <p className="text-sm text-neutral-400 mt-1">Selecione o item do catálogo para registrar aquisições e incrementar automaticamente o estoque de insumos e filamentos.</p>
         </div>
         <button
           onClick={handleOpenModal}
@@ -155,7 +213,7 @@ export default function Purchases() {
             <DollarSign size={22} />
           </div>
           <div>
-            <div className="text-xs font-mono text-neutral-400 uppercase">Investimento Total Filtrado</div>
+            <div className="text-xs font-mono text-neutral-400 uppercase">Investimento Acumulado Filtrado</div>
             <div className="text-xl font-black text-white mt-1">R$ {totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
           </div>
         </div>
@@ -165,7 +223,7 @@ export default function Purchases() {
             <Box size={22} />
           </div>
           <div>
-            <div className="text-xs font-mono text-neutral-400 uppercase">Filamentos Comprados</div>
+            <div className="text-xs font-mono text-neutral-400 uppercase">Filamentos Adquiridos</div>
             <div className="text-xl font-black text-white mt-1">{(totalFilamentGrams / 1000).toFixed(2)} <span className="text-sm font-normal text-neutral-400">Kg</span></div>
           </div>
         </div>
@@ -175,13 +233,13 @@ export default function Purchases() {
             <ShoppingCart size={22} />
           </div>
           <div>
-            <div className="text-xs font-mono text-neutral-400 uppercase">Registros de Compra</div>
+            <div className="text-xs font-mono text-neutral-400 uppercase">Total de Compras</div>
             <div className="text-xl font-black text-white mt-1">{filteredPurchases.length} <span className="text-sm font-normal text-neutral-400">lotes</span></div>
           </div>
         </div>
       </div>
 
-      {/* FILTER & SEARCH BAR */}
+      {/* FILTER & SEARCH BAR WITH LIVE MATCHING */}
       <div className="flex flex-col sm:flex-row gap-3" id="purchases-filters">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
@@ -189,7 +247,7 @@ export default function Purchases() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Pesquisar por fornecedor, descrição, nota fiscal..."
+            placeholder="Pesquisar digitando parte do nome do insumo, fornecedor ou NF..."
             className="w-full pl-10 pr-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 transition-colors"
           />
         </div>
@@ -202,9 +260,9 @@ export default function Purchases() {
             className="px-3 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-sm text-white focus:outline-none focus:border-orange-500 cursor-pointer"
           >
             <option value="all">Todas as Categorias</option>
-            <option value="Filamento">Filamento</option>
-            <option value="Cola / Adesivo">Cola / Adesivo</option>
-            <option value="Embalagem / Caixas">Embalagem / Caixas</option>
+            <option value="Filamento">Filamentos</option>
+            <option value="Cola / Adesivo">Cola / Adesivos</option>
+            <option value="Embalagem / Caixas">Embalagens / Caixas</option>
             <option value="Acessórios / Componentes">Acessórios / Componentes</option>
             <option value="Impressoras 3D">Impressoras 3D</option>
             <option value="Peças de Manutenção / Peças de Impressoras">Peças de Manutenção</option>
@@ -236,10 +294,11 @@ export default function Purchases() {
             </thead>
             <tbody className="divide-y divide-neutral-800/60 text-sm text-neutral-300 font-mono">
               {filteredPurchases.length > 0 ? (
-                [...filteredPurchases].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).map(p => {
+                [...filteredPurchases].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).map((p) => {
                   const catBadge = getCategoryBadge(p.categoriaItem);
                   const IconComp = catBadge.icon;
-                  const filamentObj = filaments.find(f => f.id === p.filamentoId);
+                  const filamentObj = filaments.find((f) => f.id === p.filamentoId);
+                  const supplyObj = supplies.find((s) => s.id === p.insumoId);
 
                   return (
                     <tr key={p.id} className="hover:bg-neutral-800/10 transition-colors">
@@ -258,19 +317,26 @@ export default function Purchases() {
                       </td>
 
                       <td className="py-3.5 px-4">
-                        {(p.categoriaItem || 'Filamento') === 'Filamento' ? (
-                          filamentObj ? (
-                            <div>
-                              <span className="text-white font-semibold block">{filamentObj.nome}</span>
-                              <span className="text-[11px] text-neutral-500">Tipo: {filamentObj.tipo} • Cor: {filamentObj.cor}</span>
-                            </div>
-                          ) : (
-                            <span className="text-red-400 italic">Filamento não encontrado</span>
-                          )
+                        {p.insumoId && supplyObj ? (
+                          <div>
+                            <span className="text-white font-semibold flex items-center gap-1.5">
+                              {supplyObj.nome}
+                              <CheckCircle2 size={12} className="text-emerald-400" title="Item do Catálogo" />
+                            </span>
+                            <span className="text-[11px] text-neutral-500">Catálogo: {supplyObj.categoria}</span>
+                          </div>
+                        ) : p.filamentoId && filamentObj ? (
+                          <div>
+                            <span className="text-white font-semibold flex items-center gap-1.5">
+                              {filamentObj.nome}
+                              <CheckCircle2 size={12} className="text-orange-400" title="Filamento do Estoque" />
+                            </span>
+                            <span className="text-[11px] text-neutral-500">Filamento: {filamentObj.tipo} • {filamentObj.cor}</span>
+                          </div>
                         ) : (
                           <div>
-                            <span className="text-white font-semibold block">{p.descricaoItem || 'Sem descrição'}</span>
-                            <span className="text-[11px] text-neutral-500">Unidades: {p.quantidade || 1}</span>
+                            <span className="text-white font-semibold block">{p.descricaoItem || 'Item Diverso'}</span>
+                            <span className="text-[11px] text-neutral-500">Registro Manual</span>
                           </div>
                         )}
                       </td>
@@ -313,7 +379,7 @@ export default function Purchases() {
               ) : (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-neutral-500 text-xs">
-                    Nenhuma compra encontrada para os filtros aplicados.
+                    Nenhuma compra encontrada para a pesquisa efetuada.
                   </td>
                 </tr>
               )}
@@ -322,17 +388,32 @@ export default function Purchases() {
         </div>
       </div>
 
-      {/* FORM DIALOG MODAL */}
+      {/* FORM DIALOG MODAL WITH LIVE SEARCHABLE SELECT */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="purchase-form-modal">
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <ShoppingCart size={20} className="text-orange-500" />
-              Registrar Compra de Insumos & Peças
+              Registrar Compra de Insumo / Material
             </h3>
 
             <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
               
+              {/* SEARCHABLE SELECT COMBOBOX */}
+              <div className="p-3 bg-neutral-950 border border-neutral-800 rounded-xl space-y-2">
+                <SearchableSelect
+                  label="Buscar & Selecionar Item do Catálogo"
+                  placeholder="Digite qualquer parte do nome (ex: cola, caixa, m3, pla)..."
+                  options={searchableOptions}
+                  value={selectedItemId}
+                  onChange={handleSelectItemChange}
+                  emptyMessage="Nenhum item do catálogo encontrado com este nome."
+                />
+                <span className="text-[10px] text-neutral-500 block">
+                  💡 Digite o nome para autocompletar ou preencha os campos abaixo caso o item ainda não esteja cadastrado.
+                </span>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 
                 {/* Data */}
@@ -349,95 +430,77 @@ export default function Purchases() {
 
                 {/* Categoria do Insumo */}
                 <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Categoria do Item *</label>
+                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Categoria *</label>
                   <select
                     value={categoriaItem}
                     onChange={(e) => setCategoriaItem(e.target.value as PurchaseCategory)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer font-bold"
                   >
-                    <option value="Filamento">Filamento (Credita Estoque)</option>
-                    <option value="Cola / Adesivo">Cola / Adesivo de Mesa</option>
+                    <option value="Filamento">Filamento</option>
+                    <option value="Cola / Adesivo">Cola / Adesivo</option>
                     <option value="Embalagem / Caixas">Embalagem / Caixas</option>
                     <option value="Acessórios / Componentes">Acessórios / Componentes</option>
                     <option value="Impressoras 3D">Impressoras 3D</option>
-                    <option value="Peças de Manutenção / Peças de Impressoras">Peças de Impressora / Manutenção</option>
+                    <option value="Peças de Manutenção / Peças de Impressoras">Peça de Impressora / Manutenção</option>
                     <option value="Outros Insumos">Outros Insumos</option>
                   </select>
                 </div>
 
-                {/* Dynamic fields according to Category */}
+                {/* Item Description / Name */}
+                <div className="col-span-2">
+                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome / Descrição do Item Comprado *</label>
+                  <input
+                    type="text"
+                    required
+                    value={descricaoItem}
+                    onChange={(e) => setDescricaoItem(e.target.value)}
+                    placeholder="Ex: Cola Bastão 40g Kores / Caixa 20x20x20"
+                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+
+                {/* Quantity or Weight */}
                 {categoriaItem === 'Filamento' ? (
-                  <>
-                    <div className="col-span-2 sm:col-span-1">
-                      <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Selecione o Filamento *</label>
-                      <select
-                        value={filamentoId}
-                        onChange={(e) => setFilamentoId(e.target.value)}
-                        className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
-                      >
-                        {filaments.map(f => (
-                          <option key={f.id} value={f.id}>
-                            {f.nome} ({f.tipo} - {f.cor})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Peso Adquirido (g) *</label>
-                      <input
-                        type="number"
-                        required
-                        min={1}
-                        value={quantidadeAdquirida}
-                        onChange={(e) => setQuantidadeAdquirida(Number(e.target.value))}
-                        className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                      />
-                    </div>
-                  </>
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Massa Adquirida (g) *</label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={quantidadeAdquirida}
+                      onChange={(e) => setQuantidadeAdquirida(Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
                 ) : (
-                  <>
-                    <div className="col-span-2 sm:col-span-1">
-                      <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Descrição do Item *</label>
-                      <input
-                        type="text"
-                        required
-                        value={descricaoItem}
-                        onChange={(e) => setDescricaoItem(e.target.value)}
-                        placeholder="Ex: Cola Bastão 40g / Parafusos M3"
-                        className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Quantidade (Unidades) *</label>
-                      <input
-                        type="number"
-                        required
-                        min={1}
-                        value={quantidade}
-                        onChange={(e) => setQuantidade(Number(e.target.value))}
-                        className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                      />
-                    </div>
-                  </>
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Quantidade (Unidades) *</label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={quantidade}
+                      onChange={(e) => setQuantidade(Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
                 )}
 
                 {/* Fornecedor */}
-                <div className="col-span-2">
+                <div>
                   <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Fornecedor *</label>
                   <input
                     type="text"
                     required
                     value={fornecedor}
                     onChange={(e) => setFornecedor(e.target.value)}
-                    placeholder="Ex: 3D Fila, Mercado Livre, Creality Direct"
+                    placeholder="Ex: Mercado Livre / 3D Fila"
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
                   />
                 </div>
 
                 {/* Valor Pago */}
-                <div className="col-span-2 sm:col-span-1">
+                <div>
                   <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Valor Total Pago R$ *</label>
                   <input
                     type="number"
@@ -451,13 +514,13 @@ export default function Purchases() {
                 </div>
 
                 {/* Nota Fiscal */}
-                <div className="col-span-2 sm:col-span-1">
+                <div>
                   <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nota Fiscal (opcional)</label>
                   <input
                     type="text"
                     value={notaFiscal}
                     onChange={(e) => setNotaFiscal(e.target.value)}
-                    placeholder="Ex: NF-e 49201"
+                    placeholder="Ex: NF-e 88102"
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
                   />
                 </div>
@@ -469,7 +532,7 @@ export default function Purchases() {
                     value={observacoes}
                     onChange={(e) => setObservacoes(e.target.value)}
                     rows={2}
-                    placeholder="Comentários sobre a compra ou garantia..."
+                    placeholder="Notas adicionais sobre a compra..."
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
                   />
                 </div>
@@ -488,7 +551,7 @@ export default function Purchases() {
                   type="submit"
                   className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer shadow-md shadow-orange-600/20"
                 >
-                  {categoriaItem === 'Filamento' ? 'Salvar e Creditar Filamento' : 'Salvar Registro de Compra'}
+                  Registrar Compra & Atualizar Estoque
                 </button>
               </div>
 

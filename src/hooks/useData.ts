@@ -185,6 +185,7 @@ const mapCompraFromDB = (row: any): Purchase => ({
   id: row.id,
   data: row.data,
   fornecedor: row.fornecedor,
+  insumoId: row.insumo_id || '',
   categoriaItem: row.categoria_item || 'Filamento',
   descricaoItem: row.descricao_item || '',
   quantidade: Number(row.quantidade || 1),
@@ -200,6 +201,7 @@ const mapCompraToDB = (p: Partial<Purchase>, empresaId: string) => {
     empresa_id: empresaId,
     data: p.data,
     fornecedor: p.fornecedor,
+    insumo_id: isValidUuid(p.insumoId) ? p.insumoId : null,
     categoria_item: p.categoriaItem || 'Filamento',
     descricao_item: p.descricaoItem || null,
     quantidade: Number(p.quantidade || 1),
@@ -211,6 +213,43 @@ const mapCompraToDB = (p: Partial<Purchase>, empresaId: string) => {
   };
   if (isValidUuid(p.id)) {
     payload.id = p.id;
+  }
+  return payload;
+};
+
+// 3.5 INSUMOS
+const mapInsumoFromDB = (row: any): SupplyItem => ({
+  id: row.id,
+  nome: row.nome,
+  categoria: row.categoria,
+  unidadeMedida: row.unidade_medida || 'un',
+  quantidadeEstoque: Number(row.quantidade_estoque || 0),
+  estoqueMinimo: Number(row.estoque_minimo || 0),
+  custoUnitarioPadrao: Number(row.custo_unitario_padrao || 0),
+  fornecedorPadrao: row.fornecedor_padrao || '',
+  tipoFilamento: row.tipo_filamento || undefined,
+  cor: row.cor || '',
+  filamentoId: row.filamento_id || '',
+  observacoes: row.observacoes || ''
+});
+
+const mapInsumoToDB = (s: Partial<SupplyItem>, empresaId: string) => {
+  const payload: any = {
+    empresa_id: empresaId,
+    nome: s.nome,
+    categoria: s.categoria,
+    unidade_medida: s.unidadeMedida || 'un',
+    quantidade_estoque: Number(s.quantidadeEstoque || 0),
+    estoque_minimo: Number(s.estoqueMinimo || 0),
+    custo_unitario_padrao: Number(s.custoUnitarioPadrao || 0),
+    fornecedor_padrao: s.fornecedorPadrao || null,
+    tipo_filamento: s.tipoFilamento || null,
+    cor: s.cor || null,
+    filamento_id: isValidUuid(s.filamentoId) ? s.filamentoId : null,
+    observacoes: s.observacoes || null
+  };
+  if (isValidUuid(s.id)) {
+    payload.id = s.id;
   }
   return payload;
 };
@@ -647,6 +686,21 @@ export const useData = () => {
         } else {
           console.error('[useData] Erro ao salvar compra:', error?.message);
         }
+
+        // Incrementar estoque do insumo se vinculado
+        if (newCompra.insumoId) {
+          const qty = Number(newCompra.quantidade || 1);
+          const { data: insRow } = await supabase.from('insumos').select('quantidade_estoque').eq('id', newCompra.insumoId).single();
+          if (insRow) {
+            const currentStock = Number(insRow.quantidade_estoque || 0);
+            await supabase.from('insumos').update({ quantidade_estoque: currentStock + qty }).eq('id', newCompra.insumoId);
+          }
+          const cachedInsumos = getLocalCache<SupplyItem>('insumos');
+          const updated = cachedInsumos.map(item => 
+            item.id === newCompra.insumoId ? { ...item, quantidadeEstoque: item.quantidadeEstoque + qty } : item
+          );
+          setLocalCache('insumos', updated);
+        }
       } catch (err) {
         console.error('[useData] Exceção ao salvar compra:', err);
       }
@@ -656,7 +710,80 @@ export const useData = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['compras', activeTenant] });
       queryClient.invalidateQueries({ queryKey: ['filamentos', activeTenant] });
+      queryClient.invalidateQueries({ queryKey: ['insumos', activeTenant] });
     },
+  });
+
+  // --- INSUMOS ---
+  const useInsumos = () => useQuery({
+    queryKey: ['insumos', activeTenant],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase.from('insumos').select('*').eq('empresa_id', activeTenant);
+        if (!error && data) {
+          const mapped = data.map(mapInsumoFromDB);
+          setLocalCache('insumos', mapped);
+          return mapped;
+        }
+      } catch (err) {
+        console.error('[useData] Exceção ao buscar insumos:', err);
+      }
+      return getLocalCache<SupplyItem>('insumos');
+    },
+    enabled: true,
+  });
+
+  const useAddInsumo = () => useMutation({
+    mutationFn: async (insumo: SupplyItem) => {
+      const payload = mapInsumoToDB(insumo, activeTenant);
+      let itemSalvo: SupplyItem = insumo;
+      try {
+        const { data, error } = await supabase.from('insumos').insert([payload]).select().single();
+        if (!error && data) {
+          itemSalvo = mapInsumoFromDB(data);
+        } else {
+          console.error('[useData] Erro ao salvar insumo:', error?.message);
+        }
+      } catch (err) {
+        console.error('[useData] Exceção ao salvar insumo:', err);
+      }
+      addToLocalCache('insumos', itemSalvo);
+      return itemSalvo;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['insumos', activeTenant] }),
+  });
+
+  const useUpdateInsumo = () => useMutation({
+    mutationFn: async (insumo: SupplyItem) => {
+      const payload = mapInsumoToDB(insumo, activeTenant);
+      delete payload.empresa_id;
+      let itemSalvo: SupplyItem = insumo;
+      try {
+        const { data, error } = await supabase.from('insumos').update(payload).eq('id', insumo.id).select().single();
+        if (!error && data) {
+          itemSalvo = mapInsumoFromDB(data);
+        } else {
+          console.error('[useData] Erro ao atualizar insumo:', error?.message);
+        }
+      } catch (err) {
+        console.error('[useData] Exceção ao atualizar insumo:', err);
+      }
+      addToLocalCache('insumos', itemSalvo);
+      return itemSalvo;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['insumos', activeTenant] }),
+  });
+
+  const useDeleteInsumo = () => useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        await supabase.from('insumos').delete().eq('id', id);
+      } catch (err) {
+        console.error('[useData] Exceção ao excluir insumo:', err);
+      }
+      removeFromLocalCache('insumos', id);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['insumos', activeTenant] }),
   });
 
   // --- IMPRESSORAS ---
@@ -1170,6 +1297,7 @@ export const useData = () => {
   return {
     useEmpresa, useUpdateEmpresa,
     useFilamentos, useAddFilamento, useUpdateFilamento, useDeleteFilamento,
+    useInsumos, useAddInsumo, useUpdateInsumo, useDeleteInsumo,
     useCompras, useAddCompra,
     useImpressoras, useAddImpressora, useUpdateImpressora, useDeleteImpressora,
     useClientes, useAddCliente, useUpdateCliente, useDeleteCliente,
