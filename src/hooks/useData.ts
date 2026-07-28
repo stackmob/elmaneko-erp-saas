@@ -373,6 +373,7 @@ const mapBudgetFromDB = (row: any): Budget => ({
   clienteId: row.cliente_id,
   dataEmissao: row.data_emissao,
   validade: row.validade,
+  previsaoEntrega: row.previsao_entrega || '',
   descontoGeral: Number(row.desconto_geral || 0),
   observacoes: row.observacoes || '',
   status: row.status,
@@ -392,6 +393,7 @@ const mapBudgetToDB = (b: Partial<Budget>, empresaId: string) => {
     cliente_id: isValidUuid(b.clienteId) ? b.clienteId : null,
     data_emissao: b.dataEmissao,
     validade: b.validade || null,
+    previsao_entrega: b.previsaoEntrega || null,
     desconto_geral: Number(b.descontoGeral || 0),
     observacoes: b.observacoes || null,
     status: b.status

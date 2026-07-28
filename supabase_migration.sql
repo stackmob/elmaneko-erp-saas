@@ -161,11 +161,14 @@ CREATE TABLE IF NOT EXISTS orcamentos (
   cliente_id UUID NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
   data_emissao DATE DEFAULT CURRENT_DATE,
   validade DATE,
+  previsao_entrega DATE,
   desconto_geral NUMERIC NOT NULL DEFAULT 0,
   observacoes TEXT,
   status TEXT NOT NULL DEFAULT 'Aberto',
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS previsao_entrega DATE;
 
 -- 11. ORÇAMENTO ITENS
 CREATE TABLE IF NOT EXISTS orcamento_itens (

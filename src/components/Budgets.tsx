@@ -3,7 +3,7 @@ import { Budget, Client, Product, BudgetItem, Sale, Filament } from '../types';
 import { 
   Plus, Edit, Trash2, FileText, Calendar, User, 
   DollarSign, Check, ChevronRight, Share2, Download, Eye, X, Printer, Percent, CheckCircle2,
-  Filter, ArrowUpDown, RotateCcw
+  Filter, ArrowUpDown, RotateCcw, TrendingUp, Clock, AlertCircle
 } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
@@ -66,6 +66,11 @@ export default function Budgets() {
   const [validade, setValidade] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 15); // 15 days default validity
+    return d.toISOString().split('T')[0];
+  });
+  const [previsaoEntrega, setPrevisaoEntrega] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7); // 7 days default delivery preview
     return d.toISOString().split('T')[0];
   });
   const [itens, setItens] = useState<BudgetItem[]>([
@@ -146,9 +151,12 @@ export default function Budgets() {
     setEditingBudget(null);
     setClienteId(clients.length > 0 ? clients[0].id : '');
     setDataEmissao(new Date().toISOString().split('T')[0]);
-    const d = new Date();
-    d.setDate(d.getDate() + 15);
-    setValidade(d.toISOString().split('T')[0]);
+    const dVal = new Date();
+    dVal.setDate(dVal.getDate() + 15);
+    setValidade(dVal.toISOString().split('T')[0]);
+    const dEnt = new Date();
+    dEnt.setDate(dEnt.getDate() + 7);
+    setPrevisaoEntrega(dEnt.toISOString().split('T')[0]);
     setItens([{ produtoId: products.length > 0 ? products[0].id : '', quantidade: 1, valorUnitario: products.length > 0 ? getProductSuggestedPrice(products[0]) : 0, desconto: 0 }]);
     setDescontoGeral(0);
     setObservacoes('');
@@ -161,6 +169,7 @@ export default function Budgets() {
     setClienteId(b.clienteId);
     setDataEmissao(b.dataEmissao);
     setValidade(b.validade);
+    setPrevisaoEntrega(b.previsaoEntrega || '');
     setItens(b.itens.map(it => ({ ...it })));
     setDescontoGeral(b.descontoGeral);
     setObservacoes(b.observacoes || '');
@@ -181,6 +190,7 @@ export default function Budgets() {
       clienteId,
       dataEmissao,
       validade,
+      previsaoEntrega,
       itens,
       descontoGeral: Number(descontoGeral),
       observacoes,
@@ -289,6 +299,15 @@ export default function Budgets() {
     }
   });
 
+  // KPIS TOTALIZADOS (Total Faturado, Pendente de Faturamento e Provisão)
+  const faturadosBudgets = filteredAndSortedBudgets.filter(b => isBudgetInvoiced(b));
+  const aprovadosBudgets = filteredAndSortedBudgets.filter(b => b.status === 'Aprovado' && !isBudgetInvoiced(b));
+  const provisaoBudgets = filteredAndSortedBudgets.filter(b => (b.status === 'Aberto' || b.status === 'Enviado') && !isBudgetInvoiced(b));
+
+  const totalFaturadoVal = faturadosBudgets.reduce((acc, b) => acc + calculateTotal(b.itens, b.descontoGeral), 0);
+  const totalPendenteFaturamentoVal = aprovadosBudgets.reduce((acc, b) => acc + calculateTotal(b.itens, b.descontoGeral), 0);
+  const totalProvisaoVal = provisaoBudgets.reduce((acc, b) => acc + calculateTotal(b.itens, b.descontoGeral), 0);
+
   return (
     <div className="space-y-6" id="budgets-module-container">
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
@@ -308,6 +327,45 @@ export default function Budgets() {
           <Plus size={18} />
           Gerar Novo Orçamento
         </button>
+      </div>
+
+      {/* BUDGETS KPIS BOARD */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 animate-fade-in" id="budgets-kpis">
+        {/* Total Faturado */}
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+          <div className="flex justify-between items-center text-[10px] font-mono uppercase text-neutral-400">
+            <span>Total Faturado (Tudo faturado)</span>
+            <TrendingUp size={14} className="text-purple-400" />
+          </div>
+          <div className="text-xl font-black text-purple-300 mt-1">
+            R$ {totalFaturadoVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </div>
+          <p className="text-[10px] text-neutral-500 mt-1 font-mono">{faturadosBudgets.length} propostas liquidadas</p>
+        </div>
+
+        {/* Total Pendente de Faturamento */}
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+          <div className="flex justify-between items-center text-[10px] font-mono uppercase text-neutral-400">
+            <span>Pendente de Faturamento (Aprovado)</span>
+            <CheckCircle2 size={14} className="text-emerald-500" />
+          </div>
+          <div className="text-xl font-black text-emerald-400 mt-1">
+            R$ {totalPendenteFaturamentoVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </div>
+          <p className="text-[10px] text-neutral-500 mt-1 font-mono">{aprovadosBudgets.length} propostas aprovadas</p>
+        </div>
+
+        {/* Provisão */}
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+          <div className="flex justify-between items-center text-[10px] font-mono uppercase text-neutral-400">
+            <span>Provisão (Pendente Aprovação)</span>
+            <FileText size={14} className="text-orange-500" />
+          </div>
+          <div className="text-xl font-black text-orange-400 mt-1">
+            R$ {totalProvisaoVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </div>
+          <p className="text-[10px] text-neutral-500 mt-1 font-mono">{provisaoBudgets.length} propostas em negociação</p>
+        </div>
       </div>
 
       {(clients.length === 0 || products.length === 0) && (
@@ -448,7 +506,7 @@ export default function Budgets() {
               <tr className="border-b border-neutral-800 bg-neutral-950/20 text-[11px] font-mono uppercase tracking-wider text-neutral-400">
                 <th className="py-4 px-4 font-semibold">Orçamento</th>
                 <th className="py-4 px-4 font-semibold">Cliente</th>
-                <th className="py-4 px-4 font-semibold">Emissão / Validade</th>
+                <th className="py-4 px-4 font-semibold">Emissão / Validade / Entrega</th>
                 <th className="py-4 px-4 text-right">Qtd Itens</th>
                 <th className="py-4 px-4 text-right">Valor Final</th>
                 <th className="py-4 px-4 font-semibold text-center">Status</th>
@@ -474,6 +532,11 @@ export default function Budgets() {
                       <td className="py-3.5 px-4 font-mono text-xs">
                         <div className="text-neutral-400">{formatDateBR(b.dataEmissao)}</div>
                         <div className="text-neutral-500 text-[10px]">Expira: {formatDateBR(b.validade)}</div>
+                        {b.previsaoEntrega && (
+                          <div className="text-orange-400 font-semibold text-[10px] flex items-center gap-1 mt-0.5">
+                            <Calendar size={10} /> Entrega: {formatDateBR(b.previsaoEntrega)}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3.5 px-4 text-right font-mono font-semibold">
                         {itemsCount} peças
@@ -657,6 +720,16 @@ export default function Budgets() {
                     required
                     value={validade}
                     onChange={(e) => setValidade(e.target.value)}
+                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Previsão de Entrega</label>
+                  <input
+                    type="date"
+                    value={previsaoEntrega}
+                    onChange={(e) => setPrevisaoEntrega(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
                   />
                 </div>
@@ -903,6 +976,7 @@ export default function Budgets() {
                   <p className="text-xs font-mono text-neutral-500 mt-1">Número: <strong className="text-neutral-900">{pdfPreviewBudget.numero}</strong></p>
                   <p className="text-xs font-mono text-neutral-500">Data: {formatDateBR(pdfPreviewBudget.dataEmissao)}</p>
                   <p className="text-xs font-mono text-neutral-500">Vencimento: {formatDateBR(pdfPreviewBudget.validade)}</p>
+                  <p className="text-xs font-mono text-neutral-500">Previsão Entrega: {pdfPreviewBudget.previsaoEntrega ? formatDateBR(pdfPreviewBudget.previsaoEntrega) : 'A combinar'}</p>
                 </div>
               </div>
 

@@ -123,6 +123,7 @@ export interface Budget {
   clienteId: string;
   dataEmissao: string;
   validade: string;
+  previsaoEntrega?: string; // e.g. YYYY-MM-DD
   itens: BudgetItem[];
   descontoGeral: number; // flat discount
   observacoes?: string;
