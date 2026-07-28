@@ -631,43 +631,67 @@ export default function Financial() {
               <div className="flex justify-between items-center border-b border-neutral-800 pb-3">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                   <BarChart3 size={16} className="text-orange-500" />
-                  Fluxo de Caixa & Projeção Financeira
+                  Fluxo de Caixa & Projeção Real (Últimos 6 Meses)
                 </h3>
-                <span className="text-xs font-mono text-neutral-500">Indicadores em tempo real</span>
+                <span className="text-xs font-mono text-neutral-500">Dados reais consolidados</span>
               </div>
 
-              <div className="h-64 flex items-end justify-between gap-3 pt-6 px-2 border-b border-neutral-800 pb-2">
-                {[
-                  { month: 'Jan', receita: 12000, despesa: 4500 },
-                  { month: 'Fev', receita: 14500, despesa: 6200 },
-                  { month: 'Mar', receita: 18900, despesa: 7100 },
-                  { month: 'Abr', receita: 16200, despesa: 5400 },
-                  { month: 'Mai', receita: 21000, despesa: 8300 },
-                  { month: 'Jun', receita: totalReceitasMes || 24500, despesa: totalDespesasMes || 9200 },
-                ].map((item, idx) => {
-                  const maxVal = 30000;
-                  const recH = Math.min(100, (item.receita / maxVal) * 100);
-                  const desH = Math.min(100, (item.despesa / maxVal) * 100);
+              {(() => {
+                const getLast6MonthsData = () => {
+                  const months = [];
+                  const now = new Date();
+                  for (let i = 5; i >= 0; i--) {
+                    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                    const monthLabel = d.toLocaleDateString('pt-BR', { month: 'short' });
+                    const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 
-                  return (
-                    <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
-                      <div className="flex items-end gap-1.5 w-full justify-center h-full">
-                        <div
-                          style={{ height: `${recH}%` }}
-                          className="w-4 sm:w-6 bg-emerald-500/80 group-hover:bg-emerald-400 rounded-t transition-all relative"
-                          title={`Receitas ${item.month}: R$ ${item.receita}`}
-                        />
-                        <div
-                          style={{ height: `${desH}%` }}
-                          className="w-4 sm:w-6 bg-red-500/80 group-hover:bg-red-400 rounded-t transition-all relative"
-                          title={`Despesas ${item.month}: R$ ${item.despesa}`}
-                        />
-                      </div>
-                      <span className="text-[11px] font-mono text-neutral-400 font-bold">{item.month}</span>
-                    </div>
-                  );
-                })}
-              </div>
+                    const receita = activeEntries
+                      .filter(e => e.tipo === 'Receita' && (e.status === 'Liquidado' || e.status === 'Conciliado') && (e.dataLiquidacao || e.dataVencimento).startsWith(yearMonth))
+                      .reduce((acc, e) => acc + (e.valorPago || e.valorLiquido), 0);
+
+                    const despesa = activeEntries
+                      .filter(e => e.tipo === 'Despesa' && (e.status === 'Liquidado' || e.status === 'Conciliado') && (e.dataLiquidacao || e.dataVencimento).startsWith(yearMonth))
+                      .reduce((acc, e) => acc + (e.valorPago || e.valorLiquido), 0);
+
+                    months.push({
+                      month: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1).replace('.', ''),
+                      receita,
+                      despesa
+                    });
+                  }
+                  return months;
+                };
+
+                const chartData = getLast6MonthsData();
+                const maxVal = Math.max(100, ...chartData.map(m => Math.max(m.receita, m.despesa)));
+
+                return (
+                  <div className="h-64 flex items-end justify-between gap-3 pt-6 px-2 border-b border-neutral-800 pb-2">
+                    {chartData.map((item, idx) => {
+                      const recH = maxVal > 0 ? Math.min(100, (item.receita / maxVal) * 100) : 0;
+                      const desH = maxVal > 0 ? Math.min(100, (item.despesa / maxVal) * 100) : 0;
+
+                      return (
+                        <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                          <div className="flex items-end gap-1.5 w-full justify-center h-full">
+                            <div
+                              style={{ height: `${Math.max(recH, 4)}%` }}
+                              className={`w-4 sm:w-6 rounded-t transition-all relative ${item.receita > 0 ? 'bg-emerald-500/80 group-hover:bg-emerald-400' : 'bg-neutral-800'}`}
+                              title={`Receitas ${item.month}: R$ ${item.receita.toFixed(2)}`}
+                            />
+                            <div
+                              style={{ height: `${Math.max(desH, 4)}%` }}
+                              className={`w-4 sm:w-6 rounded-t transition-all relative ${item.despesa > 0 ? 'bg-red-500/80 group-hover:bg-red-400' : 'bg-neutral-800'}`}
+                              title={`Despesas ${item.month}: R$ ${item.despesa.toFixed(2)}`}
+                            />
+                          </div>
+                          <span className="text-[11px] font-mono text-neutral-400 font-bold">{item.month}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
               <div className="flex justify-center gap-6 font-mono text-xs text-neutral-400">
                 <div className="flex items-center gap-2">
@@ -688,25 +712,51 @@ export default function Financial() {
                 Despesas por Categoria
               </h3>
 
-              <div className="space-y-3 font-mono text-xs">
-                {[
-                  { cat: 'Insumos & Filamentos (BOM)', valor: 4200, pct: 45, color: 'bg-orange-500' },
-                  { cat: 'Energia Elétrica Impressoras', valor: 1850, pct: 20, color: 'bg-yellow-500' },
-                  { cat: 'Manutenção & Peças 3D', valor: 1200, pct: 13, color: 'bg-blue-500' },
-                  { cat: 'Embalagens & Logística', valor: 950, pct: 10, color: 'bg-emerald-500' },
-                  { cat: 'Marketing & Outros', valor: 1000, pct: 12, color: 'bg-purple-500' },
-                ].map((c, i) => (
-                  <div key={i} className="space-y-1">
-                    <div className="flex justify-between text-neutral-300">
-                      <span>{c.cat}</span>
-                      <strong className="text-white">R$ {c.valor} ({c.pct}%)</strong>
+              {(() => {
+                const categoryMap: { [key: string]: number } = {};
+                activeEntries
+                  .filter(e => e.tipo === 'Despesa' && (e.status === 'Liquidado' || e.status === 'Conciliado'))
+                  .forEach(e => {
+                    const catObj = categories.find(c => c.id === e.categoriaId);
+                    const catName = catObj ? catObj.nome : 'Outras Despesas';
+                    categoryMap[catName] = (categoryMap[catName] || 0) + (e.valorPago || e.valorLiquido);
+                  });
+
+                const totalExp = Object.values(categoryMap).reduce((a, b) => a + b, 0);
+                const items = Object.entries(categoryMap).map(([cat, val], idx) => {
+                  const colors = ['bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-emerald-500', 'bg-purple-500', 'bg-red-500'];
+                  return {
+                    cat,
+                    valor: val,
+                    pct: totalExp > 0 ? Math.round((val / totalExp) * 100) : 0,
+                    color: colors[idx % colors.length]
+                  };
+                });
+
+                if (items.length === 0) {
+                  return (
+                    <div className="py-12 text-center text-neutral-500 font-mono text-xs italic">
+                      Nenhuma despesa liquidada registrada no momento.
                     </div>
-                    <div className="w-full bg-neutral-950 h-2 rounded-full overflow-hidden">
-                      <div className={`h-full ${c.color}`} style={{ width: `${c.pct}%` }} />
-                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-3 font-mono text-xs">
+                    {items.map((c, i) => (
+                      <div key={i} className="space-y-1">
+                        <div className="flex justify-between text-neutral-300">
+                          <span className="truncate max-w-[160px]">{c.cat}</span>
+                          <strong className="text-white">R$ {c.valor.toFixed(2)} ({c.pct}%)</strong>
+                        </div>
+                        <div className="w-full bg-neutral-950 h-2 rounded-full overflow-hidden">
+                          <div className={`h-full ${c.color}`} style={{ width: `${c.pct}%` }} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                );
+              })()}
             </div>
 
           </div>

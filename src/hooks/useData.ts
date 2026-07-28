@@ -850,6 +850,36 @@ export const useData = () => {
           );
           setLocalCache('insumos', updated);
         }
+
+        // INTEGRAR AO FINANCEIRO: Gerar automaticamente Título a Pagar (Despesa)
+        try {
+          const docNum = newCompra.notaFiscal ? `NF-${newCompra.notaFiscal}` : `COMP-${newCompra.data.replace(/-/g, '')}`;
+          const financialEntry: FinancialEntry = {
+            id: crypto.randomUUID(),
+            numeroDocumento: docNum,
+            tipo: 'Despesa',
+            origem: 'Compra',
+            origemId: itemSalvo.id,
+            fornecedor: itemSalvo.fornecedor,
+            dataEmissao: itemSalvo.data || new Date().toISOString().split('T')[0],
+            dataVencimento: itemSalvo.data || new Date().toISOString().split('T')[0],
+            valorBruto: itemSalvo.valorPago,
+            desconto: 0,
+            acrescimo: 0,
+            valorLiquido: itemSalvo.valorPago,
+            formaPagamento: 'PIX',
+            status: 'Aberto',
+            conciliado: false,
+            observacoes: `Lançamento automático de despesa da Compra: ${itemSalvo.descricaoItem || 'Insumo/Filamento'}`
+          };
+
+          const payloadFin = mapFinancialEntryToDB(financialEntry, activeTenant);
+          await supabase.from('lancamentos_financeiros').insert([payloadFin]);
+          addToLocalCache('lancamentos_financeiros', financialEntry);
+        } catch (finErr) {
+          console.error('[useData] Erro ao gerar título financeiro para compra:', finErr);
+        }
+
       } catch (err) {
         console.error('[useData] Exceção ao salvar compra:', err);
       }
@@ -860,6 +890,7 @@ export const useData = () => {
       queryClient.invalidateQueries({ queryKey: ['compras', activeTenant] });
       queryClient.invalidateQueries({ queryKey: ['filamentos', activeTenant] });
       queryClient.invalidateQueries({ queryKey: ['insumos', activeTenant] });
+      queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros', activeTenant] });
     },
   });
 
@@ -1172,13 +1203,46 @@ export const useData = () => {
         } else {
           console.error('[useData] Erro ao salvar venda:', error?.message);
         }
+
+        // INTEGRAR AO FINANCEIRO: Gerar automaticamente Título a Receber (Receita)
+        try {
+          const docNum = itemSalvo.numero ? `VENDA-#${itemSalvo.numero}` : `VENDA-${itemSalvo.id.slice(0, 6)}`;
+          const financialEntry: FinancialEntry = {
+            id: crypto.randomUUID(),
+            numeroDocumento: docNum,
+            tipo: 'Receita',
+            origem: 'Venda',
+            origemId: itemSalvo.id,
+            clienteId: itemSalvo.clienteId,
+            dataEmissao: itemSalvo.data || new Date().toISOString().split('T')[0],
+            dataVencimento: itemSalvo.data || new Date().toISOString().split('T')[0],
+            valorBruto: itemSalvo.valorTotal,
+            desconto: 0,
+            acrescimo: 0,
+            valorLiquido: itemSalvo.valorTotal,
+            formaPagamento: itemSalvo.formaPagamento || 'PIX',
+            status: 'Aberto',
+            conciliado: false,
+            observacoes: `Faturamento automático da Venda #${itemSalvo.numero || ''}`
+          };
+
+          const payloadFin = mapFinancialEntryToDB(financialEntry, activeTenant);
+          await supabase.from('lancamentos_financeiros').insert([payloadFin]);
+          addToLocalCache('lancamentos_financeiros', financialEntry);
+        } catch (finErr) {
+          console.error('[useData] Erro ao gerar título financeiro para venda:', finErr);
+        }
+
       } catch (err) {
         console.error('[useData] Exceção ao salvar venda:', err);
       }
       addToLocalCache('vendas', itemSalvo);
       return itemSalvo;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vendas', activeTenant] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendas', activeTenant] });
+      queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros', activeTenant] });
+    },
   });
 
   const useUpdateVenda = () => useMutation({
@@ -1209,11 +1273,28 @@ export const useData = () => {
       } catch (err) {
         console.error('[useData] Exceção ao excluir venda:', err);
       }
+
+      // INTEGRAR AO FINANCEIRO: Cancelar automaticamente o lançamento financeiro correspondente
+      try {
+        await supabase
+          .from('lancamentos_financeiros')
+          .update({ status: 'Cancelado' })
+          .eq('origem_id', id)
+          .eq('origem', 'Venda');
+      } catch (finErr) {
+        console.error('[useData] Erro ao cancelar título financeiro da venda:', finErr);
+      }
+
+      const cachedEntries = getLocalCache<FinancialEntry>('lancamentos_financeiros');
+      const updatedEntries = cachedEntries.map(e => (e.origemId === id && e.origem === 'Venda') ? { ...e, status: 'Cancelado' as const } : e);
+      setLocalCache('lancamentos_financeiros', updatedEntries);
+
       removeFromLocalCache('vendas', id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendas', activeTenant] });
       queryClient.invalidateQueries({ queryKey: ['orcamentos', activeTenant] });
+      queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros', activeTenant] });
     },
   });
 
@@ -2008,12 +2089,12 @@ export const useData = () => {
   };
 };
 
-// Seeds Financeiros Iniciais
+// Seeds Financeiros Iniciais (Estrutura sem saldos fictícios)
 const DEFAULT_ACCOUNTS: FinancialAccount[] = [
-  { id: 'acc-01', nome: 'Itaú Conta Corrente', tipo: 'Conta Bancaria', banco: 'Itaú', agencia: '1234', conta: '56789', digito: '0', saldoInicial: 5000, saldoAtual: 5000, situacao: 'Ativa' },
-  { id: 'acc-02', nome: 'Caixa Físico (Dinheiro)', tipo: 'Caixa Fisico', saldoInicial: 500, saldoAtual: 500, situacao: 'Ativa' },
-  { id: 'acc-03', nome: 'Mercado Pago / Carteira Digital', tipo: 'Carteira Digital', banco: 'Mercado Pago', saldoInicial: 1200, saldoAtual: 1200, situacao: 'Ativa' },
-  { id: 'acc-04', nome: 'Cartão Santander Corp', tipo: 'Cartao Credito', banco: 'Santander', bandeira: 'Mastercard', limite: 10000, limiteDisponivel: 10000, diaFechamento: 15, diaVencimento: 25, saldoInicial: 0, saldoAtual: 0, situacao: 'Ativa' },
+  { id: 'acc-01', nome: 'Itaú Conta Corrente', tipo: 'Conta Bancaria', banco: 'Itaú', agencia: '', conta: '', digito: '', saldoInicial: 0, saldoAtual: 0, situacao: 'Ativa' },
+  { id: 'acc-02', nome: 'Caixa Físico (Dinheiro)', tipo: 'Caixa Fisico', saldoInicial: 0, saldoAtual: 0, situacao: 'Ativa' },
+  { id: 'acc-03', nome: 'Mercado Pago / Carteira Digital', tipo: 'Carteira Digital', banco: 'Mercado Pago', saldoInicial: 0, saldoAtual: 0, situacao: 'Ativa' },
+  { id: 'acc-04', nome: 'Cartão Santander Corp', tipo: 'Cartao Credito', banco: 'Santander', bandeira: 'Mastercard', limite: 0, limiteDisponivel: 0, diaFechamento: 15, diaVencimento: 25, saldoInicial: 0, saldoAtual: 0, situacao: 'Ativa' },
 ];
 
 const DEFAULT_CATEGORIES: FinancialCategory[] = [
