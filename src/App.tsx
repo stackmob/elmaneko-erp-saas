@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 // Component Imports
 import AuthPage from './components/AuthPage';
@@ -22,7 +22,7 @@ import {
   LayoutDashboard, Users, Layers, ShoppingBag, Cpu, 
   Zap, FolderHeart, PlayCircle, FileCheck, DollarSign, LogOut, Shield, 
   AlertTriangle, Loader2, PanelLeftClose, PanelLeftOpen, Sparkles, Building2,
-  Menu, X, Package, Wallet
+  Menu, X, Package, Wallet, Sun, Moon
 } from 'lucide-react';
 
 import { useAuth } from './context/AuthContext';
@@ -36,6 +36,26 @@ export default function App() {
   const [currentView, setCurrentView] = useState<string>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+
+  // Theme Mode State (Dark / Light)
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('elmaneko_theme') as 'dark' | 'light') || 'dark';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('elmaneko_theme', theme);
+    if (theme === 'light') {
+      document.documentElement.classList.add('light-theme');
+      document.body.classList.add('light-theme');
+    } else {
+      document.documentElement.classList.remove('light-theme');
+      document.body.classList.remove('light-theme');
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   const auth = {
     isAuthenticated: !!session,
@@ -201,17 +221,41 @@ export default function App() {
             </div>
           </div>
 
-          {lowStockFilaments.length > 0 ? (
-            <div className="flex items-center gap-2 px-3.5 py-1.5 bg-amber-950/40 border border-amber-500/30 rounded-xl text-amber-300 text-xs font-mono shadow-lg shadow-amber-950/20 shrink-0">
-              <AlertTriangle size={15} className="text-amber-400 animate-bounce shrink-0" />
-              <span className="truncate">Aviso HUD: <strong className="text-amber-200">{lowStockFilaments.length} bobina(s)</strong> abaixo de 200g!</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 px-3.5 py-1.5 bg-emerald-950/40 border border-emerald-500/20 rounded-xl text-emerald-300 text-xs font-mono shrink-0">
-              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping shrink-0" />
-              <span>Insumos & Impressoras operacionais</span>
-            </div>
-          )}
+          <div className="flex items-center gap-3 shrink-0">
+            {lowStockFilaments.length > 0 ? (
+              <div className="flex items-center gap-2 px-3.5 py-1.5 bg-amber-950/40 border border-amber-500/30 rounded-xl text-amber-300 text-xs font-mono shadow-lg shadow-amber-950/20 shrink-0">
+                <AlertTriangle size={15} className="text-amber-400 animate-bounce shrink-0" />
+                <span className="truncate">Aviso HUD: <strong className="text-amber-200">{lowStockFilaments.length} bobina(s)</strong> abaixo de 200g!</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 px-3.5 py-1.5 bg-emerald-950/40 border border-emerald-500/20 rounded-xl text-emerald-300 text-xs font-mono shrink-0">
+                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping shrink-0" />
+                <span>Insumos & Impressoras operacionais</span>
+              </div>
+            )}
+
+            <button
+              onClick={toggleTheme}
+              className={`py-1.5 px-3 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${
+                theme === 'dark' 
+                  ? 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:bg-neutral-800 hover:text-white' 
+                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100 shadow-md'
+              }`}
+              title={theme === 'dark' ? 'Mudar para Modo Claro (Light)' : 'Mudar para Modo Escuro (Dark)'}
+            >
+              {theme === 'dark' ? (
+                <>
+                  <Sun size={15} className="text-amber-400 shrink-0" />
+                  <span className="hidden sm:inline">Modo Claro</span>
+                </>
+              ) : (
+                <>
+                  <Moon size={15} className="text-indigo-600 shrink-0" />
+                  <span className="hidden sm:inline">Modo Escuro</span>
+                </>
+              )}
+            </button>
+          </div>
         </header>
 
         {/* VIEWPORT CONTENT CONTAINER */}
