@@ -2,7 +2,7 @@ import { useEmpresa, useUpdateEmpresa } from './data/useCompanyData';
 import { 
   useFilamentos, useAddFilamento, useUpdateFilamento, useDeleteFilamento,
   useInsumos, useAddInsumo, useUpdateInsumo, useDeleteInsumo,
-  useCompras, useAddCompra 
+  useCompras, useAddCompra, useUpdateCompra, useDeleteCompra
 } from './data/useFilamentsData';
 import { 
   useImpressoras, useAddImpressora, useUpdateImpressora, useDeleteImpressora,
@@ -42,6 +42,8 @@ export function useData() {
     useDeleteInsumo,
     useCompras,
     useAddCompra,
+    useUpdateCompra,
+    useDeleteCompra,
     // Printers & Tariffs
     useImpressoras,
     useAddImpressora,
@@ -116,6 +118,8 @@ export {
   useDeleteInsumo,
   useCompras,
   useAddCompra,
+  useUpdateCompra,
+  useDeleteCompra,
   useImpressoras,
   useAddImpressora,
   useUpdateImpressora,

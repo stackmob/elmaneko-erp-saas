@@ -348,3 +348,75 @@ export function useAddCompra() {
     },
   });
 }
+
+export function useUpdateCompra() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (compra: Purchase) => {
+      const payload = {
+        data: compra.data,
+        fornecedor: compra.fornecedor,
+        categoria_item: compra.categoriaItem,
+        descricao_item: compra.descricaoItem,
+        quantidade: compra.quantidade,
+        unidade_medida: compra.unidadeMedida,
+        filamento_id: isValidUuid(compra.filamentoId) ? compra.filamentoId : null,
+        insumo_id: isValidUuid(compra.insumoId) ? compra.insumoId : null,
+        quantidade_adquirida: compra.quantidadeAdquirida,
+        valor_pago: compra.valorPago,
+        nota_fiscal: compra.notaFiscal,
+        observacoes: compra.observacoes
+      };
+
+      if (isValidUuid(compra.id)) {
+        await supabase.from('compras').update(payload).eq('id', compra.id);
+        
+        try {
+          await supabase
+            .from('lancamentos_financeiros')
+            .update({
+              fornecedor: compra.fornecedor,
+              data_emissao: compra.data || new Date().toISOString().split('T')[0],
+              data_vencimento: compra.data || new Date().toISOString().split('T')[0],
+              valor_bruto: Number(compra.valorPago),
+              valor_liquido: Number(compra.valorPago),
+              numero_documento: compra.notaFiscal ? `NF-${compra.notaFiscal}` : `COMP-${compra.id.slice(0, 8)}`,
+            })
+            .eq('origem_id', compra.id);
+        } catch (e) {}
+      }
+
+      addToLocalCache('compras', compra);
+      return compra;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['compras'] });
+      queryClient.invalidateQueries({ queryKey: ['filamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['insumos'] });
+      queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros'] });
+    },
+  });
+}
+
+export function useDeleteCompra() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (isValidUuid(id)) {
+        await supabase.from('compras').delete().eq('id', id);
+        try {
+          await supabase.from('lancamentos_financeiros').delete().eq('origem_id', id);
+        } catch (e) {}
+      }
+      removeFromLocalCache('compras', id);
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['compras'] });
+      queryClient.invalidateQueries({ queryKey: ['filamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['insumos'] });
+      queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros'] });
+    },
+  });
+}
+

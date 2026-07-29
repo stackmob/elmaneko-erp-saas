@@ -1,20 +1,26 @@
 import React, { useState } from 'react';
 import { Purchase, PurchaseCategory, SupplyUnit, Filament, SupplyItem } from '../types';
-import { Plus, ShoppingCart, Calendar, Building, DollarSign, FileText, Search, Tag, Package, Cpu, Wrench, Box, Sparkles, Filter, CheckCircle2, X } from 'lucide-react';
+import { Plus, ShoppingCart, Calendar, Building, DollarSign, FileText, Search, Tag, Package, Cpu, Wrench, Box, Sparkles, Filter, CheckCircle2, X, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
+import { Modal } from './ui/Modal';
 import SearchableSelect, { SelectOption } from './ui/SearchableSelect';
 
 export default function Purchases() {
-  const { useCompras, useFilamentos, useInsumos, useAddCompra } = useData();
+  const { useCompras, useFilamentos, useInsumos, useAddCompra, useUpdateCompra, useDeleteCompra } = useData();
   const { data: purchases = [] } = useCompras();
   const { data: filaments = [] } = useFilamentos();
   const { data: supplies = [] } = useInsumos();
   const addMutation = useAddCompra();
+  const updateMutation = useUpdateCompra();
+  const deleteMutation = useDeleteCompra();
   const { toast, showToast, hideToast } = useToast();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
+  const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
+
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -53,20 +59,46 @@ export default function Purchases() {
     })),
   ];
 
-  const handleOpenModal = () => {
-    setData(new Date().toISOString().split('T')[0]);
-    setSelectedItemId('');
-    setInsumoId('');
-    setFilamentoId('');
-    setCategoriaItem('Filamento');
-    setDescricaoItem('');
-    setQuantidade(1);
-    setUnidadeMedida('g');
-    setQuantidadeAdquirida(1000);
-    setFornecedor('');
-    setValorPago(120.00);
-    setNotaFiscal('');
-    setObservacoes('');
+  const handleOpenModal = (purchaseToEdit?: Purchase) => {
+    if (purchaseToEdit) {
+      setEditingPurchase(purchaseToEdit);
+      setData(purchaseToEdit.data || new Date().toISOString().split('T')[0]);
+      setInsumoId(purchaseToEdit.insumoId || '');
+      setFilamentoId(purchaseToEdit.filamentoId || '');
+      
+      if (purchaseToEdit.filamentoId) {
+        setSelectedItemId(`fil_${purchaseToEdit.filamentoId}`);
+      } else if (purchaseToEdit.insumoId) {
+        setSelectedItemId(`ins_${purchaseToEdit.insumoId}`);
+      } else {
+        setSelectedItemId('');
+      }
+
+      setCategoriaItem(purchaseToEdit.categoriaItem || 'Filamento');
+      setDescricaoItem(purchaseToEdit.descricaoItem || '');
+      setQuantidade(purchaseToEdit.quantidade || 1);
+      setUnidadeMedida(purchaseToEdit.unidadeMedida || 'un');
+      setQuantidadeAdquirida(purchaseToEdit.quantidadeAdquirida || 1000);
+      setFornecedor(purchaseToEdit.fornecedor || '');
+      setValorPago(purchaseToEdit.valorPago || 0);
+      setNotaFiscal(purchaseToEdit.notaFiscal || '');
+      setObservacoes(purchaseToEdit.observacoes || '');
+    } else {
+      setEditingPurchase(null);
+      setData(new Date().toISOString().split('T')[0]);
+      setSelectedItemId('');
+      setInsumoId('');
+      setFilamentoId('');
+      setCategoriaItem('Filamento');
+      setDescricaoItem('');
+      setQuantidade(1);
+      setUnidadeMedida('g');
+      setQuantidadeAdquirida(1000);
+      setFornecedor('');
+      setValorPago(120.00);
+      setNotaFiscal('');
+      setObservacoes('');
+    }
     setIsModalOpen(true);
   };
 
@@ -127,8 +159,8 @@ export default function Purchases() {
       else grams = Number(quantidade);
     }
 
-    const newPurchase: Purchase = {
-      id: crypto.randomUUID(),
+    const purchasePayload: Purchase = {
+      id: editingPurchase ? editingPurchase.id : crypto.randomUUID(),
       data,
       fornecedor,
       insumoId: insumoId || undefined,
@@ -143,17 +175,39 @@ export default function Purchases() {
       observacoes,
     };
 
-    addMutation.mutate(newPurchase, {
+    if (editingPurchase) {
+      updateMutation.mutate(purchasePayload, {
+        onSuccess: () => {
+          setIsModalOpen(false);
+          setEditingPurchase(null);
+          showToast('Registro de compra atualizado com sucesso!', 'success');
+        },
+        onError: () => showToast('Erro ao atualizar registro de compra.', 'error'),
+      });
+    } else {
+      addMutation.mutate(purchasePayload, {
+        onSuccess: () => {
+          setIsModalOpen(false);
+          showToast(
+            categoriaItem === 'Filamento' || insumoId
+              ? 'Compra registrada e estoque atualizado no catálogo!'
+              : 'Compra registrada com sucesso!',
+            'success'
+          );
+        },
+        onError: () => showToast('Erro ao registrar compra.', 'error'),
+      });
+    }
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!purchaseToDelete) return;
+    deleteMutation.mutate(purchaseToDelete.id, {
       onSuccess: () => {
-        setIsModalOpen(false);
-        showToast(
-          categoriaItem === 'Filamento' || insumoId
-            ? 'Compra registrada e estoque atualizado no catálogo!'
-            : 'Compra registrada com sucesso!',
-          'success'
-        );
+        setPurchaseToDelete(null);
+        showToast('Registro de compra excluído com sucesso!', 'success');
       },
-      onError: () => showToast('Erro ao registrar compra.', 'error'),
+      onError: () => showToast('Erro ao excluir compra.', 'error'),
     });
   };
 
@@ -209,10 +263,10 @@ export default function Purchases() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="purchases-header">
         <div>
           <h2 className="text-xl font-bold text-white tracking-tight">Controle de Compras & Entrada de Insumos</h2>
-          <p className="text-sm text-neutral-400 mt-1">Registre compras com seleção de unidades flexíveis (MT, UN, KG, G, CX, RL, PCT, L) e atualização instantânea de estoque.</p>
+          <p className="text-sm text-neutral-400 mt-1">Registre, edite e acompanhe compras de insumos com atualização instantânea e controle total.</p>
         </div>
         <button
-          onClick={handleOpenModal}
+          onClick={() => handleOpenModal()}
           id="add-new-purchase-btn"
           className="py-2.5 px-4 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-md shadow-orange-600/10 flex items-center justify-center gap-2 hover:translate-y-[-1px] transition-all cursor-pointer"
         >
@@ -305,6 +359,7 @@ export default function Purchases() {
                 <th className="py-4 px-4 font-semibold text-right">Valor Pago</th>
                 <th className="py-4 px-4 font-semibold">Nota Fiscal</th>
                 <th className="py-4 px-4 font-semibold">Observações</th>
+                <th className="py-4 px-4 font-semibold text-center">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-800/60 text-sm text-neutral-300 font-mono">
@@ -390,12 +445,31 @@ export default function Purchases() {
                       <td className="py-3.5 px-4 text-xs text-neutral-400 max-w-xs truncate" title={p.observacoes}>
                         {p.observacoes || <span className="text-neutral-600 italic">-</span>}
                       </td>
+
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => handleOpenModal(p)}
+                            className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+                            title="Editar Compra"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            onClick={() => setPurchaseToDelete(p)}
+                            className="p-1.5 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-red-950/40 transition-colors cursor-pointer"
+                            title="Excluir Compra"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-neutral-500 text-xs">
+                  <td colSpan={9} className="py-12 text-center text-neutral-500 text-xs">
                     Nenhuma compra encontrada para a pesquisa efetuada.
                   </td>
                 </tr>
@@ -405,199 +479,236 @@ export default function Purchases() {
         </div>
       </div>
 
-      {/* FORM DIALOG MODAL WITH LIVE SEARCHABLE SELECT */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="purchase-form-modal">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-lg max-h-[88vh] flex flex-col shadow-2xl overflow-hidden text-neutral-100 font-sans">
+      {/* FORM DIALOG REUSABLE MODAL COMPONENT */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingPurchase(null);
+        }}
+        maxWidth="lg"
+        title={
+          <span className="flex items-center gap-2">
+            <ShoppingCart size={20} className="text-orange-500" />
+            {editingPurchase ? 'Editar Compra de Insumo / Material' : 'Registrar Compra de Insumo / Material'}
+          </span>
+        }
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setIsModalOpen(false);
+                setEditingPurchase(null);
+              }}
+              className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const formEl = document.getElementById('purchase-form-element') as HTMLFormElement;
+                if (formEl) formEl.requestSubmit();
+              }}
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer shadow-md shadow-orange-600/20"
+            >
+              {editingPurchase ? 'Salvar Alterações' : 'Registrar Compra'}
+            </button>
+          </>
+        }
+      >
+        <form id="purchase-form-element" onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
+          {/* SEARCHABLE SELECT COMBOBOX */}
+          <div className="p-3 bg-neutral-950 border border-neutral-800 rounded-xl space-y-2">
+            <SearchableSelect
+              label="Buscar & Selecionar Item do Catálogo"
+              placeholder="Digite qualquer parte do nome (ex: cola, caixa, m3, pla)..."
+              options={searchableOptions}
+              value={selectedItemId}
+              onChange={handleSelectItemChange}
+              emptyMessage="Nenhum item do catálogo encontrado com este nome."
+            />
+            <span className="text-[10px] text-neutral-500 block">
+              💡 Digite o nome para autocompletar ou preencha os campos abaixo caso o item ainda não esteja cadastrado.
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             
-            {/* STICKY HEADER */}
-            <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
-              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                <ShoppingCart size={20} className="text-orange-500" />
-                Registrar Compra de Insumo / Material
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-                title="Fechar Modal"
-              >
-                <X size={18} />
-              </button>
+            {/* Data */}
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Data da Compra *</label>
+              <input
+                type="date"
+                required
+                value={data}
+                onChange={(e) => setData(e.target.value)}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
             </div>
 
-            {/* SCROLLABLE FORM BODY */}
-            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 font-mono text-xs flex-1">
-                
-                {/* SEARCHABLE SELECT COMBOBOX */}
-                <div className="p-3 bg-neutral-950 border border-neutral-800 rounded-xl space-y-2">
-                  <SearchableSelect
-                    label="Buscar & Selecionar Item do Catálogo"
-                    placeholder="Digite qualquer parte do nome (ex: cola, caixa, m3, pla)..."
-                    options={searchableOptions}
-                    value={selectedItemId}
-                    onChange={handleSelectItemChange}
-                    emptyMessage="Nenhum item do catálogo encontrado com este nome."
-                  />
-                  <span className="text-[10px] text-neutral-500 block">
-                    💡 Digite o nome para autocompletar ou preencha os campos abaixo caso o item ainda não esteja cadastrado.
-                  </span>
-                </div>
+            {/* Categoria */}
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Categoria *</label>
+              <select
+                value={categoriaItem}
+                onChange={(e) => setCategoriaItem(e.target.value as PurchaseCategory)}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+              >
+                <option value="Filamento">Filamento</option>
+                <option value="Cola / Adesivo">Cola / Adesivo de Mesa</option>
+                <option value="Embalagem / Caixas">Embalagem / Caixas</option>
+                <option value="Acessórios / Componentes">Acessórios / Componentes</option>
+                <option value="Impressoras 3D">Impressora 3D</option>
+                <option value="Peças de Manutenção / Peças de Impressoras">Peça de Impressora / Manutenção</option>
+                <option value="Outros Insumos">Outros Insumos</option>
+              </select>
+            </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  
-                  {/* Data */}
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Data da Compra *</label>
-                    <input
-                      type="date"
-                      required
-                      value={data}
-                      onChange={(e) => setData(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
+            {/* Descrição do Item */}
+            <div className="col-span-2">
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome / Descrição do Item *</label>
+              <input
+                type="text"
+                required
+                value={descricaoItem}
+                onChange={(e) => setDescricaoItem(e.target.value)}
+                placeholder="Ex: Cola em Bastão Kores / Bobina PLA Preto 1kg"
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
 
-                  {/* Categoria */}
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Categoria *</label>
-                    <select
-                      value={categoriaItem}
-                      onChange={(e) => setCategoriaItem(e.target.value as PurchaseCategory)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
-                    >
-                      <option value="Filamento">Filamento</option>
-                      <option value="Cola / Adesivo">Cola / Adesivo de Mesa</option>
-                      <option value="Embalagem / Caixas">Embalagem / Caixas</option>
-                      <option value="Acessórios / Componentes">Acessórios / Componentes</option>
-                      <option value="Impressoras 3D">Impressora 3D</option>
-                      <option value="Peças de Manutenção / Peças de Impressoras">Peça de Impressora / Manutenção</option>
-                      <option value="Outros Insumos">Outros Insumos</option>
-                    </select>
-                  </div>
+            {/* Quantidade */}
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Quantidade *</label>
+              <input
+                type="number"
+                required
+                step="0.01"
+                min="0.01"
+                value={quantidade}
+                onChange={(e) => setQuantidade(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
 
-                  {/* Descrição do Item */}
-                  <div className="col-span-2">
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome / Descrição do Item *</label>
-                    <input
-                      type="text"
-                      required
-                      value={descricaoItem}
-                      onChange={(e) => setDescricaoItem(e.target.value)}
-                      placeholder="Ex: Cola em Bastão Kores / Bobina PLA Preto 1kg"
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
+            {/* Unidade de Medida */}
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Unidade de Medida *</label>
+              <select
+                value={unidadeMedida}
+                onChange={(e) => setUnidadeMedida(e.target.value as SupplyUnit)}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+              >
+                <option value="un">Unidade (un)</option>
+                <option value="g">Gramas (g)</option>
+                <option value="Kg">Quilos (Kg)</option>
+                <option value="metro">Metro (m)</option>
+                <option value="rolo">Rolo</option>
+                <option value="caixa">Caixa</option>
+                <option value="pacote">Pacote</option>
+                <option value="litro">Litro (l)</option>
+              </select>
+            </div>
 
-                  {/* Quantidade */}
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Quantidade *</label>
-                    <input
-                      type="number"
-                      required
-                      step="0.01"
-                      min="0.01"
-                      value={quantidade}
-                      onChange={(e) => setQuantidade(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
+            {/* Fornecedor */}
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Fornecedor / Loja *</label>
+              <input
+                type="text"
+                required
+                value={fornecedor}
+                onChange={(e) => setFornecedor(e.target.value)}
+                placeholder="Ex: Mercado Livre / 3D Fila"
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
 
-                  {/* Unidade de Medida */}
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Unidade de Medida *</label>
-                    <select
-                      value={unidadeMedida}
-                      onChange={(e) => setUnidadeMedida(e.target.value as SupplyUnit)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
-                    >
-                      <option value="un">Unidade (un)</option>
-                      <option value="g">Gramas (g)</option>
-                      <option value="Kg">Quilos (Kg)</option>
-                      <option value="metro">Metro (m)</option>
-                      <option value="rolo">Rolo</option>
-                      <option value="caixa">Caixa</option>
-                      <option value="pacote">Pacote</option>
-                      <option value="litro">Litro (l)</option>
-                    </select>
-                  </div>
+            {/* Valor Pago */}
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Valor Total Pago (R$) *</label>
+              <input
+                type="number"
+                required
+                step="0.01"
+                min="0"
+                value={valorPago}
+                onChange={(e) => setValorPago(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold text-orange-400"
+              />
+            </div>
 
-                  {/* Fornecedor */}
-                  <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Fornecedor / Loja *</label>
-                    <input
-                      type="text"
-                      required
-                      value={fornecedor}
-                      onChange={(e) => setFornecedor(e.target.value)}
-                      placeholder="Ex: Mercado Livre / 3D Fila"
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
+            {/* Nota Fiscal */}
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nota Fiscal (opcional)</label>
+              <input
+                type="text"
+                value={notaFiscal}
+                onChange={(e) => setNotaFiscal(e.target.value)}
+                placeholder="Ex: NF-e 88102"
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
 
-                  {/* Valor Pago */}
-                  <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Valor Total Pago (R$) *</label>
-                    <input
-                      type="number"
-                      required
-                      step="0.01"
-                      min="0"
-                      value={valorPago}
-                      onChange={(e) => setValorPago(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold text-orange-400"
-                    />
-                  </div>
-
-                  {/* Nota Fiscal */}
-                  <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nota Fiscal (opcional)</label>
-                    <input
-                      type="text"
-                      value={notaFiscal}
-                      onChange={(e) => setNotaFiscal(e.target.value)}
-                      placeholder="Ex: NF-e 88102"
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
-
-                  {/* Observações */}
-                  <div className="col-span-2">
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações</label>
-                    <textarea
-                      value={observacoes}
-                      onChange={(e) => setObservacoes(e.target.value)}
-                      rows={2}
-                      placeholder="Notas adicionais sobre a compra..."
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
-                    />
-                  </div>
-                </div>
-
-              </div>
-
-              {/* STICKY ACTIONS FOOTER */}
-              <div className="p-4 border-t border-neutral-800 bg-neutral-950/80 flex justify-end gap-3 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer shadow-md shadow-orange-600/20"
-                >
-                  Registrar Compra
-                </button>
-              </div>
-
-            </form>
+            {/* Observações */}
+            <div className="col-span-2">
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações</label>
+              <textarea
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                rows={2}
+                placeholder="Notas adicionais sobre a compra..."
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
+              />
+            </div>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
+
+      {/* CONFIRMATION DELETE DIALOG USING REUSABLE MODAL */}
+      <Modal
+        isOpen={!!purchaseToDelete}
+        onClose={() => setPurchaseToDelete(null)}
+        maxWidth="md"
+        title={
+          <span className="flex items-center gap-2 text-red-500">
+            <AlertTriangle size={20} />
+            Excluir Compra
+          </span>
+        }
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setPurchaseToDelete(null)}
+              className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer text-xs"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteConfirm}
+              className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl cursor-pointer shadow-md shadow-red-600/20 text-xs flex items-center gap-1.5"
+            >
+              <Trash2 size={14} />
+              Excluir Definitivamente
+            </button>
+          </>
+        }
+      >
+        {purchaseToDelete && (
+          <div className="space-y-3 font-sans text-xs">
+            <p className="text-neutral-300">
+              Tem certeza que deseja excluir o registro de compra de <strong className="text-white">{purchaseToDelete.descricaoItem || 'item'}</strong> no valor de <strong className="text-orange-400">R$ {purchaseToDelete.valorPago.toFixed(2)}</strong>?
+            </p>
+            
+            <span className="text-xs text-neutral-500 block bg-neutral-950 p-3 rounded-lg border border-neutral-800 font-mono">
+              ⚠️ Esta ação removerá a compra do histórico e atualizará o lançamento financeiro vinculado.
+            </span>
+          </div>
+        )}
+      </Modal>
 
     </div>
   );
