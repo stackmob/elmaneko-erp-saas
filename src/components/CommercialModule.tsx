@@ -7,6 +7,7 @@ import Sales from './Sales';
 import Clients from './Clients';
 import { useData } from '../hooks/useData';
 import { formatCurrency } from '../utils/formatters';
+import { ScrollableTabs } from './ui/ScrollableTabs';
 
 export default function CommercialModule() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'budgets' | 'sales' | 'clients'>('budgets');
@@ -50,26 +51,16 @@ export default function CommercialModule() {
       </div>
 
       {/* NAVIGATION TABS */}
-      <div className="flex overflow-x-auto gap-2 border-b border-neutral-800 pb-2 scrollbar-none" id="commercial-tabs">
-        {[
-          { id: 'dashboard', label: '📊 Dashboard Comercial', icon: BarChart3 },
-          { id: 'budgets', label: '📄 Orçamentos & Propostas', icon: FileCheck },
-          { id: 'sales', label: '💰 Vendas Realizadas', icon: DollarSign },
-          { id: 'clients', label: '👥 Clientes (CRM)', icon: Users },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`py-2 px-4 rounded-xl font-mono text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-2 cursor-pointer ${
-              activeTab === tab.id
-                ? 'bg-orange-600 text-white shadow-md shadow-orange-600/20'
-                : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <ScrollableTabs
+        tabs={[
+          { id: 'dashboard', label: 'Dashboard Comercial', icon: BarChart3 },
+          { id: 'budgets', label: 'Orçamentos & Propostas', icon: FileCheck, badge: budgets.length },
+          { id: 'sales', label: 'Vendas Realizadas', icon: DollarSign, badge: sales.length },
+          { id: 'clients', label: 'Clientes (CRM)', icon: Users, badge: clients.length },
+        ]}
+        activeTab={activeTab}
+        onChangeTab={(tabId) => setActiveTab(tabId as any)}
+      />
 
       {/* TAB 1: DASHBOARD COMERCIAL */}
       {activeTab === 'dashboard' && (

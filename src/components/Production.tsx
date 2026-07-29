@@ -7,9 +7,11 @@ import {
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
+import { ScrollableTabs } from './ui/ScrollableTabs';
+import { CompleteOrderModal } from './production/CompleteOrderModal';
 
 export default function Production() {
-  const { useProducoes, useProdutos, useImpressoras, useFilamentos, useTarifas, useAddProducao, useUpdateProducao } = useData();
+  const { useProducoes, useProdutos, useImpressoras, useFilamentos, useTarifas, useAddProducao, useUpdateProducao, useUpdateFilamento } = useData();
   const { data: productions = [] } = useProducoes();
   const { data: products = [] } = useProdutos();
   const { data: printers = [] } = useImpressoras();
@@ -17,8 +19,10 @@ export default function Production() {
   const { data: tariffs = [] } = useTarifas();
   const addMutation = useAddProducao();
   const updateMutation = useUpdateProducao();
+  const updateFilamentoMutation = useUpdateFilamento();
   const { toast, showToast, hideToast } = useToast();
   
+  const [completingOrder, setCompletingOrder] = useState<ProductionOrder | null>(null);
   const [activeTab, setActiveTab] = useState<'nova' | 'historico' | 'relatorios'>('historico');
 
   // FILTERS
@@ -243,105 +247,7 @@ export default function Production() {
 
   // FINALIZE PRODUCTION FROM HISTORY
   const handleFinalizeFromHistory = (po: ProductionOrder) => {
-    const prodObj = products.find(p => p.id === po.produtoId);
-    if (!prodObj) {
-      setFormError('Produto da ordem de produção não localizado.');
-      return;
-    }
-
-    const timestamp = new Date().toISOString().split('T')[0];
-    const updatedFilaments = [...filaments];
-    const stockMovements: StockMovement[] = [];
-    const updatedProductStocks: ProductStock[] = [];
-
-    let isStockSufficient = true;
-    const stockErrors: string[] = [];
-
-    // Calculate real costs to freeze
-    const finalFilamentCost = prodObj.materials.reduce((acc, mat) => {
-      const maxRate = getMaxCostPerGram(mat.tipoFilamento);
-      return acc + (mat.quantidadeGrams * maxRate);
-    }, 0) * po.quantidade;
-
-    const printerObj = printers.find(pr => pr.id === po.impressoraId);
-    let finalEnergyCost = 0;
-    if (printerObj) {
-      const consumptionKwh = (printerObj.potenciaWatts * prodObj.tempoImpressao) / 1000;
-      finalEnergyCost = consumptionKwh * currentTariff * po.quantidade;
-    }
-
-    const finalLaborCost = po.maoDeObraEscolha === 'unitario' ? po.maoDeObraValor * po.quantidade : po.maoDeObraValor;
-    const finalTotalCost = finalFilamentCost + finalEnergyCost + finalLaborCost;
-    const finalUnitCost = finalTotalCost / po.quantidade;
-
-    // Check stock & deduct
-    prodObj.materials.forEach(mat => {
-      const totalNeeded = mat.quantidadeGrams * po.quantidade;
-      let matchedFilament = filaments.find(f => f.id === mat.filamentoId);
-      
-      if (!matchedFilament || mat.filamentoId === 'any') {
-        const typeSpools = filaments
-          .filter(f => f.tipo === mat.tipoFilamento)
-          .sort((a, b) => b.quantidadeDisponivel - a.quantidadeDisponivel);
-        if (typeSpools.length > 0) {
-          matchedFilament = typeSpools[0];
-        }
-      }
-
-      if (!matchedFilament || matchedFilament.quantidadeDisponivel < totalNeeded) {
-        isStockSufficient = false;
-        stockErrors.push(`${mat.tipoFilamento} (Necessário: ${totalNeeded}g, Disponível: ${matchedFilament ? matchedFilament.quantidadeDisponivel : 0}g)`);
-      } else {
-        const idx = updatedFilaments.findIndex(f => f.id === matchedFilament!.id);
-        if (idx !== -1) {
-          updatedFilaments[idx] = {
-            ...updatedFilaments[idx],
-            quantidadeDisponivel: updatedFilaments[idx].quantidadeDisponivel - totalNeeded
-          };
-
-          stockMovements.push({
-            id: `mvt-${Date.now()}-${matchedFilament!.id}`,
-            data: timestamp,
-            tipo: 'saida',
-            origem: 'producao_consumo',
-            referenciaId: po.numero,
-            filamentoId: matchedFilament!.id,
-            quantidade: totalNeeded,
-            descricao: `Consumo de ${totalNeeded}g de ${matchedFilament!.tipo} (${matchedFilament!.cor}) na ordem ${po.numero}`
-          });
-        }
-      }
-    });
-
-    if (!isStockSufficient) {
-      alert(`Erro: Estoque insuficiente para concluir esta produção.\n${stockErrors.join('\n')}`);
-      return;
-    }
-
-    // Record entry for finished product
-    stockMovements.push({
-      id: `mvt-${Date.now()}-prod-entry`,
-      data: timestamp,
-      tipo: 'entrada',
-      origem: 'producao_entrada',
-      referenciaId: po.numero,
-      produtoId: po.produtoId,
-      quantidade: po.quantidade,
-      descricao: `Fabricação concluída de ${po.quantidade}x ${prodObj.nome} (${po.numero})`
-    });
-
-    // Freeze costs in order
-    const updatedOrder = {
-      ...po,
-      custoFilamento: finalFilamentCost,
-      custoEnergia: finalEnergyCost,
-      custoMaoDeObra: finalLaborCost,
-      custoTotal: finalTotalCost,
-      custoUnitario: finalUnitCost
-    };
-
-    updateMutation.mutate(updatedOrder);
-    alert(`Sucesso: Ordem de produção ${po.numero} finalizada com sucesso! Insumos baixados.`);
+    setCompletingOrder(po);
   };
 
   const handleCancelFromHistory = (po: ProductionOrder) => {
@@ -1027,6 +933,30 @@ export default function Production() {
         </div>
       )}
 
+      {/* MODAL CONCLUIR ORDEM & ABATER ESTOQUE */}
+      <CompleteOrderModal
+        isOpen={!!completingOrder}
+        onClose={() => setCompletingOrder(null)}
+        order={completingOrder}
+        filaments={filaments}
+        onConfirmComplete={(orderId, filamentId, pesoGramas) => {
+          if (!completingOrder) return;
+          const updatedOrder: ProductionOrder = { ...completingOrder, status: 'Finalizada' };
+          updateMutation.mutate(updatedOrder, {
+            onSuccess: () => {
+              const fil = filaments.find(f => f.id === filamentId);
+              if (fil) {
+                const novaQtd = Math.max(0, fil.quantidadeDisponivel - pesoGramas);
+                const updatedFilament = { ...fil, quantidadeDisponivel: novaQtd };
+                updateFilamentoMutation.mutate(updatedFilament);
+                showToast(`Ordem concluída! ${pesoGramas}g deduzidos da bobina ${fil.nome}. Novo saldo: ${novaQtd}g.`, 'success');
+              } else {
+                showToast('Ordem marcada como finalizada!', 'success');
+              }
+            }
+          });
+        }}
+      />
     </div>
   );
 }

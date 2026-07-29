@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -6,6 +7,7 @@ interface ModalProps {
   onClose: () => void;
   title: string | React.ReactNode;
   children: React.ReactNode;
+  footer?: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl';
 }
 
@@ -14,6 +16,7 @@ export const Modal: React.FC<ModalProps> = ({
   onClose,
   title,
   children,
+  footer,
   maxWidth = 'md'
 }) => {
   useEffect(() => {
@@ -41,9 +44,9 @@ export const Modal: React.FC<ModalProps> = ({
     '7xl': 'max-w-7xl',
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
-      <div className={`bg-neutral-900 border border-neutral-800 rounded-2xl w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-auto text-neutral-100 font-sans`}>
+  return createPortal(
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-[100] flex items-center justify-center p-3 sm:p-4 overflow-hidden animate-fade-in">
+      <div className={`bg-neutral-900 border border-neutral-800 rounded-2xl w-full ${maxWidthClasses[maxWidth]} max-h-[85vh] sm:max-h-[88vh] flex flex-col shadow-2xl overflow-hidden my-auto text-neutral-100 font-sans`}>
         {/* STICKY MODAL HEADER */}
         <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
           <h3 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
@@ -63,7 +66,15 @@ export const Modal: React.FC<ModalProps> = ({
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 font-mono text-xs space-y-4">
           {children}
         </div>
+
+        {/* STICKY MODAL FOOTER */}
+        {footer && (
+          <div className="p-4 border-t border-neutral-800 bg-neutral-950/90 backdrop-blur-md flex items-center justify-end gap-3 shrink-0">
+            {footer}
+          </div>
+        )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

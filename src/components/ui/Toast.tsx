@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, XCircle, AlertTriangle, X } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { ToastType } from '../../hooks/useToast';
 
 interface ToastProps {
@@ -13,18 +13,21 @@ const icons: Record<ToastType, React.ElementType> = {
   success: CheckCircle2,
   error: XCircle,
   warning: AlertTriangle,
+  info: Info,
 };
 
 const containerStyles: Record<ToastType, string> = {
   success: 'bg-emerald-950/95 border-emerald-500/30 text-emerald-200',
   error: 'bg-red-950/95 border-red-500/30 text-red-200',
   warning: 'bg-amber-950/95 border-amber-500/30 text-amber-200',
+  info: 'bg-blue-950/95 border-blue-500/30 text-blue-200',
 };
 
 const iconStyles: Record<ToastType, string> = {
   success: 'text-emerald-400',
   error: 'text-red-400',
   warning: 'text-amber-400',
+  info: 'text-blue-400',
 };
 
 export default function Toast({ message, type, visible, onClose }: ToastProps) {

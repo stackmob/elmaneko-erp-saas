@@ -3,11 +3,13 @@ import { Budget, Client, Product, BudgetItem, Sale, Filament } from '../types';
 import { 
   Plus, Edit, Trash2, FileText, Calendar, User, 
   DollarSign, Check, ChevronRight, Share2, Download, Eye, X, Printer, Percent, CheckCircle2,
-  Filter, ArrowUpDown, RotateCcw, TrendingUp, Clock, AlertCircle, FolderHeart
+  Filter, ArrowUpDown, RotateCcw, TrendingUp, Clock, AlertCircle, FolderHeart, Package
 } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
+import { BudgetPreviewModal } from './commercial/BudgetPreviewModal';
+import { Modal } from './ui/Modal';
 
 // Helper to format ISO YYYY-MM-DD date to DD/MM/YYYY
 const formatDateBR = (dateStr?: string): string => {
@@ -648,7 +650,7 @@ export default function Budgets() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-neutral-500 font-mono text-xs">
+              <td colSpan={7} className="py-12 text-center text-neutral-500 font-mono text-xs">
                     Nenhum orçamento emitido ainda. Clique em "Gerar Novo Orçamento" para propor.
                   </td>
                 </tr>
@@ -659,234 +661,210 @@ export default function Budgets() {
       </div>
 
       {/* --- FORM MODAL (NEW / EDIT BUDGET) --- */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in" id="budget-form-modal">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-neutral-100 font-sans">
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        maxWidth="5xl"
+        title={
+          <span className="flex items-center gap-2">
+            <FileText className="text-orange-500" />
+            {editingBudget ? `Editar Orçamento ${editingBudget.numero}` : 'Gerar Orçamento Comercial'}
+          </span>
+        }
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const formEl = document.getElementById('budget-form-element') as HTMLFormElement;
+                if (formEl) formEl.requestSubmit();
+              }}
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer shadow-md shadow-orange-600/20"
+            >
+              Gravar Proposta
+            </button>
+          </>
+        }
+      >
+        <form id="budget-form-element" onSubmit={handleSubmit} className="space-y-5 font-mono text-xs text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             
-            {/* STICKY HEADER */}
-            <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
-              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                <FileText className="text-orange-500" />
-                {editingBudget ? `Editar Orçamento ${editingBudget.numero}` : 'Gerar Orçamento Comercial'}
-              </h3>
+            {/* Cliente */}
+            <div className="lg:col-span-2">
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Cliente *</label>
+              <select
+                value={clienteId}
+                onChange={(e) => setClienteId(e.target.value)}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+              >
+                {clients.map(c => (
+                  <option key={c.id} value={c.id}>{c.nome} ({c.cpfCnpj})</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Data emissao */}
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Emissão</label>
+              <input
+                type="date"
+                value={dataEmissao}
+                onChange={(e) => setDataEmissao(e.target.value)}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
+
+            {/* Validade */}
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Validade</label>
+              <input
+                type="date"
+                value={validade}
+                onChange={(e) => setValidade(e.target.value)}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
+
+            {/* Previsao Entrega */}
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-orange-400">Previsão Entrega</label>
+              <input
+                type="date"
+                value={previsaoEntrega}
+                onChange={(e) => setPrevisaoEntrega(e.target.value)}
+                className="w-full px-3 py-2 bg-neutral-950 border border-orange-500/30 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
+
+            {/* Desconto Geral % */}
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Desconto %</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                value={descontoGeral}
+                onChange={(e) => setDescontoGeral(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
+
+          </div>
+
+          {/* ITENS DO ORÇAMENTO (BOM / PRODUTOS) */}
+          <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-4">
+            <div className="flex justify-between items-center border-b border-neutral-900 pb-2">
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Package size={14} className="text-orange-500" /> Peças & Serviços do Orçamento
+              </h4>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-                title="Fechar Modal"
+                onClick={handleAddItemRow}
+                className="py-1 px-3 bg-neutral-900 hover:bg-neutral-850 text-orange-400 border border-neutral-800 text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
               >
-                <X size={18} />
+                + Adicionar Peça
               </button>
             </div>
 
-            {/* SCROLLABLE FORM BODY */}
-            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden font-mono text-xs text-left">
-              <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+            {itens.map((item, index) => {
+              const prod = products.find(p => p.id === item.produtoId);
+
+              return (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-neutral-900 p-3 rounded-lg border border-neutral-850 relative">
                   
-                  {/* Cliente */}
-                  <div className="lg:col-span-2">
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Cliente *</label>
+                  {/* Produto Select */}
+                  <div className="md:col-span-5">
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Peça / Modelo 3D *</label>
                     <select
-                      value={clienteId}
-                      onChange={(e) => setClienteId(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+                      value={item.produtoId}
+                      onChange={(e) => handleProductSelectionChange(index, e.target.value)}
+                      className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none focus:border-orange-500"
                     >
-                      {clients.map(c => (
-                        <option key={c.id} value={c.id}>{c.nome} ({c.cpfCnpj})</option>
+                      {products.map(p => (
+                        <option key={p.id} value={p.id}>{p.nome} ({p.categoria}) - R$ {p.precoVenda.toFixed(2)}</option>
                       ))}
                     </select>
                   </div>
 
-                  {/* Status */}
-                  <div className="lg:col-span-1">
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Situação *</label>
-                    {editingBudget && isBudgetInvoiced(editingBudget) ? (
-                      <div className="px-3 py-2 bg-purple-950/40 border border-purple-800/60 text-purple-300 rounded-lg text-xs font-mono font-bold flex items-center gap-2">
-                        <Check size={14} className="text-purple-400" /> Faturado
-                      </div>
-                    ) : (
-                      <select
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value as Budget['status'])}
-                        className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
-                      >
-                        <option value="Aberto">Aberto</option>
-                        <option value="Aprovado">Aprovado</option>
-                        <option value="Rejeitado">Rejeitado</option>
-                        <option value="Cancelado">Cancelado</option>
-                      </select>
-                    )}
-                  </div>
-
-                  {/* Emissão */}
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Emissão *</label>
+                  {/* Qtd */}
+                  <div className="md:col-span-2">
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Qtd *</label>
                     <input
-                      type="date"
-                      required
-                      value={dataEmissao}
-                      onChange={(e) => setDataEmissao(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                      type="number"
+                      min="1"
+                      value={item.quantidade}
+                      onChange={(e) => handleItemChange(index, 'quantidade', Number(e.target.value))}
+                      className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none focus:border-orange-500"
                     />
                   </div>
 
-                  {/* Validade */}
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Validade *</label>
-                    <input
-                      type="date"
-                      required
-                      value={validade}
-                      onChange={(e) => setValidade(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
-
-                  {/* Desconto Geral R$ */}
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Desconto (R$)</label>
+                  {/* Preco Unitario */}
+                  <div className="md:col-span-2">
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Valor Unit. (R$) *</label>
                     <input
                       type="number"
                       step="0.01"
                       min="0"
-                      value={descontoGeral}
-                      onChange={(e) => setDescontoGeral(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold text-emerald-400"
+                      value={item.valorUnitario}
+                      onChange={(e) => handleItemChange(index, 'valorUnitario', Number(e.target.value))}
+                      className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none focus:border-orange-500 font-bold text-orange-400"
                     />
                   </div>
-                </div>
 
-                {/* ITEMS SELECTOR BUILDER */}
-                <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-4">
-                  <div className="flex justify-between items-center border-b border-neutral-900 pb-2">
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                      <FolderHeart size={14} className="text-orange-500" /> Itens / Peças Adicionadas à Cotação
-                    </h4>
-                    <button
-                      type="button"
-                       onClick={handleAddItemRow}
-                      className="text-[10px] bg-orange-600 hover:bg-orange-500 text-white px-2.5 py-1 rounded font-bold cursor-pointer"
-                    >
-                      + Adicionar Peça
-                    </button>
+                  {/* Subtotal */}
+                  <div className="md:col-span-3 flex items-center justify-between">
+                    <div>
+                      <span className="block text-neutral-500 text-[9px] uppercase">Subtotal</span>
+                      <strong className="text-white text-xs font-mono font-bold">
+                        R$ {(item.quantidade * (item.valorUnitario - item.desconto)).toFixed(2)}
+                      </strong>
+                    </div>
+
+                    {itens.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItemRow(index)}
+                        className="text-red-500 hover:text-red-400 p-1 bg-neutral-950 rounded border border-neutral-850 cursor-pointer"
+                        title="Remover Peça"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
 
-                  {itens.map((item, index) => {
-                    const selectedProd = products.find(p => p.id === item.produtoId);
-
-                    return (
-                      <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end bg-neutral-900 p-3 rounded-lg border border-neutral-850 relative">
-                        
-                        {/* Select Produto */}
-                        <div className="col-span-1 md:col-span-2">
-                          <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Peça do Catálogo *</label>
-                          <select
-                            value={item.produtoId}
-                             onChange={(e) => handleProductSelectionChange(index, e.target.value)}
-                            className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none"
-                          >
-                            {products.map(p => (
-                              <option key={p.id} value={p.id}>{p.nome} ({p.categoria})</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Qtd */}
-                        <div>
-                          <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Quantidade *</label>
-                          <input
-                            type="number"
-                            required
-                            min={1}
-                            value={item.quantidade}
-                            onChange={(e) => handleItemChange(index, 'quantidade', e.target.value)}
-                            className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none font-bold"
-                          />
-                        </div>
-
-                        {/* Valor Unitário */}
-                        <div>
-                          <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Valor Unit. (R$) *</label>
-                          <input
-                            type="number"
-                            required
-                            step="0.01"
-                            min="0"
-                            value={item.valorUnitario}
-                            onChange={(e) => handleItemChange(index, 'valorUnitario', e.target.value)}
-                            className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none font-bold text-orange-400"
-                          />
-                        </div>
-
-                        {/* Subtotal Item */}
-                        <div className="flex gap-2 items-center justify-between">
-                          <div>
-                            <span className="block text-neutral-500 text-[9px] uppercase">Total Item</span>
-                            <span className="font-mono text-xs font-bold text-white">
-                              R$ {((item.quantidade * item.valorUnitario) - item.desconto).toFixed(2)}
-                            </span>
-                          </div>
-                          {itens.length > 1 && (
-                            <button
-                              type="button"
-                             onClick={() => handleRemoveItemRow(index)}
-                              className="text-red-500 hover:text-red-400 p-1 bg-neutral-950 rounded border border-neutral-850 cursor-pointer"
-                              title="Remover Item"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </div>
-
-                      </div>
-                    );
-                  })}
                 </div>
-
-                {/* TOTAL SUMMARY CARD */}
-                <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl flex justify-between items-center">
-                  <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider font-semibold">Valor Total Líquido da Cotação:</span>
-                  <span className="text-xl font-black font-mono text-emerald-400">
-                    R$ {calculateTotal(itens, descontoGeral).toFixed(2)}
-                  </span>
-                </div>
-
-                {/* OBSERVATIONS */}
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações / Termos de Pagamento</label>
-                  <textarea
-                    value={observacoes}
-                    onChange={(e) => setObservacoes(e.target.value)}
-                    rows={2}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
-                  />
-                </div>
-
-              </div>
-
-              {/* STICKY ACTIONS FOOTER */}
-              <div className="p-4 border-t border-neutral-800 bg-neutral-950/80 flex justify-end gap-3 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer shadow-md shadow-orange-600/20"
-                >
-                  Gravar Proposta
-                </button>
-              </div>
-
-            </form>
+              );
+            })}
           </div>
-        </div>
-      )}
+
+          {/* TOTAL SUMMARY CARD */}
+          <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl flex justify-between items-center">
+            <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider font-semibold">Valor Total Líquido da Cotação:</span>
+            <span className="text-xl font-black font-mono text-emerald-400">
+              R$ {calculateTotal(itens, descontoGeral).toFixed(2)}
+            </span>
+          </div>
+
+          {/* OBSERVATIONS */}
+          <div>
+            <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações / Termos de Pagamento</label>
+            <textarea
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
+            />
+          </div>
+        </form>
+      </Modal>
 
       {/* --- CONVERSION TO SALE CONFIRMATION MODAL --- */}
       {conversionBudget && (
@@ -943,203 +921,14 @@ export default function Budgets() {
       )}
 
       {/* --- MÓDULO 11: PDF PREVIEW MODAL --- */}
-      {pdfPreviewBudget && (() => {
-        const client = clients.find(c => c.id === pdfPreviewBudget.clienteId);
-        const subtotal = calculateSubtotal(pdfPreviewBudget.itens);
-        const total = calculateTotal(pdfPreviewBudget.itens, pdfPreviewBudget.descontoGeral);
-
-        return (
-          <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4 animate-fade-in" id="pdf-rendering-modal">
-            <div className="w-full max-w-3xl flex justify-between items-center bg-neutral-900 border border-neutral-800 p-4 rounded-t-2xl">
-              <span className="text-white text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5">
-                <Printer size={16} className="text-orange-500" /> Pré-visualização Digital de Documento (PDF)
-              </span>
-              <button
-                onClick={() => setPdfPreviewBudget(null)}
-                className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* PRINT-READY CONTAINER SHEET */}
-            <div className="w-full max-w-3xl flex-1 bg-white text-neutral-950 p-10 font-sans shadow-2xl overflow-y-auto print:p-0" id="pdf-print-sheet">
-              
-              {/* SHEET HEADER */}
-              <div className="flex justify-between items-start border-b-2 border-orange-500 pb-6">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 bg-gradient-to-tr from-orange-600 to-amber-500 rounded-lg flex items-center justify-center text-white font-black text-sm">
-                      {company?.nome ? company.nome[0] : 'E'}
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black tracking-tight text-neutral-900">
-                        {company?.nome || 'ELMANEKO 3D'}
-                      </h2>
-                      <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
-                        {company?.slogan || 'Impressão 3D de Alta Fidelidade'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-xs text-neutral-500 mt-3 space-y-0.5">
-                    <p className="font-semibold text-neutral-800">
-                      {company?.razaoSocial || company?.nome || 'ELMANEKO 3D LTDA'} 
-                      {company?.cnpj ? ` • CNPJ: ${company.cnpj}` : ''}
-                    </p>
-                    {company?.endereco && <p>{company.endereco}</p>}
-                    <p>
-                      {company?.email ? `Email: ${company.email}` : ''} 
-                      {(company?.telefone || company?.whatsapp) ? ` • Tel: ${company?.telefone || company?.whatsapp}` : ''}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <h3 className="text-lg font-black text-orange-500">PROPOSTA COMERCIAL</h3>
-                  <p className="text-xs font-mono text-neutral-500 mt-1">Número: <strong className="text-neutral-900">{pdfPreviewBudget.numero}</strong></p>
-                  <p className="text-xs font-mono text-neutral-500">Data: {formatDateBR(pdfPreviewBudget.dataEmissao)}</p>
-                  <p className="text-xs font-mono text-neutral-500">Vencimento: {formatDateBR(pdfPreviewBudget.validade)}</p>
-                  <p className="text-xs font-mono text-neutral-500">Previsão Entrega: {pdfPreviewBudget.previsaoEntrega ? formatDateBR(pdfPreviewBudget.previsaoEntrega) : 'A combinar'}</p>
-                </div>
-              </div>
-
-              {/* CLIENT SECTION */}
-              <div className="mt-6 p-4 bg-neutral-100 rounded-xl">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-500 border-b border-neutral-200 pb-1.5 mb-2">Dados do Cliente</h4>
-                {client ? (
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <p className="text-neutral-500">Nome / Razão:</p>
-                      <strong className="text-neutral-900 text-sm">{client.nome}</strong>
-                    </div>
-                    <div>
-                      <p className="text-neutral-500">CPF / CNPJ:</p>
-                      <strong className="text-neutral-900">{client.cpfCnpj}</strong>
-                    </div>
-                    <div>
-                      <p className="text-neutral-500">E-mail de Contato:</p>
-                      <strong className="text-neutral-900">{client.email}</strong>
-                    </div>
-                    <div>
-                      <p className="text-neutral-500">Telefone / WhatsApp:</p>
-                      <strong className="text-neutral-900">{client.whatsapp}</strong>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-neutral-500">Endereço de Entrega:</p>
-                      <strong className="text-neutral-900">{client.endereco}</strong>
-                    </div>
-                  </div>
-                ) : (
-                  <span className="text-red-500 italic">Informações do cliente indisponíveis.</span>
-                )}
-              </div>
-
-              {/* TABLE PRODUCTS AND VALUES */}
-              <div className="mt-8">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b-2 border-neutral-300 text-neutral-500 uppercase tracking-wider">
-                      <th className="py-2">Item</th>
-                      <th className="py-2 text-center">Quantidade</th>
-                      <th className="py-2 text-right">Valor Unitário</th>
-                      <th className="py-2 text-right">Desconto unit.</th>
-                      <th className="py-2 text-right">Total Item</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-200 text-neutral-800">
-                    {pdfPreviewBudget.itens.map((it, idx) => {
-                      const prod = products.find(p => p.id === it.produtoId);
-                      const itemTotal = it.quantidade * (it.valorUnitario - it.desconto);
-
-                      return (
-                        <tr key={idx} className="py-2">
-                          <td className="py-3">
-                            <strong className="text-neutral-900">{prod?.nome || 'Produto Indefinido'}</strong>
-                            <p className="text-[10px] text-neutral-500 mt-0.5">{prod?.categoria}</p>
-                          </td>
-                          <td className="py-3 text-center">{it.quantidade} unid.</td>
-                          <td className="py-3 text-right">R$ {it.valorUnitario.toFixed(2)}</td>
-                          <td className="py-3 text-right text-red-600">-R$ {it.desconto.toFixed(2)}</td>
-                          <td className="py-3 text-right font-bold text-neutral-900">R$ {itemTotal.toFixed(2)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* VALUE CALCULATOR SHEET FOOTER */}
-              <div className="mt-8 flex flex-col items-end border-t border-neutral-300 pt-4">
-                <div className="w-64 text-xs space-y-1.5 font-mono text-neutral-600">
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <strong className="text-neutral-900">R$ {subtotal.toFixed(2)}</strong>
-                  </div>
-                  {pdfPreviewBudget.descontoGeral > 0 && (
-                    <div className="flex justify-between text-red-600">
-                      <span>Desconto Geral:</span>
-                      <strong>-R$ {pdfPreviewBudget.descontoGeral.toFixed(2)}</strong>
-                    </div>
-                  )}
-                  <div className="flex justify-between border-t border-neutral-200 pt-1.5 text-sm font-sans">
-                    <strong className="text-neutral-900 font-bold">VALOR FINAL:</strong>
-                    <strong className="text-orange-600 font-black text-base">R$ {total.toFixed(2)}</strong>
-                  </div>
-                </div>
-
-                {company?.pixChave && (
-                  <div className="w-full mt-4 p-3 bg-neutral-50 rounded-xl border border-neutral-200 text-neutral-800 text-xs font-mono text-left">
-                    <span className="font-bold text-orange-600 block">Dados para Pagamento via PIX:</span>
-                    <span>Chave ({company.pixTipo || 'CNPJ'}): <strong>{company.pixChave}</strong></span>
-                  </div>
-                )}
-              </div>
-
-              {/* SIGNATURE SECTION & COMPLIANCE */}
-              <div className="mt-12 grid grid-cols-2 gap-8 border-t border-neutral-200 pt-8 text-center text-[10px] text-neutral-500">
-                <div className="space-y-4">
-                  <div className="h-10 border-b border-neutral-300 flex items-end justify-center">
-                    <span className="font-mono text-[9px] text-neutral-400">EMISSOR DIGITAL • {company?.nome || 'ELMANEKO 3D'}</span>
-                  </div>
-                  <p>
-                    <strong className="text-neutral-900">{company?.responsavel || 'Guilherme Braga'}</strong><br />
-                    <span>{company?.cargoResponsavel || 'Gestor Administrativo'}</span>
-                  </p>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="h-10 border-b border-neutral-300" />
-                  <p>{client?.nome || 'Assinatura do Cliente'}<br /><strong>Aceite da Proposta Comercial</strong></p>
-                </div>
-              </div>
-
-              <div className="mt-8 text-center text-[9px] text-neutral-400 border-t border-neutral-100 pt-4 font-mono">
-                Documento emitido digitalmente via ELMANEKO 3D ERP v2.0 • Sincronismo Supabase Auth • RLS Ativo.
-              </div>
-
-            </div>
-
-            {/* PREVIEW BOTTOM ACTION BAR */}
-            <div className="w-full max-w-3xl bg-neutral-900 border border-neutral-800 p-4 rounded-b-2xl flex gap-3 justify-end">
-              <button
-                onClick={() => window.print()}
-                className="py-2 px-4 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-lg flex items-center gap-1 cursor-pointer"
-              >
-                <Printer size={14} /> Imprimir / PDF
-              </button>
-              <button
-                onClick={() => {
-                  alert('Documento salvo na pasta de downloads simulados de seu navegador!');
-                }}
-                className="py-2 px-4 bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold rounded-lg flex items-center gap-1 cursor-pointer"
-              >
-                <Download size={14} /> Baixar PDF
-              </button>
-            </div>
-          </div>
-        );
-      })()}
-
+      <BudgetPreviewModal
+        isOpen={!!pdfPreviewBudget}
+        onClose={() => setPdfPreviewBudget(null)}
+        budget={pdfPreviewBudget}
+        company={company || null}
+        client={clients.find(c => c.id === pdfPreviewBudget?.clienteId || c.nome === pdfPreviewBudget?.clienteNome) || null}
+        onSendWhatsApp={(b) => handleShareWhatsApp(b)}
+      />
     </div>
   );
 }

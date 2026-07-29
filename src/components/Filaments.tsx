@@ -5,6 +5,7 @@ import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
 import ConfirmDialog from './ui/ConfirmDialog';
+import { Modal } from './ui/Modal';
 
 export default function Filaments() {
   const { useFilamentos, useAddFilamento, useUpdateFilamento, useDeleteFilamento } = useData();
@@ -373,181 +374,167 @@ export default function Filaments() {
       </div>
 
       {/* 3. MODAL FOR NEW/EDIT FILAMENT */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in" id="filament-form-modal">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-neutral-100 font-sans">
-            
-            {/* STICKY HEADER */}
-            <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
-              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                <span className="w-2.5 h-2.5 bg-orange-500 rounded-full animate-ping" />
-                {editingFilament ? 'Editar Filamento / Bobina' : 'Cadastrar Novo Filamento'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-                title="Fechar Modal"
-              >
-                <X size={18} />
-              </button>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        maxWidth="3xl"
+        title={
+          <span className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 bg-orange-500 rounded-full animate-ping" />
+            {editingFilament ? 'Editar Filamento / Bobina' : 'Cadastrar Novo Filamento'}
+          </span>
+        }
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const formEl = document.getElementById('filament-form-element') as HTMLFormElement;
+                if (formEl) formEl.requestSubmit();
+              }}
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer shadow-md shadow-orange-600/20"
+            >
+              {editingFilament ? 'Salvar Alterações' : 'Salvar Cadastro'}
+            </button>
+          </>
+        }
+      >
+        <form id="filament-form-element" onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="col-span-2">
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome do Produto *</label>
+              <input
+                type="text"
+                required
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
             </div>
 
-            {/* SCROLLABLE FORM BODY */}
-            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 font-mono text-xs flex-1">
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="col-span-2">
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome do Produto *</label>
-                    <input
-                      type="text"
-                      required
-                      value={nome}
-                      onChange={(e) => setNome(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Tipo do Filamento *</label>
+              <select
+                value={tipo}
+                onChange={(e) => setTipo(e.target.value as FilamentType)}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+              >
+                <option value="PLA">PLA</option>
+                <option value="PETG">PETG</option>
+                <option value="ABS">ABS</option>
+                <option value="TPU">TPU</option>
+              </select>
+            </div>
 
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Tipo do Filamento *</label>
-                    <select
-                      value={tipo}
-                      onChange={(e) => setTipo(e.target.value as FilamentType)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
-                    >
-                      <option value="PLA">PLA</option>
-                      <option value="PETG">PETG</option>
-                      <option value="ABS">ABS</option>
-                      <option value="TPU">TPU</option>
-                    </select>
-                  </div>
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Marca *</label>
+              <input
+                type="text"
+                required
+                value={marca}
+                onChange={(e) => setMarca(e.target.value)}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
 
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Marca *</label>
-                    <input
-                      type="text"
-                      required
-                      value={marca}
-                      onChange={(e) => setMarca(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Cor *</label>
+              <input
+                type="text"
+                required
+                value={cor}
+                onChange={(e) => setCor(e.target.value)}
+                placeholder="Ex: Preto Cadmus"
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
 
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Cor *</label>
-                    <input
-                      type="text"
-                      required
-                      value={cor}
-                      onChange={(e) => setCor(e.target.value)}
-                      placeholder="Ex: Preto Cadmus"
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Peso Inicial Total (g) *</label>
+              <input
+                type="number"
+                required
+                min={100}
+                value={pesoTotal}
+                onChange={(e) => setPesoTotal(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
 
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Peso Inicial Total (g) *</label>
-                    <input
-                      type="number"
-                      required
-                      min={100}
-                      value={pesoTotal}
-                      onChange={(e) => setPesoTotal(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Quantidade Disponível (g) *</label>
+              <input
+                type="number"
+                required
+                min={0}
+                value={quantidadeDisponivel}
+                onChange={(e) => setQuantidadeDisponivel(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
 
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Quantidade Disponível (g) *</label>
-                    <input
-                      type="number"
-                      required
-                      min={0}
-                      value={quantidadeDisponivel}
-                      onChange={(e) => setQuantidadeDisponivel(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Valor Total da Compra (R$) *</label>
+              <input
+                type="number"
+                required
+                step="0.01"
+                min={0}
+                value={valorCompra}
+                onChange={(e) => setValorCompra(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
 
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Valor Total da Compra (R$) *</label>
-                    <input
-                      type="number"
-                      required
-                      step="0.01"
-                      min={0}
-                      value={valorCompra}
-                      onChange={(e) => setValorCompra(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Data da Compra</label>
+              <input
+                type="date"
+                value={dataCompra}
+                onChange={(e) => setDataCompra(e.target.value)}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
 
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Data da Compra *</label>
-                    <input
-                      type="date"
-                      required
-                      value={dataCompra}
-                      onChange={(e) => setDataCompra(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Fornecedor / Loja</label>
+              <input
+                type="text"
+                value={fornecedor}
+                onChange={(e) => setFornecedor(e.target.value)}
+                placeholder="Ex: 3D Fila / Voolt3D / Mercado Livre"
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
 
-                  <div className="col-span-2">
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Fornecedor / Loja</label>
-                    <input
-                      type="text"
-                      value={fornecedor}
-                      onChange={(e) => setFornecedor(e.target.value)}
-                      placeholder="Ex: 3D Fila / Voolt3D / Mercado Livre"
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
-
-                  <div className="col-span-2">
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações Rápidas</label>
-                    <input
-                      type="text"
-                      value={observacoes}
-                      onChange={(e) => setObservacoes(e.target.value)}
-                      placeholder="Ex: Temp bico 215C, Mesa 60C"
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
-                </div>
-
-                {/* AUTOMATIC VALUE PER GRAM INDICATOR */}
-                <div className="p-3 bg-neutral-950 rounded-lg border border-neutral-800 flex justify-between items-center text-xs font-mono">
-                  <span className="text-neutral-400">VALOR ESTIMADO POR GRAMA:</span>
-                  <span className="text-orange-500 font-bold">
-                    R$ {pesoTotal > 0 ? (valorCompra / pesoTotal).toFixed(4) : '0.0000'} / g
-                  </span>
-                </div>
-
-              </div>
-
-              {/* STICKY ACTIONS FOOTER */}
-              <div className="p-4 border-t border-neutral-800 bg-neutral-950/80 flex justify-end gap-3 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer shadow-md shadow-orange-600/20"
-                >
-                  {editingFilament ? 'Salvar Alterações' : 'Salvar Cadastro'}
-                </button>
-              </div>
-
-            </form>
+            <div className="col-span-2">
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações Rápidas</label>
+              <input
+                type="text"
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                placeholder="Ex: Temp bico 215C, Mesa 60C"
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          {/* AUTOMATIC VALUE PER GRAM INDICATOR */}
+          <div className="p-3 bg-neutral-950 rounded-lg border border-neutral-800 flex justify-between items-center text-xs font-mono">
+            <span className="text-neutral-400">VALOR ESTIMADO POR GRAMA:</span>
+            <span className="text-orange-500 font-bold">
+              R$ {pesoTotal > 0 ? (valorCompra / pesoTotal).toFixed(4) : '0.0000'} / g
+            </span>
+          </div>
+        </form>
+      </Modal>
 
     </div>
   );

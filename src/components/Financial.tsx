@@ -2039,6 +2039,7 @@ export default function Financial() {
         </div>
       )}
 
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
     </div>
   );
 }

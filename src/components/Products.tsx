@@ -6,6 +6,7 @@ import { DataList, ColumnDef } from './ui/DataList';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
 import ConfirmDialog from './ui/ConfirmDialog';
+import { Modal } from './ui/Modal';
 
 export default function Products() {
   const { useProdutos, useImpressoras, useFilamentos, useTarifas, useAddProduto, useUpdateProduto, useDeleteProduto } = useData();
@@ -528,500 +529,417 @@ export default function Products() {
       />
 
       {/* PRODUCT / BOM DIALOG FORM MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in" id="product-form-modal">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-5xl flex flex-col max-h-[92vh] shadow-2xl overflow-hidden text-neutral-100 font-sans">
-            
-            {/* STICKY MODAL HEADER */}
-            <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
-              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                <ClipboardList size={20} className="text-orange-500" />
-                {editingProduct ? 'Editar Ficha Técnica do Produto' : 'Cadastrar Peça & Ficha Técnica (BOM)'}
-              </h3>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        maxWidth="5xl"
+        title={
+          <span className="flex items-center gap-2">
+            <ClipboardList size={20} className="text-orange-500" />
+            {editingProduct ? 'Editar Ficha Técnica do Produto' : 'Cadastrar Peça & Ficha Técnica (BOM)'}
+          </span>
+        }
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                const formEl = document.getElementById('product-form-element') as HTMLFormElement;
+                if (formEl) formEl.requestSubmit();
+              }}
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer shadow-md shadow-orange-600/20"
+            >
+              Salvar Peça & Ficha Técnica
+            </button>
+          </>
+        }
+      >
+        <form id="product-form-element" onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
+          {/* IMAGE & MAIN FIELDS ROW */}
+          <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-4">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 border-b border-neutral-900 pb-2">
+              <ImageIcon size={14} className="text-orange-500" /> Imagem & Identificação da Peça
+            </h4>
+
+            <div className="flex flex-col sm:flex-row gap-4 items-start">
+              {/* Image selector */}
+              <div className="flex flex-col items-center gap-2 shrink-0">
+                <div className="w-24 h-24 rounded-xl bg-neutral-900 border border-neutral-800 flex flex-col items-center justify-center relative overflow-hidden group">
+                  {imagem ? (
+                    <>
+                      <img src={imagem} alt="Preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setImagem('')}
+                        className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-opacity"
+                      >
+                        Remover
+                      </button>
+                    </>
+                  ) : (
+                    <div className="text-center p-2">
+                      <ImageIcon size={24} className="mx-auto text-neutral-600 mb-1" />
+                      <span className="text-[9px] text-neutral-500 block">Sem foto</span>
+                    </div>
+                  )}
+                </div>
+                <label className="py-1 px-2.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-200 text-[10px] font-bold rounded-lg cursor-pointer border border-neutral-700 flex items-center gap-1">
+                  <Upload size={10} /> {imagem ? 'Alterar Foto' : 'Escolher Foto'}
+                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                </label>
+              </div>
+
+              {/* Product Name & Category */}
+              <div className="flex-1 space-y-3 w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Nome da Peça / Produto *</label>
+                    <input
+                      type="text"
+                      required
+                      value={nome}
+                      onChange={(e) => setNome(e.target.value)}
+                      placeholder="Ex: Suporte de Headset RGB"
+                      className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Categoria *</label>
+                    <select
+                      value={categoria}
+                      onChange={(e) => setCategoria(e.target.value)}
+                      className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+                    >
+                      <option value="Decoração">Decoração</option>
+                      <option value="Escritório">Escritório</option>
+                      <option value="Colecionáveis">Colecionáveis</option>
+                      <option value="Industrial">Industrial</option>
+                      <option value="Brindes">Brindes</option>
+                      <option value="Outros">Outros</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Descrição Detalhada do Produto</label>
+                  <textarea
+                    value={descricao}
+                    onChange={(e) => setDescricao(e.target.value)}
+                    rows={2}
+                    placeholder="Descrição para catálogo, especificações técnicas ou manual de instalação..."
+                    className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ATTACHMENTS & LINKS ROW */}
+          <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-3">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 border-b border-neutral-900 pb-2">
+              <Paperclip size={14} className="text-orange-500" /> Anexos & Arquivos do Projeto (3D / G-Code / PDF)
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Manual / Desenho Técnico (PDF)</label>
+                <div className="flex items-center gap-2">
+                  <label className="flex-1 px-3 py-2 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-lg cursor-pointer flex items-center justify-between text-neutral-300 transition-colors">
+                    <span className="truncate text-xs font-mono">
+                      {pdfProjetoNome ? `📄 ${pdfProjetoNome}` : 'Selecionar arquivo PDF...'}
+                    </span>
+                    <Upload size={14} className="text-orange-500 shrink-0 ml-2" />
+                    <input type="file" accept=".pdf" onChange={handlePdfUpload} className="hidden" />
+                  </label>
+                  {pdfProjeto && (
+                    <button
+                      type="button"
+                      onClick={() => { setPdfProjeto(''); setPdfProjetoNome(''); }}
+                      className="px-2 py-2 bg-neutral-900 border border-neutral-800 hover:bg-neutral-850 text-red-400 rounded-lg text-xs font-mono"
+                    >
+                      Remover
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Link Externo do Modelo (Thingiverse / Printables)</label>
+                <input
+                  type="url"
+                  value={linkProjeto}
+                  onChange={(e) => setLinkProjeto(e.target.value)}
+                  placeholder="https://www.printables.com/model/..."
+                  className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* PARAMETROS DE FABRICAÇÃO E MANUFATURA */}
+          <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-4">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 border-b border-neutral-900 pb-2">
+              <Sliders size={14} className="text-orange-500" /> Parâmetros Técnicos de Impressão & Acabamento
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Tempo Impressão (h) *</label>
+                <input
+                  type="number"
+                  required
+                  step="0.1"
+                  min="0.1"
+                  value={tempoImpressao}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setTempoImpressao(val);
+                    if (!isCustomPriceManual) {
+                      const nrg = calculateEnergyCost(val, impressoraPadraoId);
+                      const tot = costBOM + nrg + Number(valorMaoDeObra) + Number(outrasDespesas);
+                      setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
+                    }
+                  }}
+                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Impressora Padrão *</label>
+                <select
+                  value={impressoraPadraoId}
+                  onChange={(e) => {
+                    const pid = e.target.value;
+                    setImpressoraPadraoId(pid);
+                    if (!isCustomPriceManual) {
+                      const nrg = calculateEnergyCost(tempoImpressao, pid);
+                      const tot = costBOM + nrg + Number(valorMaoDeObra) + Number(outrasDespesas);
+                      setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
+                    }
+                  }}
+                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+                >
+                  {printers.map(pr => (
+                    <option key={pr.id} value={pr.id}>
+                      {pr.nome} ({pr.potenciaWatts}W)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Acabamento (h)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={tempoAcabamento}
+                  onChange={(e) => setTempoAcabamento(Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Mão de Obra (R$) *</label>
+                <input
+                  type="number"
+                  required
+                  step="0.5"
+                  min="0"
+                  value={valorMaoDeObra}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setValorMaoDeObra(val);
+                    if (!isCustomPriceManual) {
+                      const tot = costBOM + costEnergy + val + Number(outrasDespesas);
+                      setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
+                    }
+                  }}
+                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* COMPOSITION BOM TABLE */}
+          <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-4">
+            <div className="flex justify-between items-center border-b border-neutral-900 pb-2">
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <FileText size={14} className="text-orange-500" /> Lista de Insumos & Polímeros (BOM)
+              </h4>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-                title="Fechar Modal"
+                onClick={handleAddBOMItem}
+                className="py-1 px-3 bg-neutral-900 hover:bg-neutral-850 text-orange-400 border border-neutral-800 text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
               >
-                <X size={18} />
+                + Adicionar Material
               </button>
             </div>
 
-            {/* FORM CONTAINER */}
-            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-              
-              {/* SCROLLABLE FORM BODY */}
-              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 font-mono text-xs flex-1">
-                
-                {/* IMAGE & MAIN FIELDS ROW */}
-                <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-4">
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 border-b border-neutral-900 pb-2">
-                    <ImageIcon size={14} className="text-orange-500" /> Imagem & Identificação da Peça
-                  </h4>
+            {formMaterials.map((item, index) => {
+              const availableTypeFilaments = filaments.filter(f => f.tipo === item.tipoFilamento);
 
-                  <div className="flex flex-col sm:flex-row gap-4 items-start">
-                    
-                    {/* Image selector */}
-                    <div className="flex flex-col items-center gap-2 shrink-0">
-                      <div className="w-24 h-24 rounded-xl bg-neutral-900 border border-neutral-800 flex flex-col items-center justify-center relative overflow-hidden group">
-                        {imagem ? (
-                          <>
-                            <img src={imagem} alt="Preview" className="w-full h-full object-cover" />
-                            <button
-                              type="button"
-                              onClick={() => setImagem('')}
-                              className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-opacity"
-                            >
-                              Remover
-                            </button>
-                          </>
-                        ) : (
-                          <div className="text-center p-2">
-                            <ImageIcon size={24} className="mx-auto text-neutral-600 mb-1" />
-                            <span className="text-[9px] text-neutral-500 block">Sem foto</span>
-                          </div>
-                        )}
-                      </div>
-                      <label className="py-1 px-2.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-200 text-[10px] font-bold rounded-lg cursor-pointer border border-neutral-700 flex items-center gap-1">
-                        <Upload size={10} /> {imagem ? 'Alterar Foto' : 'Escolher Foto'}
-                        <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                      </label>
-                    </div>
-
-                    {/* Product Name & Category */}
-                    <div className="flex-1 space-y-3 w-full">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Nome da Peça / Produto *</label>
-                          <input
-                            type="text"
-                            required
-                            value={nome}
-                            onChange={(e) => setNome(e.target.value)}
-                            placeholder="Ex: Suporte de Headset RGB"
-                            className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Categoria *</label>
-                          <select
-                            value={categoria}
-                            onChange={(e) => setCategoria(e.target.value)}
-                            className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
-                          >
-                            <option value="Decoração">Decoração</option>
-                            <option value="Escritório">Escritório</option>
-                            <option value="Colecionáveis">Colecionáveis</option>
-                            <option value="Industrial">Industrial</option>
-                            <option value="Brindes">Brindes</option>
-                            <option value="Outros">Outros</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Descrição Comercial</label>
-                        <input
-                          type="text"
-                          value={descricao}
-                          onChange={(e) => setDescricao(e.target.value)}
-                          placeholder="Ex: Peça fatiada em alta resolução para mesa de escritório"
-                          className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                        />
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-
-                {/* PROJECT FILE (PDF) & EXTERNAL LINK SECTION */}
-                <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-3">
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 border-b border-neutral-900 pb-2">
-                    <Paperclip size={14} className="text-orange-500" /> Arquivo PDF do Projeto & Link Externo
-                  </h4>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    
-                    {/* PDF Project File Upload */}
-                    <div>
-                      <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">PDF do Projeto (Arquivo Local)</label>
-                      <div className="flex items-center gap-2">
-                        <label className="py-2 px-3 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border border-neutral-800 rounded-lg text-xs font-semibold cursor-pointer flex items-center gap-2 flex-1">
-                          <FileText size={14} className="text-red-400" />
-                          <span className="truncate">{pdfProjetoNome || 'Selecionar PDF local...'}</span>
-                          <input type="file" accept="application/pdf" onChange={handlePdfUpload} className="hidden" />
-                        </label>
-                        {pdfProjeto && (
-                          <button
-                            type="button"
-                            onClick={() => { setPdfProjeto(''); setPdfProjetoNome(''); }}
-                            className="p-2 bg-neutral-900 hover:bg-neutral-800 text-red-400 border border-neutral-800 rounded-lg"
-                            title="Remover PDF"
-                          >
-                            <X size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Project Link / URL */}
-                    <div>
-                      <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Link do Projeto (Site / Modelo 3D)</label>
-                      <div className="relative">
-                        <ExternalLink size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
-                        <input
-                          type="url"
-                          value={linkProjeto}
-                          onChange={(e) => setLinkProjeto(e.target.value)}
-                          placeholder="https://printables.com/model/..."
-                          className="w-full pl-9 pr-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                        />
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-
-                {/* MANUFACTURING TIME, LABOR COST & SECONDARY EXPENSES */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
+              return (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end bg-neutral-900 p-3 rounded-lg border border-neutral-850 relative">
                   <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Tempo Impressão (h) *</label>
-                    <input
-                      type="number"
-                      required
-                      step="0.1"
-                      min="0.1"
-                      value={tempoImpressao}
-                      onChange={(e) => {
-                        const val = Number(e.target.value);
-                        setTempoImpressao(val);
-                        if (!isCustomPriceManual) {
-                          const nrg = calculateEnergyCost(val, impressoraPadraoId);
-                          const tot = costBOM + nrg + Number(valorMaoDeObra) + Number(outrasDespesas);
-                          setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Impressora Padrão *</label>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Polímero *</label>
                     <select
-                      value={impressoraPadraoId}
-                      onChange={(e) => {
-                        const pid = e.target.value;
-                        setImpressoraPadraoId(pid);
-                        if (!isCustomPriceManual) {
-                          const nrg = calculateEnergyCost(tempoImpressao, pid);
-                          const tot = costBOM + nrg + Number(valorMaoDeObra) + Number(outrasDespesas);
-                          setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+                      value={item.tipoFilamento}
+                      onChange={(e) => handleBOMChange(index, 'tipoFilamento', e.target.value)}
+                      className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none"
                     >
-                      {printers.map(pr => (
-                        <option key={pr.id} value={pr.id}>
-                          {pr.nome} ({pr.potenciaWatts}W)
-                        </option>
-                      ))}
+                      <option value="PLA">PLA</option>
+                      <option value="PETG">PETG</option>
+                      <option value="ABS">ABS</option>
+                      <option value="TPU">TPU</option>
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Acabamento (h)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      value={tempoAcabamento}
-                      onChange={(e) => setTempoAcabamento(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Mão de Obra (R$) *</label>
-                    <input
-                      type="number"
-                      required
-                      step="0.5"
-                      min="0"
-                      value={valorMaoDeObra}
-                      onChange={(e) => {
-                        const val = Number(e.target.value);
-                        setValorMaoDeObra(val);
-                        if (!isCustomPriceManual) {
-                          const tot = costBOM + costEnergy + val + Number(outrasDespesas);
-                          setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
-
-                  {/* Outras Despesas (Cola, Embalagem, Parafusos, Acessórios) */}
-                  <div>
-                    <label className="block text-orange-400 mb-1 uppercase tracking-wider font-bold text-[11px]" title="Cola, embalagens, caixas, parafusos, insertos, etc.">
-                      Outras Despesas (R$)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      value={outrasDespesas}
-                      onChange={(e) => {
-                        const val = Number(e.target.value);
-                        setOutrasDespesas(val);
-                        if (!isCustomPriceManual) {
-                          const tot = costBOM + costEnergy + Number(valorMaoDeObra) + val;
-                          setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
-                        }
-                      }}
-                      placeholder="Embalagem, cola..."
-                      className="w-full px-3 py-2 bg-neutral-950 border border-orange-500/40 rounded-lg text-orange-300 font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
+                  <div className="flex gap-2 items-center">
+                    <div className="flex-1">
+                      <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Massa (g) *</label>
+                      <input
+                        type="number"
+                        required
+                        min={1}
+                        value={item.quantidadeGrams}
+                        onChange={(e) => handleBOMChange(index, 'quantidadeGrams', e.target.value)}
+                        className="w-full px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none"
+                      />
+                    </div>
+                    {formMaterials.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveBOMItem(index)}
+                        className="text-red-500 hover:text-red-400 p-1 bg-neutral-950 rounded border border-neutral-850 mt-4 cursor-pointer"
+                        title="Remover Item"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
+              );
+            })}
+          </div>
+          {/* REAL-TIME COST SUMMARY & MARGINS */}
+          <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-4">
+            <div className="flex justify-between items-center border-b border-neutral-900 pb-2">
+              <h4 className="text-xs font-bold text-orange-500 uppercase tracking-wider flex items-center gap-1.5">
+                <DollarSign size={14} /> Detalhamento de Custos, Margem & Over
+              </h4>
+            </div>
 
-                {/* DYNAMIC BOM MATERIALS LIST */}
-                <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-4">
-                  <div className="flex justify-between items-center border-b border-neutral-900 pb-2">
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                      <ClipboardList size={14} className="text-orange-500" /> Ficha de Insumos da Peça (BOM)
-                    </h4>
-                    <button
-                      type="button"
-                      onClick={handleAddBOMItem}
-                      className="text-[10px] bg-orange-600 hover:bg-orange-500 text-white px-2.5 py-1 rounded font-bold cursor-pointer"
-                    >
-                      + Adicionar Material
-                    </button>
-                  </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono text-xs">
+              <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
+                <span className="text-neutral-500 uppercase text-[9px] block">Insumos (BOM)</span>
+                <strong className="text-white text-xs">R$ {costBOM.toFixed(2)}</strong>
+              </div>
 
-                  {formMaterials.map((item, index) => {
-                    const availableTypeFilaments = filaments.filter(f => f.tipo === item.tipoFilamento);
+              <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
+                <span className="text-neutral-500 uppercase text-[9px] block">Energia</span>
+                <strong className="text-white text-xs">R$ {costEnergy.toFixed(2)}</strong>
+              </div>
 
-                    return (
-                      <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end bg-neutral-900 p-3 rounded-lg border border-neutral-850 relative">
-                        
-                        {/* Tipo Filamento */}
-                        <div>
-                          <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Polímero *</label>
-                          <select
-                            value={item.tipoFilamento}
-                            onChange={(e) => handleBOMChange(index, 'tipoFilamento', e.target.value)}
-                            className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none"
-                          >
-                            <option value="PLA">PLA</option>
-                            <option value="PETG">PETG</option>
-                            <option value="ABS">ABS</option>
-                            <option value="TPU">TPU</option>
-                          </select>
-                        </div>
+              <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
+                <span className="text-neutral-500 uppercase text-[9px] block">Mão de Obra</span>
+                <strong className="text-white text-xs">R$ {Number(valorMaoDeObra).toFixed(2)}</strong>
+              </div>
 
-                        {/* Bobina Especifica ou Qualquer */}
-                        <div className="col-span-1 md:col-span-2">
-                          <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Origem / Bobina sugerida</label>
-                          <select
-                            value={item.filamentoId}
-                            onChange={(e) => handleBOMChange(index, 'filamentoId', e.target.value)}
-                            className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none"
-                          >
-                            <option value="any">Usar maior valor de {item.tipoFilamento} (Recomendado)</option>
-                            {availableTypeFilaments.map(f => (
-                              <option key={f.id} value={f.id}>
-                                {f.marca} - {f.cor} (R$ {(f.valorCompra/f.pesoTotal).toFixed(4)}/g)
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+              <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
+                <span className="text-neutral-500 uppercase text-[9px] block">Outras Despesas</span>
+                <strong className="text-white text-xs">R$ {Number(outrasDespesas).toFixed(2)}</strong>
+              </div>
 
-                        {/* Quantidade em gramas */}
-                        <div className="flex gap-2 items-center">
-                          <div className="flex-1">
-                            <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Massa (g) *</label>
-                            <input
-                              type="number"
-                              required
-                              min={1}
-                              value={item.quantidadeGrams}
-                              onChange={(e) => handleBOMChange(index, 'quantidadeGrams', e.target.value)}
-                              className="w-full px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none"
-                            />
-                          </div>
-                          {formMaterials.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveBOMItem(index)}
-                              className="text-red-500 hover:text-red-400 p-1 bg-neutral-950 rounded border border-neutral-850 mt-4 cursor-pointer"
-                              title="Remover Item"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </div>
+              <div className="bg-neutral-900 p-2 rounded border border-neutral-850 col-span-2 sm:col-span-1">
+                <span className="text-orange-400 uppercase text-[9px] font-bold block">Custo Total</span>
+                <strong className="text-orange-400 text-sm font-bold">R$ {costTotal.toFixed(2)}</strong>
+              </div>
+            </div>
 
-                      </div>
-                    );
-                  })}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800">
+                <label className="block text-neutral-400 text-[10px] uppercase tracking-wider font-semibold mb-1">
+                  Margem de Lucro %
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="1"
+                    value={Number(marginPercentage.toFixed(1))}
+                    onChange={(e) => handleMarginChange(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold"
+                  />
+                  <span className="text-neutral-400 font-mono text-xs">%</span>
                 </div>
+                <span className="text-[9px] text-neutral-500 block mt-1">
+                  Lucro líquido: R$ {(costTotal * (marginPercentage / 100)).toFixed(2)}
+                </span>
+              </div>
 
-                {/* REAL-TIME COST SUMMARY & SEPARATED MARGIN % / OVER % / FINAL SELLING PRICE */}
-                <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-4">
-                  <div className="flex justify-between items-center border-b border-neutral-900 pb-2">
-                    <h4 className="text-xs font-bold text-orange-500 uppercase tracking-wider flex items-center gap-1.5">
-                      <DollarSign size={14} /> Detalhamento de Custos, Margem & Over
-                    </h4>
-                    <span className="text-[10px] text-neutral-500 font-mono hidden sm:inline">
-                      Campos de Margem, Over e Preço Final editáveis
-                    </span>
-                  </div>
-                  
-                  {/* Cost Breakdown (5 cards including Outras Despesas) */}
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono text-xs">
-                    <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
-                      <span className="text-neutral-500 uppercase text-[9px] block">Insumos (BOM)</span>
-                      <strong className="text-white text-xs">
-                        R$ {costBOM.toFixed(2)}
-                      </strong>
-                    </div>
-
-                    <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
-                      <span className="text-neutral-500 uppercase text-[9px] block">Energia</span>
-                      <strong className="text-white text-xs">
-                        R$ {costEnergy.toFixed(2)}
-                      </strong>
-                    </div>
-
-                    <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
-                      <span className="text-neutral-500 uppercase text-[9px] block">Mão de Obra</span>
-                      <strong className="text-white text-xs">
-                        R$ {Number(valorMaoDeObra).toFixed(2)}
-                      </strong>
-                    </div>
-
-                    <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
-                      <span className="text-neutral-500 uppercase text-[9px] block">Outras Despesas</span>
-                      <strong className="text-white text-xs">
-                        R$ {Number(outrasDespesas).toFixed(2)}
-                      </strong>
-                    </div>
-
-                    <div className="col-span-2 sm:col-span-1 bg-orange-950/30 p-2 rounded border border-orange-500/20">
-                      <span className="text-orange-400 uppercase text-[9px] block">Custo Total</span>
-                      <strong className="text-orange-400 text-xs font-black">
-                        R$ {costTotal.toFixed(2)}
-                      </strong>
-                    </div>
-                  </div>
-
-                  {/* Separated Controls: Margem de Lucro %, Over %, Preço Final R$ */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-neutral-900">
-                    
-                    {/* Margem de Lucro % */}
-                    <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800">
-                      <label className="block text-neutral-400 text-[10px] uppercase tracking-wider font-semibold mb-1">
-                        Margem de Lucro %
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          step="1"
-                          value={Number(marginPercentage.toFixed(1))}
-                          onChange={(e) => handleMarginChange(Number(e.target.value))}
-                          className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold"
-                        />
-                        <span className="text-neutral-400 font-mono text-xs">%</span>
-                      </div>
-                      <span className="text-[9px] text-neutral-500 block mt-1">
-                        Lucro líquido: R$ {(costTotal * (marginPercentage / 100)).toFixed(2)}
-                      </span>
-                    </div>
-
-                    {/* Over % */}
-                    <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800">
-                      <label className="block text-neutral-400 text-[10px] uppercase tracking-wider font-semibold mb-1">
-                        Over / Custos Extras %
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          step="1"
-                          min="0"
-                          value={Number(overPercent.toFixed(1))}
-                          onChange={(e) => handleOverChange(Number(e.target.value))}
-                          className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold"
-                        />
-                        <span className="text-neutral-400 font-mono text-xs">%</span>
-                      </div>
-                      <span className="text-[9px] text-neutral-500 block mt-1">
-                        Valor Over: R$ {(costTotal * (overPercent / 100)).toFixed(2)}
-                      </span>
-                    </div>
-
-                    {/* Preço de Venda R$ Input (digitável diretamente) */}
-                    <div className="bg-neutral-900 p-3 rounded-lg border border-orange-500/30 shadow-inner">
-                      <label className="block text-orange-400 text-[10px] uppercase tracking-wider font-bold mb-1">
-                        Preço Final Sugerido (R$) *
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <span className="text-orange-500 font-mono font-bold text-xs">R$</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          required
-                          value={Number(precoVenda.toFixed(2))}
-                          onChange={(e) => handlePriceChange(Number(e.target.value))}
-                          className="w-full px-3 py-1.5 bg-neutral-950 border border-orange-500/50 rounded text-orange-400 font-mono text-sm focus:outline-none focus:border-orange-500 font-black"
-                        />
-                      </div>
-                      <span className="text-[9px] text-neutral-400 block mt-1">
-                        {isCustomPriceManual ? '✏️ Preço ajustado manualmente' : '⚡ Calculado via Margem + Over'}
-                      </span>
-                    </div>
-
-                  </div>
+              <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800">
+                <label className="block text-neutral-400 text-[10px] uppercase tracking-wider font-semibold mb-1">
+                  Over / Custos Extras %
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={Number(overPercent.toFixed(1))}
+                    onChange={(e) => handleOverChange(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold"
+                  />
+                  <span className="text-neutral-400 font-mono text-xs">%</span>
                 </div>
+                <span className="text-[9px] text-neutral-500 block mt-1">
+                  Valor Over: R$ {(costTotal * (overPercent / 100)).toFixed(2)}
+                </span>
+              </div>
 
-                {/* OBSERVATIONS */}
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações Técnicas / Fatiador / Notas de Produção</label>
-                  <textarea
-                    value={observacoes}
-                    onChange={(e) => setObservacoes(e.target.value)}
-                    rows={2}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
+              <div className="bg-neutral-900 p-3 rounded-lg border border-orange-500/30 shadow-inner">
+                <label className="block text-orange-400 text-[10px] uppercase tracking-wider font-bold mb-1">
+                  Preço Final Sugerido (R$) *
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-orange-500 font-mono font-bold text-xs">R$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    value={Number(precoVenda.toFixed(2))}
+                    onChange={(e) => handlePriceChange(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 bg-neutral-950 border border-orange-500/50 rounded text-orange-400 font-mono text-sm focus:outline-none focus:border-orange-500 font-black"
                   />
                 </div>
-
+                <span className="text-[9px] text-neutral-400 block mt-1">
+                  {isCustomPriceManual ? '✏️ Preço ajustado manualmente' : '⚡ Calculado via Margem + Over'}
+                </span>
               </div>
-
-              {/* STICKY FOOTER BUTTONS */}
-              <div className="p-4 border-t border-neutral-800 bg-neutral-950/80 backdrop-blur flex justify-end gap-3 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer shadow-md shadow-orange-600/20"
-                >
-                  Salvar Peça & Ficha Técnica
-                </button>
-              </div>
-
-            </form>
+            </div>
           </div>
-        </div>
-      )}
 
+          {/* OBSERVATIONS */}
+          <div>
+            <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações Técnicas / Fatiador / Notas de Produção</label>
+            <textarea
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
+            />
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
