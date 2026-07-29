@@ -68,64 +68,14 @@ const mapEmpresaToDB = (comp: Partial<Company>) => ({
   observacoes: comp.observacoes
 });
 
-export function useCompanyData() {
-  const queryClient = useQueryClient();
+export function useEmpresa() {
+  const { session } = useAuth();
+  const fallbackId = getFallbackEmpresaId();
 
-  const useEmpresa = () => {
-    const { session } = useAuth();
-    const fallbackId = getFallbackEmpresaId();
-
-    return useQuery({
-      queryKey: ['empresa', session?.user?.id],
-      queryFn: async () => {
-        try {
-          if (session?.user?.id) {
-            const { data: ueData } = await supabase
-              .from('usuario_empresa')
-              .select('empresa_id')
-              .eq('user_id', session.user.id)
-              .maybeSingle();
-
-            const activeEmpresaId = ueData?.empresa_id || fallbackId;
-
-            const { data: empData, error: empErr } = await supabase
-              .from('empresas')
-              .select('*')
-              .eq('id', activeEmpresaId)
-              .maybeSingle();
-
-            if (empData && !empErr) {
-              return mapEmpresaFromDB(empData);
-            }
-          }
-
-          const { data: demoData } = await supabase
-            .from('empresas')
-            .select('*')
-            .eq('id', fallbackId)
-            .maybeSingle();
-
-          if (demoData) {
-            return mapEmpresaFromDB(demoData);
-          }
-
-          return DEFAULT_COMPANY_DATA;
-        } catch (e) {
-          return DEFAULT_COMPANY_DATA;
-        }
-      },
-      staleTime: 1000 * 60 * 10,
-    });
-  };
-
-  const useUpdateEmpresa = () => {
-    const { session } = useAuth();
-    const fallbackId = getFallbackEmpresaId();
-
-    return useMutation({
-      mutationFn: async (updated: Partial<Company>) => {
-        let activeEmpresaId = fallbackId;
-
+  return useQuery({
+    queryKey: ['empresa', session?.user?.id],
+    queryFn: async () => {
+      try {
         if (session?.user?.id) {
           const { data: ueData } = await supabase
             .from('usuario_empresa')
@@ -133,31 +83,75 @@ export function useCompanyData() {
             .eq('user_id', session.user.id)
             .maybeSingle();
 
-          if (ueData?.empresa_id) {
-            activeEmpresaId = ueData.empresa_id;
+          const activeEmpresaId = ueData?.empresa_id || fallbackId;
+
+          const { data: empData, error: empErr } = await supabase
+            .from('empresas')
+            .select('*')
+            .eq('id', activeEmpresaId)
+            .maybeSingle();
+
+          if (empData && !empErr) {
+            return mapEmpresaFromDB(empData);
           }
         }
 
-        const dbPayload = mapEmpresaToDB(updated);
-
-        const { data, error } = await supabase
+        // Try querying demo empresa only if session exists or try-catch gracefully
+        const { data: demoData, error: demoErr } = await supabase
           .from('empresas')
-          .update(dbPayload)
-          .eq('id', activeEmpresaId)
-          .select()
-          .single();
+          .select('*')
+          .eq('id', fallbackId)
+          .maybeSingle();
 
-        if (error) throw error;
-        return mapEmpresaFromDB(data);
-      },
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['empresa'] });
-      },
-    });
-  };
+        if (demoData && !demoErr) {
+          return mapEmpresaFromDB(demoData);
+        }
 
-  return {
-    useEmpresa,
-    useUpdateEmpresa,
-  };
+        return DEFAULT_COMPANY_DATA;
+      } catch (e) {
+        return DEFAULT_COMPANY_DATA;
+      }
+    },
+    staleTime: 1000 * 60 * 10,
+    retry: false, // Prevent noisy console 403 retries
+  });
+}
+
+export function useUpdateEmpresa() {
+  const queryClient = useQueryClient();
+  const { session } = useAuth();
+  const fallbackId = getFallbackEmpresaId();
+
+  return useMutation({
+    mutationFn: async (updated: Partial<Company>) => {
+      let activeEmpresaId = fallbackId;
+
+      if (session?.user?.id) {
+        const { data: ueData } = await supabase
+          .from('usuario_empresa')
+          .select('empresa_id')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        if (ueData?.empresa_id) {
+          activeEmpresaId = ueData.empresa_id;
+        }
+      }
+
+      const dbPayload = mapEmpresaToDB(updated);
+
+      const { data, error } = await supabase
+        .from('empresas')
+        .update(dbPayload)
+        .eq('id', activeEmpresaId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapEmpresaFromDB(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['empresa'] });
+    },
+  });
 }
