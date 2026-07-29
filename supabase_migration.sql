@@ -635,3 +635,297 @@ BEGIN
     END IF;
   END LOOP;
 END $$;
+
+-- ============================================================
+-- 15. PROCEDURES / RPCs ATÔMICAS FINANCEIRAS
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.liquidar_lancamento_financeiro(
+  p_lancamento_id UUID,
+  p_conta_id UUID,
+  p_valor_pago NUMERIC,
+  p_data_liquidacao DATE DEFAULT CURRENT_DATE
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_lanc RECORD;
+  v_conta RECORD;
+  v_saldo_ant NUMERIC;
+  v_saldo_post NUMERIC;
+  v_tipo_mov TEXT;
+BEGIN
+  -- 1. Busca e valida lançamento
+  SELECT * INTO v_lanc FROM lancamentos_financeiros WHERE id = p_lancamento_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Lançamento financeiro não encontrado.';
+  END IF;
+
+  -- Verifica tenant
+  IF NOT public.is_empresa_member(v_lanc.empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
+  END IF;
+
+  -- 2. Busca e valida conta
+  SELECT * INTO v_conta FROM contas_financeiras WHERE id = p_conta_id AND empresa_id = v_lanc.empresa_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Conta financeira não encontrada ou não pertence à mesma empresa.';
+  END IF;
+
+  v_saldo_ant := COALESCE(v_conta.saldo_atual, 0);
+
+  IF v_lanc.tipo = 'Receita' THEN
+    v_saldo_post := v_saldo_ant + p_valor_pago;
+    v_tipo_mov := 'Entrada';
+  ELSE
+    v_saldo_post := v_saldo_ant - p_valor_pago;
+    v_tipo_mov := 'Saida';
+  END IF;
+
+  -- 3. Atualiza conta
+  UPDATE contas_financeiras 
+  SET saldo_atual = v_saldo_post 
+  WHERE id = p_conta_id;
+
+  -- 4. Atualiza lançamento
+  UPDATE lancamentos_financeiros
+  SET status = 'Liquidado',
+      conta_financeira_id = p_conta_id,
+      valor_pago = p_valor_pago,
+      data_liquidacao = p_data_liquidacao
+  WHERE id = p_lancamento_id;
+
+  -- 5. Registra movimentação
+  INSERT INTO movimentacoes_financeiras (
+    empresa_id,
+    conta_financeira_id,
+    lancamento_id,
+    data,
+    tipo,
+    valor,
+    saldo_anterior,
+    saldo_posterior,
+    descricao
+  ) VALUES (
+    v_lanc.empresa_id,
+    p_conta_id,
+    p_lancamento_id,
+    p_data_liquidacao,
+    v_tipo_mov,
+    p_valor_pago,
+    v_saldo_ant,
+    v_saldo_post,
+    'Baixa de ' || v_lanc.tipo || ' ' || COALESCE(v_lanc.numero_documento, '')
+  );
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'lancamento_id', p_lancamento_id,
+    'saldo_anterior', v_saldo_ant,
+    'saldo_posterior', v_saldo_post
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.liquidar_lancamento_financeiro(UUID, UUID, NUMERIC, DATE) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.transferir_saldo_financeiro(
+  p_conta_origem_id UUID,
+  p_conta_destino_id UUID,
+  p_valor NUMERIC,
+  p_data DATE DEFAULT CURRENT_DATE,
+  p_observacoes TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_c_orig RECORD;
+  v_c_dest RECORD;
+  v_saldo_orig_post NUMERIC;
+  v_saldo_dest_post NUMERIC;
+  v_trans_id UUID;
+BEGIN
+  IF p_valor <= 0 THEN
+    RAISE EXCEPTION 'O valor da transferência deve ser positivo.';
+  END IF;
+
+  IF p_conta_origem_id = p_conta_destino_id THEN
+    RAISE EXCEPTION 'A conta de origem e destino devem ser diferentes.';
+  END IF;
+
+  -- 1. Lock e valida conta origem
+  SELECT * INTO v_c_orig FROM contas_financeiras WHERE id = p_conta_origem_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Conta de origem não encontrada.';
+  END IF;
+
+  IF NOT public.is_empresa_member(v_c_orig.empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado para a conta de origem.';
+  END IF;
+
+  -- 2. Lock e valida conta destino
+  SELECT * INTO v_c_dest FROM contas_financeiras WHERE id = p_conta_destino_id AND empresa_id = v_c_orig.empresa_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Conta de destino não encontrada ou pertence a outra empresa.';
+  END IF;
+
+  v_saldo_orig_post := COALESCE(v_c_orig.saldo_atual, 0) - p_valor;
+  v_saldo_dest_post := COALESCE(v_c_dest.saldo_atual, 0) + p_valor;
+
+  -- 3. Atualiza saldos das duas contas
+  UPDATE contas_financeiras SET saldo_atual = v_saldo_orig_post WHERE id = p_conta_origem_id;
+  UPDATE contas_financeiras SET saldo_atual = v_saldo_dest_post WHERE id = p_conta_destino_id;
+
+  -- 4. Registra a transferência
+  INSERT INTO transferencias_financeiras (
+    empresa_id,
+    data,
+    conta_origem_id,
+    conta_destino_id,
+    valor,
+    observacoes
+  ) VALUES (
+    v_c_orig.empresa_id,
+    p_data,
+    p_conta_origem_id,
+    p_conta_destino_id,
+    p_valor,
+    p_observacoes
+  ) RETURNING id INTO v_trans_id;
+
+  -- 5. Registra movimentações em ambas as contas
+  INSERT INTO movimentacoes_financeiras (
+    empresa_id, conta_financeira_id, data, tipo, valor, saldo_anterior, saldo_posterior, descricao
+  ) VALUES
+  (
+    v_c_orig.empresa_id, p_conta_origem_id, p_data, 'Transferencia_Debito', p_valor, COALESCE(v_c_orig.saldo_atual, 0), v_saldo_orig_post,
+    'Transferência enviada para ' || v_c_dest.nome
+  ),
+  (
+    v_c_orig.empresa_id, p_conta_destino_id, p_data, 'Transferencia_Credito', p_valor, COALESCE(v_c_dest.saldo_atual, 0), v_saldo_dest_post,
+    'Transferência recebida de ' || v_c_orig.nome
+  );
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'transferencia_id', v_trans_id,
+    'saldo_origem', v_saldo_orig_post,
+    'saldo_destino', v_saldo_dest_post
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.transferir_saldo_financeiro(UUID, UUID, NUMERIC, DATE, TEXT) TO authenticated;
+
+-- ============================================================
+-- 16. PROCEDURE ATÔMICA DE CONVERSÃO DE ORÇAMENTO EM VENDA
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.converter_orcamento_em_venda(
+  p_orcamento_id UUID,
+  p_forma_pagamento TEXT DEFAULT 'Pix'
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_orc RECORD;
+  v_num_venda TEXT;
+  v_venda_id UUID;
+  v_total NUMERIC := 0;
+BEGIN
+  -- 1. Busca e valida o orçamento
+  SELECT * INTO v_orc FROM orcamentos WHERE id = p_orcamento_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Orçamento não encontrado.';
+  END IF;
+
+  IF NOT public.is_empresa_member(v_orc.empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado ao orçamento.';
+  END IF;
+
+  -- 2. Gera número da venda
+  v_num_venda := 'VND-' || SUBSTRING(p_orcamento_id::text FROM 1 FOR 8);
+
+  -- 3. Calcula total a partir dos itens do orçamento
+  SELECT COALESCE(SUM((valor_unitario - desconto) * quantidade), 0) INTO v_total
+  FROM orcamento_itens WHERE orcamento_id = p_orcamento_id;
+
+  v_total := GREATEST(0, v_total - COALESCE(v_orc.desconto_geral, 0));
+
+  -- 4. Cria a Venda
+  INSERT INTO vendas (
+    empresa_id,
+    numero,
+    cliente_id,
+    data_venda,
+    valor_total,
+    forma_pagamento,
+    status_pagamento,
+    orcamento_origem_id
+  ) VALUES (
+    v_orc.empresa_id,
+    v_num_venda,
+    v_orc.cliente_id,
+    CURRENT_DATE,
+    v_total,
+    p_forma_pagamento,
+    'Pendente',
+    p_orcamento_id
+  ) RETURNING id INTO v_venda_id;
+
+  -- 5. Atualiza o orçamento para Aprovado
+  UPDATE orcamentos SET status = 'Aprovado' WHERE id = p_orcamento_id;
+
+  -- 6. Cria o lançamento financeiro a receber (Aberto)
+  INSERT INTO lancamentos_financeiros (
+    empresa_id,
+    numero_documento,
+    tipo,
+    origem,
+    origem_id,
+    cliente_id,
+    data_emissao,
+    data_vencimento,
+    valor_bruto,
+    valor_liquido,
+    forma_pagamento,
+    status,
+    conciliado
+  ) VALUES (
+    v_orc.empresa_id,
+    v_num_venda,
+    'Receita',
+    'Venda',
+    v_venda_id,
+    v_orc.cliente_id,
+    CURRENT_DATE,
+    (CURRENT_DATE + INTERVAL '30 days')::DATE,
+    v_total,
+    v_total,
+    p_forma_pagamento,
+    'Aberto',
+    false
+  );
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'venda_id', v_venda_id,
+    'numero_venda', v_num_venda,
+    'valor_total', v_total
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.converter_orcamento_em_venda(UUID, TEXT) TO authenticated;
+
+
+

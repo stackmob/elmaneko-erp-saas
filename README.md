@@ -1,59 +1,49 @@
-# ELMANEKO-3D Management System
+# ELMANEKO-3D Management System (SaaS ERP Multi-Tenant)
 
-ELMANEKO-3D is a comprehensive ERP (Enterprise Resource Planning) and management system tailored specifically for a 3D printing business. Built with React and Vite, it allows you to manage everything from filament inventory and 3D printers to client budgets, sales, and production orders.
+ELMANEKO 3D é um sistema completo de gestão de recursos (ERP) e controle financeiro especializado para empresas de manufatura e impressão 3D. Desenvolvido com React, TypeScript, Vite e Supabase, oferece isolamento completo de dados por empresa (multi-tenant RLS), cálculo de ficha técnica (BOM), fluxo de vendas e módulo financeiro transacional com auditoria imutável.
 
-## Features
+## 🚀 Módulos do Sistema
 
-- **Dashboard**: Overview of key metrics and business performance.
-- **Inventory Management**: Track filaments (materials, colors, weights) and purchases.
-- **Printer Management**: Manage 3D printers, their maintenance status, and operational costs.
-- **Energy Tariffs**: Calculate and track energy consumption costs for accurate pricing.
-- **Product Catalog**: Maintain a catalog of 3D printable products and their specifications.
-- **Production Orders**: Track the status of active production jobs.
-- **Budgets & Quotes**: Generate and manage client quotes.
-- **Sales & CRM**: Track sales, manage client information, and view purchase history.
-- **Data Backup**: Export and import your data (runs locally via `localStorage`).
+- **Dashboard**: Métricas consolidadas, receitas, despesas, margens e desempenho operacional.
+- **Estoque & Suprimentos**: Controle de filamentos (peso em gramas, marca, cor, custo), insumos e registro de compras.
+- **Parque de Impressoras 3D**: Cadastro de máquinas, status de operação/manutenção, potência (Watts) e tarifas de energia por kWh.
+- **Catálogo de Produtos & BOM**: Gestão de produtos 3D, consumo de materiais (Ficha Técnica / Bill of Materials) e precificação automática.
+- **Produção**: Ordens de produção, apontamento de tempo de impressão/acabamento e congelamento de custo realizado.
+- **Comercial (CRM, Orçamentos & Vendas)**: Cadastro de clientes, geração de propostas comerciais, conversão de orçamento em venda com baixa de estoque.
+- **Módulo Financeiro**: Contas bancárias/carteiras, categorias hierárquicas, centros de custo, lançamentos a pagar/receber, liquidação atômica e transferências.
+- **Auditoria & Multi-Tenant**: Registro imutável de movimentações (`auditoria_financeira`) e segurança baseada em Row Level Security (RLS) via `usuario_empresa`.
 
-## Tech Stack
+## 🛠️ Tecnologias Utilizadas
 
-- **Frontend Framework**: React 19
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS v4
-- **Icons**: Lucide React
-- **Charts**: Recharts
-- **Animations**: Motion (Framer Motion)
-- **Language**: TypeScript
+- **Frontend**: React 19 + TypeScript
+- **Gerenciamento de Estado**: React Query (`@tanstack/react-query`) com Hooks desacoplados por domínio (`src/hooks/data/`)
+- **Backend & Database**: Supabase (PostgreSQL, Row Level Security & Stored Procedures / RPCs Atômicas)
+- **Bundler & Tooling**: Vite 6
+- **Estilização**: Tailwind CSS v4 + Lucide Icons
 
-## Getting Started
+## ⚙️ Configuração & Execução
 
-### Prerequisites
+### Pré-requisitos
+- Node.js (v18 ou superior)
+- Conta no Supabase ou instância local
 
-- Node.js (v18 or higher recommended)
-- npm or yarn
-
-### Installation
-
-1. Clone the repository or download the source code.
-2. Install the dependencies:
-   ```bash
-   npm install
-   ```
-
-### Running Locally
-
-To start the development server:
+### Instalação & Execução
 ```bash
+# 1. Instalar dependências
+npm install
+
+# 2. Executar servidor de desenvolvimento
 npm run dev
-```
-The application will be available at `http://localhost:3000`.
 
-### Building for Production
+# 3. Validar compilação TypeScript (Linting)
+npm run lint
 
-To create a production build:
-```bash
+# 4. Compilar para produção
 npm run build
 ```
-The optimized output will be in the `dist` directory. You can preview it locally using `npm run preview`.
 
-## Data Storage
-Currently, this application uses the browser's `localStorage` for data persistence. Ensure you use the built-in **Backup** module to regularly export your data to avoid data loss if you clear your browser cache.
+## 🔐 Arquitetura de Dados & Multi-Tenancy
+
+O sistema utiliza Row Level Security (RLS) nativo do Supabase com a função `is_empresa_member(empresa_id)` para isolamento estrito entre empresas.
+
+Para resiliência, todas as mutações possuem suporte a fallback via cache local isolado no `localStorage` sob a chave `elmaneko_cache_${empresaId}_${key}`. Operações críticas (liquidação de títulos e transferências entre contas) utilizam RPCs atômicas no banco de dados (`liquidar_lancamento_financeiro` e `transferir_saldo_financeiro`).

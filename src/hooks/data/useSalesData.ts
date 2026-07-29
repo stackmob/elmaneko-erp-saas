@@ -390,3 +390,29 @@ export function useDeleteVenda() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vendas'] }),
   });
 }
+
+export function useConverterOrcamentoEmVenda() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ orcamentoId, formaPagamento }: { orcamentoId: string; formaPagamento?: string }) => {
+      if (isValidUuid(orcamentoId)) {
+        const { data: rpcRes, error } = await supabase.rpc('converter_orcamento_em_venda', {
+          p_orcamento_id: orcamentoId,
+          p_forma_pagamento: formaPagamento || 'Pix'
+        });
+        if (error) {
+          console.warn("RPC converter_orcamento_em_venda falhou:", error.message);
+          throw error;
+        }
+        return rpcRes;
+      }
+      return null;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orcamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['vendas'] });
+      queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros'] });
+    },
+  });
+}
+

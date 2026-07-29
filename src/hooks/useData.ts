@@ -15,7 +15,7 @@ import {
 import { 
   useClientes, useAddCliente, useUpdateCliente, useDeleteCliente,
   useOrcamentos, useAddOrcamento, useUpdateOrcamento, useDeleteOrcamento,
-  useVendas, useAddVenda, useUpdateVenda, useDeleteVenda
+  useVendas, useAddVenda, useUpdateVenda, useDeleteVenda, useConverterOrcamentoEmVenda
 } from './data/useSalesData';
 import { 
   useContasFinanceiras, useAddContaFinanceira, useUpdateContaFinanceira, useDeleteContaFinanceira,
@@ -74,6 +74,7 @@ export function useData() {
     useAddVenda,
     useUpdateVenda,
     useDeleteVenda,
+    useConverterOrcamentoEmVenda,
     // Financial
     useContasFinanceiras,
     useAddContaFinanceira,
