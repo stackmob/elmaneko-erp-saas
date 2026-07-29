@@ -5,14 +5,14 @@ import {
   getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid 
 } from '../../utils/storage';
 
-const DEFAULT_DEMO_EMPRESA_ID = "00000000-0000-0000-0000-000000000001";
-
 const getFallbackEmpresaId = (): string => {
   try {
-    return localStorage.getItem('elmaneko_empresa_id') || DEFAULT_DEMO_EMPRESA_ID;
+    const empresaId = localStorage.getItem('elmaneko_empresa_id');
+    if (empresaId) return empresaId;
   } catch (e) {
-    return DEFAULT_DEMO_EMPRESA_ID;
+    // The caller receives a clear tenant error below.
   }
+  throw new Error('Nenhuma empresa ativa para a sessão atual.');
 };
 
 // PRODUTOS & BOM
@@ -20,10 +20,11 @@ export function useProdutos() {
   return useQuery({
     queryKey: ['produtos'],
     queryFn: async () => {
-      const { data: prods, error: pErr } = await supabase.from('produtos').select('*').order('created_at', { ascending: false });
+      const empresaId = getFallbackEmpresaId();
+      const { data: prods, error: pErr } = await supabase.from('produtos').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false });
       if (pErr || !prods) return getLocalCache<Product>('produtos');
 
-      const { data: matRows } = await supabase.from('produto_materiais').select('*');
+      const { data: matRows } = await supabase.from('produto_materiais').select('*').eq('empresa_id', empresaId);
 
       const mapped: Product[] = prods.map(item => {
         const itemMats = (matRows || []).filter(m => m.produto_id === item.id);
@@ -183,7 +184,7 @@ export function useProducoes() {
   return useQuery({
     queryKey: ['producoes'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('producoes').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('producoes').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<ProductionOrder>('producoes');
 
       const mapped: ProductionOrder[] = data.map(item => ({

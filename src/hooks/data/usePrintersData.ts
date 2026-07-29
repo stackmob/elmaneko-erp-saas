@@ -5,14 +5,14 @@ import {
   getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid 
 } from '../../utils/storage';
 
-const DEFAULT_DEMO_EMPRESA_ID = "00000000-0000-0000-0000-000000000001";
-
 const getFallbackEmpresaId = (): string => {
   try {
-    return localStorage.getItem('elmaneko_empresa_id') || DEFAULT_DEMO_EMPRESA_ID;
+    const empresaId = localStorage.getItem('elmaneko_empresa_id');
+    if (empresaId) return empresaId;
   } catch (e) {
-    return DEFAULT_DEMO_EMPRESA_ID;
+    // The caller receives a clear tenant error below.
   }
+  throw new Error('Nenhuma empresa ativa para a sessão atual.');
 };
 
 // IMPRESSORAS 3D
@@ -20,7 +20,7 @@ export function useImpressoras() {
   return useQuery({
     queryKey: ['impressoras'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('impressoras').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('impressoras').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<Printer>('impressoras');
 
       const mapped: Printer[] = data.map(item => ({
@@ -118,7 +118,7 @@ export function useTarifasEnergia() {
   return useQuery({
     queryKey: ['tarifas_energia'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('tarifas_energia').select('*').order('data_inicio_vigencia', { ascending: false });
+      const { data, error } = await supabase.from('tarifas_energia').select('*').eq('empresa_id', getFallbackEmpresaId()).order('data_inicio_vigencia', { ascending: false });
       if (error || !data) return getLocalCache<EnergyTariff>('tarifas_energia');
 
       const mapped: EnergyTariff[] = data.map(item => ({

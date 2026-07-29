@@ -8,14 +8,14 @@ import {
   getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid 
 } from '../../utils/storage';
 
-const DEFAULT_DEMO_EMPRESA_ID = "00000000-0000-0000-0000-000000000001";
-
 const getFallbackEmpresaId = (): string => {
   try {
-    return localStorage.getItem('elmaneko_empresa_id') || DEFAULT_DEMO_EMPRESA_ID;
+    const empresaId = localStorage.getItem('elmaneko_empresa_id');
+    if (empresaId) return empresaId;
   } catch (e) {
-    return DEFAULT_DEMO_EMPRESA_ID;
+    // The caller receives a clear tenant error below.
   }
+  throw new Error('Nenhuma empresa ativa para a sessão atual.');
 };
 
 // 1. CONTAS FINANCEIRAS
@@ -23,7 +23,7 @@ export function useContasFinanceiras() {
   return useQuery({
     queryKey: ['contas_financeiras'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contas_financeiras').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('contas_financeiras').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<FinancialAccount>('contas_financeiras');
 
       const mapped: FinancialAccount[] = data.map(item => ({
@@ -161,7 +161,7 @@ export function useCategoriasFinanceiras() {
   return useQuery({
     queryKey: ['categorias_financeiras'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('categorias_financeiras').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('categorias_financeiras').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<FinancialCategory>('categorias_financeiras');
 
       const mapped: FinancialCategory[] = data.map(item => ({
@@ -255,7 +255,7 @@ export function useCentrosCusto() {
   return useQuery({
     queryKey: ['centros_custo'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('centros_custo').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('centros_custo').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<CostCenter>('centros_custo');
 
       const mapped: CostCenter[] = data.map(item => ({
@@ -348,6 +348,7 @@ export function useLancamentosFinanceiros() {
       const { data, error } = await supabase
         .from('lancamentos_financeiros')
         .select('*')
+        .eq('empresa_id', getFallbackEmpresaId())
         .eq('is_deleted', false)
         .order('created_at', { ascending: false });
 
@@ -541,7 +542,7 @@ export function useMovimentacoesFinanceiras() {
   return useQuery({
     queryKey: ['movimentacoes_financeiras'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('movimentacoes_financeiras').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('movimentacoes_financeiras').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<FinancialMovement>('movimentacoes_financeiras');
 
       const mapped: FinancialMovement[] = data.map(item => ({
@@ -568,7 +569,7 @@ export function useTransferenciasFinanceiras() {
   return useQuery({
     queryKey: ['transferencias_financeiras'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('transferencias_financeiras').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('transferencias_financeiras').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<FinancialTransfer>('transferencias_financeiras');
 
       const mapped: FinancialTransfer[] = data.map(item => ({
@@ -645,7 +646,7 @@ export function useAuditoriaFinanceira() {
   return useQuery({
     queryKey: ['auditoria_financeira'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('auditoria_financeira').select('*').order('data_hora', { ascending: false });
+      const { data, error } = await supabase.from('auditoria_financeira').select('*').eq('empresa_id', getFallbackEmpresaId()).order('data_hora', { ascending: false });
       if (error || !data) return getLocalCache<FinancialAuditLog>('auditoria_financeira');
 
       const mapped: FinancialAuditLog[] = data.map(item => ({
@@ -700,9 +701,9 @@ export function useSyncFinancialEntries() {
       const empresaId = getFallbackEmpresaId();
       
       try {
-        const { data: vendas, error: errVendas } = await supabase.from('vendas').select('*');
-        const { data: compras, error: errCompras } = await supabase.from('compras').select('*');
-        const { data: lancamentos } = await supabase.from('lancamentos_financeiros').select('origem_id');
+        const { data: vendas, error: errVendas } = await supabase.from('vendas').select('*').eq('empresa_id', empresaId);
+        const { data: compras, error: errCompras } = await supabase.from('compras').select('*').eq('empresa_id', empresaId);
+        const { data: lancamentos } = await supabase.from('lancamentos_financeiros').select('origem_id').eq('empresa_id', empresaId);
 
         const existingOrigemIds = new Set((lancamentos || []).map(l => l.origem_id));
 

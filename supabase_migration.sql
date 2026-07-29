@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS usuario_empresa (
   UNIQUE(user_id, empresa_id)
 );
 
+ALTER TABLE usuario_empresa ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'admin';
+
 -- 3. FILAMENTOS
 CREATE TABLE IF NOT EXISTS filamentos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -308,6 +310,66 @@ BEGIN
 
   DROP POLICY IF EXISTS "compras_policy" ON compras;
   CREATE POLICY "compras_policy" ON compras FOR ALL USING (true);
+END $$;
+
+-- ============================================================
+-- SEGURANÃ‡A MULTI-TENANT: substitui as polÃ­ticas permissivas acima.
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.is_empresa_member(target_empresa_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.usuario_empresa ue
+    WHERE ue.empresa_id = target_empresa_id AND ue.user_id = auth.uid()
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.is_empresa_member(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_empresa_member(UUID) TO authenticated;
+
+DROP POLICY IF EXISTS empresas_select_member ON empresas;
+DROP POLICY IF EXISTS empresas_insert_authenticated ON empresas;
+DROP POLICY IF EXISTS empresas_update_member ON empresas;
+CREATE POLICY empresas_select_member ON empresas FOR SELECT TO authenticated USING (public.is_empresa_member(id));
+CREATE POLICY empresas_insert_authenticated ON empresas FOR INSERT TO authenticated WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY empresas_update_member ON empresas FOR UPDATE TO authenticated USING (public.is_empresa_member(id)) WITH CHECK (public.is_empresa_member(id));
+
+DROP POLICY IF EXISTS usuario_empresa_select_self ON usuario_empresa;
+DROP POLICY IF EXISTS usuario_empresa_insert_self ON usuario_empresa;
+CREATE POLICY usuario_empresa_select_self ON usuario_empresa FOR SELECT TO authenticated USING (user_id = auth.uid());
+CREATE POLICY usuario_empresa_insert_self ON usuario_empresa FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+
+DO $$
+DECLARE tenant_table TEXT;
+BEGIN
+  FOREACH tenant_table IN ARRAY ARRAY[
+    'filamentos', 'clientes', 'impressoras', 'tarifas_energia', 'produtos',
+    'produto_materiais', 'producoes', 'orcamentos', 'orcamento_itens', 'vendas',
+    'compras', 'insumos'
+  ] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', tenant_table || '_policy', tenant_table);
+    EXECUTE format('DROP POLICY IF EXISTS tenant_access ON public.%I', tenant_table);
+    EXECUTE format('CREATE POLICY tenant_access ON public.%I FOR ALL TO authenticated USING (public.is_empresa_member(empresa_id)) WITH CHECK (public.is_empresa_member(empresa_id))', tenant_table);
+  END LOOP;
+END $$;
+
+-- Aplica as mesmas polÃ­ticas apÃ³s a criaÃ§Ã£o das tabelas financeiras.
+DO $$
+DECLARE tenant_table TEXT;
+BEGIN
+  FOREACH tenant_table IN ARRAY ARRAY[
+    'contas_financeiras', 'categorias_financeiras', 'centros_custo',
+    'lancamentos_financeiros', 'movimentacoes_financeiras',
+    'transferencias_financeiras', 'auditoria_financeira'
+  ] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', tenant_table || '_policy', tenant_table);
+    EXECUTE format('DROP POLICY IF EXISTS tenant_access ON public.%I', tenant_table);
+    EXECUTE format('CREATE POLICY tenant_access ON public.%I FOR ALL TO authenticated USING (public.is_empresa_member(empresa_id)) WITH CHECK (public.is_empresa_member(empresa_id))', tenant_table);
+  END LOOP;
 END $$;
 
 -- ============================================================

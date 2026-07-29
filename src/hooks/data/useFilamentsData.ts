@@ -5,14 +5,14 @@ import {
   getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid 
 } from '../../utils/storage';
 
-const DEFAULT_DEMO_EMPRESA_ID = "00000000-0000-0000-0000-000000000001";
-
 const getFallbackEmpresaId = (): string => {
   try {
-    return localStorage.getItem('elmaneko_empresa_id') || DEFAULT_DEMO_EMPRESA_ID;
+    const empresaId = localStorage.getItem('elmaneko_empresa_id');
+    if (empresaId) return empresaId;
   } catch (e) {
-    return DEFAULT_DEMO_EMPRESA_ID;
+    // The caller receives a clear tenant error below.
   }
+  throw new Error('Nenhuma empresa ativa para a sessão atual.');
 };
 
 // 1. FILAMENTOS
@@ -20,7 +20,7 @@ export function useFilamentos() {
   return useQuery({
     queryKey: ['filamentos'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('filamentos').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('filamentos').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<Filament>('filamentos');
 
       const mapped: Filament[] = data.map(item => ({
@@ -138,7 +138,7 @@ export function useInsumos() {
   return useQuery({
     queryKey: ['insumos'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('insumos').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('insumos').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<SupplyItem>('insumos');
 
       const mapped: SupplyItem[] = data.map(item => ({
@@ -248,7 +248,7 @@ export function useCompras() {
   return useQuery({
     queryKey: ['compras'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('compras').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('compras').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<Purchase>('compras');
 
       const mapped: Purchase[] = data.map(item => ({

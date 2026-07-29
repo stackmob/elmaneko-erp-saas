@@ -3,18 +3,18 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Company } from '../../types';
 
-const DEFAULT_DEMO_EMPRESA_ID = "00000000-0000-0000-0000-000000000001";
-
 const getFallbackEmpresaId = (): string => {
   try {
-    return localStorage.getItem('elmaneko_empresa_id') || DEFAULT_DEMO_EMPRESA_ID;
+    const empresaId = localStorage.getItem('elmaneko_empresa_id');
+    if (empresaId) return empresaId;
   } catch (e) {
-    return DEFAULT_DEMO_EMPRESA_ID;
+    // The caller receives a clear tenant error below.
   }
+  throw new Error('Nenhuma empresa ativa para a sessão atual.');
 };
 
 const DEFAULT_COMPANY_DATA: Company = {
-  id: DEFAULT_DEMO_EMPRESA_ID,
+  id: '',
   nome: 'ELMANEKO 3D',
   razaoSocial: 'ELMANEKO 3D LTDA',
   cnpj: '12.345.678/0001-99',

@@ -10,21 +10,6 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
-const DEFAULT_DEMO_EMPRESA_ID = "00000000-0000-0000-0000-000000000001";
-
-const getFallbackEmpresaId = (): string => {
-  try {
-    let savedId = localStorage.getItem('elmaneko_empresa_id');
-    if (!savedId) {
-      savedId = DEFAULT_DEMO_EMPRESA_ID;
-      localStorage.setItem('elmaneko_empresa_id', savedId);
-    }
-    return savedId;
-  } catch (e) {
-    return DEFAULT_DEMO_EMPRESA_ID;
-  }
-};
-
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
@@ -36,7 +21,7 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [empresaId, setEmpresaId] = useState<string | null>(getFallbackEmpresaId());
+  const [empresaId, setEmpresaId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,9 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchEmpresaId(session.user.id);
-      } else {
-        ensureEmpresaId();
-      }
+      } else setLoading(false);
     });
 
     // Escuta mudanças de auth (login, logout)
@@ -57,9 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchEmpresaId(session.user.id);
-      } else {
-        ensureEmpresaId();
-      }
+      } else setEmpresaId(null);
     });
 
     return () => subscription.unsubscribe();
@@ -81,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (err) {
       console.error("Erro ao buscar empresa:", err);
-      ensureEmpresaId();
+      setEmpresaId(null);
     } finally {
       setLoading(false);
     }
@@ -89,19 +70,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const bootstrapUserCompany = async (userId: string) => {
     try {
-      const { data: empList } = await supabase.from('empresas').select('id').limit(1);
-      let targetEmpresaId = empList && empList.length > 0 ? empList[0].id : null;
-
-      if (!targetEmpresaId) {
-        const { data: newEmp, error: createErr } = await supabase
-          .from('empresas')
-          .insert([{ nome: 'Empresa Principal' }])
-          .select()
-          .single();
-        if (!createErr && newEmp) {
-          targetEmpresaId = newEmp.id;
-        }
-      }
+      const { data: newEmp, error: createErr } = await supabase
+        .from('empresas')
+        .insert([{ nome: 'Empresa Principal' }])
+        .select()
+        .single();
+      const targetEmpresaId = !createErr && newEmp ? newEmp.id : null;
 
       if (targetEmpresaId) {
         await supabase
@@ -109,30 +83,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .insert([{ user_id: userId, empresa_id: targetEmpresaId, role: 'admin' }]);
         setEmpresaId(targetEmpresaId);
         try { localStorage.setItem('elmaneko_empresa_id', targetEmpresaId); } catch(e){}
-      } else {
-        ensureEmpresaId();
-      }
+      } else setEmpresaId(null);
     } catch (e) {
       console.error("Erro ao vincular empresa ao usuário:", e);
-      ensureEmpresaId();
-    }
-  };
-
-  const ensureEmpresaId = async () => {
-    try {
-      const { data } = await supabase.from('empresas').select('id').limit(1);
-      if (data && data.length > 0) {
-        setEmpresaId(data[0].id);
-        try { localStorage.setItem('elmaneko_empresa_id', data[0].id); } catch(e){}
-      } else {
-        const fallback = getFallbackEmpresaId();
-        setEmpresaId(fallback);
-      }
-    } catch (e) {
-      const fallback = getFallbackEmpresaId();
-      setEmpresaId(fallback);
-    } finally {
-      setLoading(false);
+      setEmpresaId(null);
     }
   };
 

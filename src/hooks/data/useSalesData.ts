@@ -5,14 +5,14 @@ import {
   getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid 
 } from '../../utils/storage';
 
-const DEFAULT_DEMO_EMPRESA_ID = "00000000-0000-0000-0000-000000000001";
-
 const getFallbackEmpresaId = (): string => {
   try {
-    return localStorage.getItem('elmaneko_empresa_id') || DEFAULT_DEMO_EMPRESA_ID;
+    const empresaId = localStorage.getItem('elmaneko_empresa_id');
+    if (empresaId) return empresaId;
   } catch (e) {
-    return DEFAULT_DEMO_EMPRESA_ID;
+    // The caller receives a clear tenant error below.
   }
+  throw new Error('Nenhuma empresa ativa para a sessão atual.');
 };
 
 // 1. CLIENTES (CRM)
@@ -20,7 +20,7 @@ export function useClientes() {
   return useQuery({
     queryKey: ['clientes'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('clientes').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('clientes').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<Client>('clientes');
 
       const mapped: Client[] = data.map(item => ({
@@ -126,10 +126,11 @@ export function useOrcamentos() {
   return useQuery({
     queryKey: ['orcamentos'],
     queryFn: async () => {
-      const { data: orcs, error: oErr } = await supabase.from('orcamentos').select('*').order('created_at', { ascending: false });
+      const empresaId = getFallbackEmpresaId();
+      const { data: orcs, error: oErr } = await supabase.from('orcamentos').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false });
       if (oErr || !orcs) return getLocalCache<Budget>('orcamentos');
 
-      const { data: itemRows } = await supabase.from('orcamento_itens').select('*');
+      const { data: itemRows } = await supabase.from('orcamento_itens').select('*').eq('empresa_id', empresaId);
 
       const mapped: Budget[] = orcs.map(item => {
         const budgetItens = (itemRows || []).filter(i => i.orcamento_id === item.id);
@@ -267,7 +268,7 @@ export function useVendas() {
   return useQuery({
     queryKey: ['vendas'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('vendas').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('vendas').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<Sale>('vendas');
 
       const mapped: Sale[] = data.map(item => ({
