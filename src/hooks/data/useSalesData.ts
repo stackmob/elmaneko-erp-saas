@@ -272,11 +272,13 @@ export function useVendas() {
 
       const mapped: Sale[] = data.map(item => ({
         id: item.id,
+        numero: `VENDA-${String(item.id).slice(0, 8).toUpperCase()}`,
         clienteId: item.cliente_id,
-        data: item.data,
+        dataVenda: item.data,
+        itens: [],
         valorTotal: Number(item.valor_total),
         formaPagamento: item.forma_pagamento as any,
-        status: item.status as any,
+        statusPagamento: item.status as Sale['statusPagamento'],
         orcamentoOrigemId: item.orcamento_origem_id
       }));
 
@@ -295,10 +297,10 @@ export function useAddVenda() {
       const payload = {
         empresa_id: empresaId,
         cliente_id: nova.clienteId,
-        data: nova.data,
+        data: nova.dataVenda,
         valor_total: nova.valorTotal,
         forma_pagamento: nova.formaPagamento,
-        status: nova.status,
+        status: nova.statusPagamento,
         orcamento_origem_id: isValidUuid(nova.orcamentoOrigemId) ? nova.orcamentoOrigemId : null
       };
 
@@ -311,11 +313,13 @@ export function useAddVenda() {
 
       const created: Sale = {
         id: data.id,
+        numero: nova.numero,
         clienteId: data.cliente_id,
-        data: data.data,
+        dataVenda: data.data,
+        itens: nova.itens,
         valorTotal: Number(data.valor_total),
         formaPagamento: data.forma_pagamento,
-        status: data.status,
+        statusPagamento: data.status,
         orcamentoOrigemId: data.orcamento_origem_id
       };
 
@@ -346,5 +350,42 @@ export function useAddVenda() {
       queryClient.invalidateQueries({ queryKey: ['orcamentos'] });
       queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros'] });
     },
+  });
+}
+
+export function useUpdateVenda() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (venda: Sale) => {
+      if (isValidUuid(venda.id)) {
+        const { error } = await supabase.from('vendas').update({
+          cliente_id: venda.clienteId,
+          data: venda.dataVenda,
+          valor_total: venda.valorTotal,
+          forma_pagamento: venda.formaPagamento,
+          status: venda.statusPagamento,
+          orcamento_origem_id: isValidUuid(venda.orcamentoOrigemId) ? venda.orcamentoOrigemId : null,
+        }).eq('id', venda.id);
+        if (error) throw error;
+      }
+      addToLocalCache('vendas', venda);
+      return venda;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vendas'] }),
+  });
+}
+
+export function useDeleteVenda() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (isValidUuid(id)) {
+        const { error } = await supabase.from('vendas').delete().eq('id', id);
+        if (error) throw error;
+      }
+      removeFromLocalCache('vendas', id);
+      return id;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vendas'] }),
   });
 }

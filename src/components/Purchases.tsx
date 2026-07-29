@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Purchase, PurchaseCategory, SupplyUnit, Filament, SupplyItem } from '../types';
-import { Plus, ShoppingCart, Calendar, Building, DollarSign, FileText, Search, Tag, Package, Cpu, Wrench, Box, Sparkles, Filter, CheckCircle2 } from 'lucide-react';
+import { Plus, ShoppingCart, Calendar, Building, DollarSign, FileText, Search, Tag, Package, Cpu, Wrench, Box, Sparkles, Filter, CheckCircle2, X } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';

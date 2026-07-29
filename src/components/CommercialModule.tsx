@@ -23,7 +23,7 @@ export default function CommercialModule() {
   const faturamentoTotal = sales.reduce((acc, s) => acc + (s.valorTotal || 0), 0);
   const valorPendenteAprovacao = budgets
     .filter(b => b.status === 'Aberto')
-    .reduce((acc, b) => acc + (b.valorTotal || 0), 0);
+    .reduce((acc, b) => acc + b.itens.reduce((total, item) => total + item.quantidade * item.valorUnitario - item.desconto, 0) - b.descontoGeral, 0);
 
   return (
     <div className="space-y-6" id="commercial-module-root">

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Client } from '../types';
-import { Plus, Search, User, MessageCircle } from 'lucide-react';
+import { Plus, Search, User, MessageCircle, X } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';

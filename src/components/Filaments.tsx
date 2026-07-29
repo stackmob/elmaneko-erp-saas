@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Filament, FilamentType } from '../types';
-import { Plus, Edit, Trash2, Search, Filter, AlertTriangle } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Filter, AlertTriangle, X } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';

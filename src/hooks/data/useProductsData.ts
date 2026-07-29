@@ -286,3 +286,22 @@ export function useUpdateProducaoStatus() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['producoes'] }),
   });
 }
+
+// Compatibility wrapper while consumers are migrated to status-only updates.
+export function useUpdateProducao() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (producao: ProductionOrder) => {
+      if (isValidUuid(producao.id)) {
+        const { error } = await supabase.from('producoes').update({
+          status: producao.status,
+          custo_unitario: producao.custoUnitario,
+        }).eq('id', producao.id);
+        if (error) throw error;
+      }
+      addToLocalCache('producoes', producao);
+      return producao;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['producoes'] }),
+  });
+}

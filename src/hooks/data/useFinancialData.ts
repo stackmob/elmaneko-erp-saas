@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { 
   FinancialAccount, FinancialCategory, CostCenter, FinancialEntry, 
-  FinancialMovement, FinancialTransfer, AuditLog 
+  FinancialMovement, FinancialTransfer, FinancialAuditLog
 } from '../../types';
 import { 
   getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid 
@@ -506,6 +506,22 @@ export function useCancelLancamento() {
   });
 }
 
+export function useConciliateLancamento() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, tipoConciliacao }: { id: string; tipoConciliacao: string }) => {
+      if (isValidUuid(id)) {
+        const { error } = await supabase.from('lancamentos_financeiros').update({
+          status: 'Conciliado', conciliado: true, tipo_conciliacao: tipoConciliacao,
+        }).eq('id', id);
+        if (error) throw error;
+      }
+      return id;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros'] }),
+  });
+}
+
 export function useDeleteLancamento() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -630,9 +646,9 @@ export function useAuditoriaFinanceira() {
     queryKey: ['auditoria_financeira'],
     queryFn: async () => {
       const { data, error } = await supabase.from('auditoria_financeira').select('*').order('data_hora', { ascending: false });
-      if (error || !data) return getLocalCache<AuditLog>('auditoria_financeira');
+      if (error || !data) return getLocalCache<FinancialAuditLog>('auditoria_financeira');
 
-      const mapped: AuditLog[] = data.map(item => ({
+      const mapped: FinancialAuditLog[] = data.map(item => ({
         id: item.id,
         dataHora: item.data_hora,
         usuario: item.usuario,
@@ -648,6 +664,31 @@ export function useAuditoriaFinanceira() {
       return mapped;
     },
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useAddAuditLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (log: Omit<FinancialAuditLog, 'id'> & { id?: string }) => {
+      const empresaId = getFallbackEmpresaId();
+      const { data, error } = await supabase.from('auditoria_financeira').insert([{
+        empresa_id: empresaId,
+        data_hora: log.dataHora,
+        usuario: log.usuario,
+        ip: log.ip,
+        operacao: log.operacao,
+        entidade: log.entidade,
+        entidade_id: log.entidadeId,
+        valor_anterior: log.valorAnterior,
+        valor_novo: log.valorNovo,
+      }]).select().single();
+      if (error) throw error;
+      const created: FinancialAuditLog = { ...log, id: data.id };
+      addToLocalCache('auditoria_financeira', created);
+      return created;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auditoria_financeira'] }),
   });
 }
 
@@ -726,10 +767,10 @@ export function useSyncFinancialEntries() {
           await supabase.from('lancamentos_financeiros').insert(newEntries);
         }
 
-        return newEntries.length;
+        return { total: newEntries.length, syncedSales: newEntries.filter(entry => entry.origem === 'Venda').length, syncedPurchases: newEntries.filter(entry => entry.origem === 'Compra').length };
       } catch (e) {
         console.error("Erro na sincronização financeira retroativa:", e);
-        return 0;
+        return { total: 0, syncedSales: 0, syncedPurchases: 0 };
       }
     },
     onSuccess: () => {

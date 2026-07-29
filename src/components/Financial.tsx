@@ -9,7 +9,7 @@ import {
   ArrowDownLeft, RefreshCw, Calendar, Search, Filter, Plus, CheckCircle, 
   XCircle, Clock, Shield, FileText, Download, Building, Users, AlertTriangle, 
   ChevronRight, Layers, PieChart, BarChart3, Lock, Check, ArrowRightLeft, Eye,
-  Edit, Trash2
+  Edit, Trash2, X
 } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
@@ -22,7 +22,7 @@ export default function Financial() {
     useContasFinanceiras, useAddContaFinanceira, useUpdateContaFinanceira, useDeleteContaFinanceira,
     useCategoriasFinanceiras, useAddCategoriaFinanceira, useUpdateCategoriaFinanceira, useDeleteCategoriaFinanceira,
     useCentrosCusto, useAddCentroCusto, useUpdateCentroCusto, useDeleteCentroCusto,
-    useLancamentosFinanceiros, useAddLancamentoFinanceiro, useUpdateLancamentoFinanceiro, useLiquidateLancamento, useConciliateLancamento, useDeleteLancamentoFinanceiro, useSyncFinancialEntries,
+    useLancamentosFinanceiros, useAddLancamentoFinanceiro, useLiquidarLancamento, useConciliateLancamento, useDeleteLancamento, useSyncFinancialEntries,
     useMovimentacoesFinanceiras, useTransferenciasFinanceiras, useAddTransferenciaFinanceira,
     useAuditoriaFinanceira, useAddAuditLog,
     useClientes
@@ -49,9 +49,9 @@ export default function Financial() {
   const deleteCCMutation = useDeleteCentroCusto();
 
   const addEntryMutation = useAddLancamentoFinanceiro();
-  const liquidateMutation = useLiquidateLancamento();
+  const liquidateMutation = useLiquidarLancamento();
   const conciliateMutation = useConciliateLancamento();
-  const deleteEntryMutation = useDeleteLancamentoFinanceiro();
+  const deleteEntryMutation = useDeleteLancamento();
   const syncMutation = useSyncFinancialEntries();
   const addTransferMutation = useAddTransferenciaFinanceira();
   const addAuditMutation = useAddAuditLog();
@@ -102,8 +102,10 @@ export default function Financial() {
   const [entryClienteId, setEntryClienteId] = useState('');
   const [entryFornecedor, setEntryFornecedor] = useState('');
   const [entryDataVencimento, setEntryDataVencimento] = useState(new Date().toISOString().split('T')[0]);
+  const [entryDataEmissao, setEntryDataEmissao] = useState(new Date().toISOString().split('T')[0]);
   const [entryValorBruto, setEntryValorBruto] = useState(150.00);
   const [entryDesconto, setEntryDesconto] = useState(0);
+  const [entryAcrescimo, setEntryAcrescimo] = useState(0);
   const [entryFormaPagamento, setEntryFormaPagamento] = useState('PIX');
   const [entryContaId, setEntryContaId] = useState('');
   const [entryCategoriaId, setEntryCategoriaId] = useState('');
@@ -323,7 +325,7 @@ export default function Financial() {
       );
     } else {
       addCatMutation.mutate(
-        { id: crypto.randomUUID(), nome: catNome, tipo: catTipo, descricao: catDesc },
+        { nome: catNome, tipo: catTipo, descricao: catDesc },
         {
           onSuccess: () => {
             setIsCatModalOpen(false);
@@ -380,7 +382,7 @@ export default function Financial() {
       );
     } else {
       addCCMutation.mutate(
-        { id: crypto.randomUUID(), codigo: ccCodigo, nome: ccNome, descricao: ccDesc },
+        { codigo: ccCodigo, nome: ccNome, descricao: ccDesc },
         {
           onSuccess: () => {
             setIsCCModalOpen(false);
@@ -430,7 +432,7 @@ export default function Financial() {
       return;
     }
 
-    const valorLiquido = entryValorBruto - entryDesconto;
+    const valorLiquido = entryValorBruto - entryDesconto + entryAcrescimo;
     const isParcelado = entryTotalParcelas > 1;
 
     if (isParcelado) {
@@ -448,11 +450,11 @@ export default function Financial() {
           origem: 'Avulso',
           clienteId: entryClienteId || undefined,
           fornecedor: entryFornecedor || undefined,
-          dataEmissao: new Date().toISOString().split('T')[0],
+          dataEmissao: entryDataEmissao,
           dataVencimento: dueDate.toISOString().split('T')[0],
           valorBruto: Number((entryValorBruto / entryTotalParcelas).toFixed(2)),
           desconto: Number((entryDesconto / entryTotalParcelas).toFixed(2)),
-          acrescimo: 0,
+          acrescimo: Number((entryAcrescimo / entryTotalParcelas).toFixed(2)),
           valorLiquido: valorParcela,
           formaPagamento: entryFormaPagamento,
           contaFinanceiraId: entryContaId || undefined,
@@ -476,11 +478,11 @@ export default function Financial() {
         origem: 'Avulso',
         clienteId: entryClienteId || undefined,
         fornecedor: entryFornecedor || undefined,
-        dataEmissao: new Date().toISOString().split('T')[0],
+        dataEmissao: entryDataEmissao,
         dataVencimento: entryDataVencimento,
         valorBruto: Number(entryValorBruto),
         desconto: Number(entryDesconto),
-        acrescimo: 0,
+        acrescimo: Number(entryAcrescimo),
         valorLiquido,
         formaPagamento: entryFormaPagamento,
         contaFinanceiraId: entryContaId || undefined,
@@ -530,12 +532,11 @@ export default function Financial() {
 
     liquidateMutation.mutate(
       {
-        entryId: selectedEntryForAction.id,
-        contaId: liqContaId,
+        id: selectedEntryForAction.id,
+        contaFinanceiraId: liqContaId,
         valorPago: Number(liqValorPago),
         dataLiquidacao: liqData,
-        jurosMulta: Number(liqJuros),
-        observacoes: liqObs
+        jurosMulta: Number(liqJuros)
       },
       {
         onSuccess: () => {
@@ -560,7 +561,7 @@ export default function Financial() {
 
   const handleConciliate = (entry: FinancialEntry) => {
     conciliateMutation.mutate(
-      { entryId: entry.id, tipoConciliacao: 'Extrato Bancário / PIX' },
+      { id: entry.id, tipoConciliacao: 'Extrato Bancário / PIX' },
       {
         onSuccess: () => {
           showToast('Lançamento marcado como Conciliado!', 'success');
@@ -582,7 +583,6 @@ export default function Financial() {
 
     addTransferMutation.mutate(
       {
-        id: crypto.randomUUID(),
         data: trData,
         contaOrigemId: trOrigemId,
         contaDestinoId: trDestinoId,
@@ -1519,8 +1519,8 @@ export default function Financial() {
                     <input
                       type="text"
                       required
-                      value={entryNumeroDoc}
-                      onChange={(e) => setEntryNumeroDoc(e.target.value)}
+                      value={entryDoc}
+                      onChange={(e) => setEntryDoc(e.target.value)}
                       className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white font-bold"
                     />
                   </div>

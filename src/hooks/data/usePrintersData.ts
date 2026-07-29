@@ -123,7 +123,7 @@ export function useTarifasEnergia() {
 
       const mapped: EnergyTariff[] = data.map(item => ({
         id: item.id,
-        dataInicioVigencia: item.data_inicio_vigencia,
+        dataInicio: item.data_inicio_vigencia,
         valorKwh: Number(item.valor_kwh)
       }));
 
@@ -141,7 +141,7 @@ export function useAddTarifaEnergia() {
       const empresaId = getFallbackEmpresaId();
       const payload = {
         empresa_id: empresaId,
-        data_inicio_vigencia: nova.dataInicioVigencia,
+        data_inicio_vigencia: nova.dataInicio,
         valor_kwh: nova.valorKwh
       };
 
@@ -154,7 +154,7 @@ export function useAddTarifaEnergia() {
 
       const created: EnergyTariff = {
         id: data.id,
-        dataInicioVigencia: data.data_inicio_vigencia,
+        dataInicio: data.data_inicio_vigencia,
         valorKwh: Number(data.valor_kwh)
       };
 

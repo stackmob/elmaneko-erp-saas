@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Printer } from '../types';
-import { Plus, Search, Zap, Cpu } from 'lucide-react';
+import { Plus, Search, Zap, Cpu, X } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';

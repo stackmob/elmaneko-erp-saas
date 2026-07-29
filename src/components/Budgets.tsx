@@ -3,7 +3,7 @@ import { Budget, Client, Product, BudgetItem, Sale, Filament } from '../types';
 import { 
   Plus, Edit, Trash2, FileText, Calendar, User, 
   DollarSign, Check, ChevronRight, Share2, Download, Eye, X, Printer, Percent, CheckCircle2,
-  Filter, ArrowUpDown, RotateCcw, TrendingUp, Clock, AlertCircle
+  Filter, ArrowUpDown, RotateCcw, TrendingUp, Clock, AlertCircle, FolderHeart
 } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
@@ -777,14 +777,14 @@ export default function Budgets() {
                     </h4>
                     <button
                       type="button"
-                      onClick={handleAddItem}
+                       onClick={handleAddItemRow}
                       className="text-[10px] bg-orange-600 hover:bg-orange-500 text-white px-2.5 py-1 rounded font-bold cursor-pointer"
                     >
                       + Adicionar Peça
                     </button>
                   </div>
 
-                  {items.map((item, index) => {
+                  {itens.map((item, index) => {
                     const selectedProd = products.find(p => p.id === item.produtoId);
 
                     return (
@@ -795,7 +795,7 @@ export default function Budgets() {
                           <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Peça do Catálogo *</label>
                           <select
                             value={item.produtoId}
-                            onChange={(e) => handleProductSelect(index, e.target.value)}
+                             onChange={(e) => handleProductSelectionChange(index, e.target.value)}
                             className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none"
                           >
                             {products.map(p => (
@@ -839,10 +839,10 @@ export default function Budgets() {
                               R$ {((item.quantidade * item.valorUnitario) - item.desconto).toFixed(2)}
                             </span>
                           </div>
-                          {items.length > 1 && (
+                          {itens.length > 1 && (
                             <button
                               type="button"
-                              onClick={() => handleRemoveItem(index)}
+                             onClick={() => handleRemoveItemRow(index)}
                               className="text-red-500 hover:text-red-400 p-1 bg-neutral-950 rounded border border-neutral-850 cursor-pointer"
                               title="Remover Item"
                             >
@@ -860,7 +860,7 @@ export default function Budgets() {
                 <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl flex justify-between items-center">
                   <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider font-semibold">Valor Total Líquido da Cotação:</span>
                   <span className="text-xl font-black font-mono text-emerald-400">
-                    R$ {calculateTotal(items, descontoGeral).toFixed(2)}
+                    R$ {calculateTotal(itens, descontoGeral).toFixed(2)}
                   </span>
                 </div>
 

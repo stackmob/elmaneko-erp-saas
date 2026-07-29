@@ -10,20 +10,20 @@ import {
 } from './data/usePrintersData';
 import { 
   useProdutos, useAddProduto, useUpdateProduto, useDeleteProduto,
-  useProducoes, useAddProducao, useUpdateProducaoStatus 
+  useProducoes, useAddProducao, useUpdateProducaoStatus, useUpdateProducao
 } from './data/useProductsData';
 import { 
   useClientes, useAddCliente, useUpdateCliente, useDeleteCliente,
   useOrcamentos, useAddOrcamento, useUpdateOrcamento, useDeleteOrcamento,
-  useVendas, useAddVenda 
+  useVendas, useAddVenda, useUpdateVenda, useDeleteVenda
 } from './data/useSalesData';
 import { 
   useContasFinanceiras, useAddContaFinanceira, useUpdateContaFinanceira, useDeleteContaFinanceira,
   useCategoriasFinanceiras, useAddCategoriaFinanceira, useUpdateCategoriaFinanceira, useDeleteCategoriaFinanceira,
   useCentrosCusto, useAddCentroCusto, useUpdateCentroCusto, useDeleteCentroCusto,
-  useLancamentosFinanceiros, useAddLancamentoFinanceiro, useLiquidarLancamento, useCancelLancamento, useDeleteLancamento,
+  useLancamentosFinanceiros, useAddLancamentoFinanceiro, useLiquidarLancamento, useConciliateLancamento, useCancelLancamento, useDeleteLancamento,
   useMovimentacoesFinanceiras, useTransferenciasFinanceiras, useAddTransferenciaFinanceira,
-  useAuditoriaFinanceira, useSyncFinancialEntries 
+  useAuditoriaFinanceira, useAddAuditLog, useSyncFinancialEntries
 } from './data/useFinancialData';
 
 export function useData() {
@@ -49,6 +49,9 @@ export function useData() {
     useDeleteImpressora,
     useTarifasEnergia,
     useAddTarifaEnergia,
+    // Deprecated aliases retained temporarily for existing screens.
+    useTarifas: useTarifasEnergia,
+    useAddTarifa: useAddTarifaEnergia,
     // Products & Production
     useProdutos,
     useAddProduto,
@@ -57,6 +60,7 @@ export function useData() {
     useProducoes,
     useAddProducao,
     useUpdateProducaoStatus,
+    useUpdateProducao,
     // Clients & Sales & Budgets
     useClientes,
     useAddCliente,
@@ -68,6 +72,8 @@ export function useData() {
     useDeleteOrcamento,
     useVendas,
     useAddVenda,
+    useUpdateVenda,
+    useDeleteVenda,
     // Financial
     useContasFinanceiras,
     useAddContaFinanceira,
@@ -84,12 +90,14 @@ export function useData() {
     useLancamentosFinanceiros,
     useAddLancamentoFinanceiro,
     useLiquidarLancamento,
+    useConciliateLancamento,
     useCancelLancamento,
     useDeleteLancamento,
     useMovimentacoesFinanceiras,
     useTransferenciasFinanceiras,
     useAddTransferenciaFinanceira,
     useAuditoriaFinanceira,
+    useAddAuditLog,
     useSyncFinancialEntries
   };
 }
@@ -113,6 +121,8 @@ export {
   useDeleteImpressora,
   useTarifasEnergia,
   useAddTarifaEnergia,
+  useTarifasEnergia as useTarifas,
+  useAddTarifaEnergia as useAddTarifa,
   useProdutos,
   useAddProduto,
   useUpdateProduto,
@@ -120,6 +130,7 @@ export {
   useProducoes,
   useAddProducao,
   useUpdateProducaoStatus,
+  useUpdateProducao,
   useClientes,
   useAddCliente,
   useUpdateCliente,
@@ -130,6 +141,8 @@ export {
   useDeleteOrcamento,
   useVendas,
   useAddVenda,
+  useUpdateVenda,
+  useDeleteVenda,
   useContasFinanceiras,
   useAddContaFinanceira,
   useUpdateContaFinanceira,
@@ -145,11 +158,13 @@ export {
   useLancamentosFinanceiros,
   useAddLancamentoFinanceiro,
   useLiquidarLancamento,
+  useConciliateLancamento,
   useCancelLancamento,
   useDeleteLancamento,
   useMovimentacoesFinanceiras,
   useTransferenciasFinanceiras,
   useAddTransferenciaFinanceira,
   useAuditoriaFinanceira,
+  useAddAuditLog,
   useSyncFinancialEntries
 };
