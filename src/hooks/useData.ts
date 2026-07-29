@@ -1831,83 +1831,121 @@ export const useData = () => {
       let syncedSales = 0;
       let syncedPurchases = 0;
 
-      const cachedVendas = getLocalCache<Sale>('vendas');
-      const cachedCompras = getLocalCache<Purchase>('compras');
-      const cachedEntries = getLocalCache<FinancialEntry>('lancamentos_financeiros');
+      try {
+        // 1. Obter dados atualizados do Supabase ou Cache Local
+        let vendasList: Sale[] = [];
+        let comprasList: Purchase[] = [];
+        let entriesList: FinancialEntry[] = [];
 
-      const newEntries: FinancialEntry[] = [];
+        try {
+          const { data: dbVendas } = await supabase.from('vendas').select('*').eq('empresa_id', activeTenant);
+          if (dbVendas && dbVendas.length > 0) vendasList = dbVendas.map(mapVendaFromDB);
+        } catch (e) {}
+        if (vendasList.length === 0) vendasList = getLocalCache<Sale>('vendas') || [];
 
-      // Sincronizar Vendas -> Títulos a Receber
-      for (const venda of cachedVendas) {
-        const exists = cachedEntries.some(e => e.origemId === venda.id && e.origem === 'Venda');
-        if (!exists) {
-          const docNum = venda.numero ? `VENDA-#${venda.numero}` : `VENDA-${venda.id.slice(0, 6)}`;
-          const entry: FinancialEntry = {
-            id: crypto.randomUUID(),
-            numeroDocumento: docNum,
-            tipo: 'Receita',
-            origem: 'Venda',
-            origemId: venda.id,
-            clienteId: venda.clienteId,
-            dataEmissao: venda.data || new Date().toISOString().split('T')[0],
-            dataVencimento: venda.data || new Date().toISOString().split('T')[0],
-            valorBruto: venda.valorTotal,
-            desconto: 0,
-            acrescimo: 0,
-            valorLiquido: venda.valorTotal,
-            formaPagamento: venda.formaPagamento || 'PIX',
-            status: 'Aberto',
-            conciliado: false,
-            observacoes: `Faturamento retroativo sincronizado da Venda #${venda.numero || ''}`
-          };
+        try {
+          const { data: dbCompras } = await supabase.from('compras').select('*').eq('empresa_id', activeTenant);
+          if (dbCompras && dbCompras.length > 0) comprasList = dbCompras.map(mapCompraFromDB);
+        } catch (e) {}
+        if (comprasList.length === 0) comprasList = getLocalCache<Purchase>('compras') || [];
 
-          try {
-            const payload = mapFinancialEntryToDB(entry, activeTenant);
-            await supabase.from('lancamentos_financeiros').insert([payload]);
-          } catch (e) {}
+        try {
+          const { data: dbEntries } = await supabase.from('lancamentos_financeiros').select('*').eq('empresa_id', activeTenant).eq('is_deleted', false);
+          if (dbEntries && dbEntries.length > 0) entriesList = dbEntries.map(mapFinancialEntryFromDB);
+        } catch (e) {}
+        if (entriesList.length === 0) entriesList = getLocalCache<FinancialEntry>('lancamentos_financeiros') || [];
 
-          newEntries.push(entry);
-          syncedSales++;
+        const newEntries: FinancialEntry[] = [];
+
+        // 2. Sincronizar Vendas -> Títulos a Receber
+        for (const venda of vendasList) {
+          if (!venda || !venda.id) continue;
+          const exists = entriesList.some(e => e && e.origemId === venda.id && e.origem === 'Venda');
+          if (!exists) {
+            const vendaIdShort = String(venda.id).slice(0, 6);
+            const docNum = venda.numero ? `VENDA-#${venda.numero}` : `VENDA-${vendaIdShort}`;
+            const dateStr = venda.data ? String(venda.data) : new Date().toISOString().split('T')[0];
+            const valor = Number(venda.valorTotal || 0);
+
+            const entry: FinancialEntry = {
+              id: crypto.randomUUID(),
+              numeroDocumento: docNum,
+              tipo: 'Receita',
+              origem: 'Venda',
+              origemId: venda.id,
+              clienteId: venda.clienteId || undefined,
+              dataEmissao: dateStr,
+              dataVencimento: dateStr,
+              valorBruto: valor,
+              desconto: 0,
+              acrescimo: 0,
+              valorLiquido: valor,
+              formaPagamento: venda.formaPagamento || 'PIX',
+              status: 'Aberto',
+              conciliado: false,
+              observacoes: `Faturamento retroativo sincronizado da Venda #${venda.numero || ''}`
+            };
+
+            try {
+              const payload = mapFinancialEntryToDB(entry, activeTenant);
+              await supabase.from('lancamentos_financeiros').insert([payload]);
+            } catch (e) {
+              console.error('[useSyncFinancialEntries] Erro ao inserir venda no Supabase:', e);
+            }
+
+            newEntries.push(entry);
+            syncedSales++;
+          }
         }
-      }
 
-      // Sincronizar Compras -> Títulos a Pagar
-      for (const compra of cachedCompras) {
-        const exists = cachedEntries.some(e => e.origemId === compra.id && e.origem === 'Compra');
-        if (!exists) {
-          const docNum = compra.notaFiscal ? `NF-${compra.notaFiscal}` : `COMP-${compra.data.replace(/-/g, '')}`;
-          const entry: FinancialEntry = {
-            id: crypto.randomUUID(),
-            numeroDocumento: docNum,
-            tipo: 'Despesa',
-            origem: 'Compra',
-            origemId: compra.id,
-            fornecedor: compra.fornecedor,
-            dataEmissao: compra.data || new Date().toISOString().split('T')[0],
-            dataVencimento: compra.data || new Date().toISOString().split('T')[0],
-            valorBruto: compra.valorPago,
-            desconto: 0,
-            acrescimo: 0,
-            valorLiquido: compra.valorPago,
-            formaPagamento: 'PIX',
-            status: 'Aberto',
-            conciliado: false,
-            observacoes: `Despesa retroativa sincronizada da Compra: ${compra.descricaoItem || 'Insumo'}`
-          };
+        // 3. Sincronizar Compras -> Títulos a Pagar
+        for (const compra of comprasList) {
+          if (!compra || !compra.id) continue;
+          const exists = entriesList.some(e => e && e.origemId === compra.id && e.origem === 'Compra');
+          if (!exists) {
+            const rawDate = compra.data ? String(compra.data) : new Date().toISOString().split('T')[0];
+            const cleanDate = rawDate.replace(/-/g, '');
+            const docNum = compra.notaFiscal ? `NF-${compra.notaFiscal}` : `COMP-${cleanDate}`;
+            const valor = Number(compra.valorPago || 0);
 
-          try {
-            const payload = mapFinancialEntryToDB(entry, activeTenant);
-            await supabase.from('lancamentos_financeiros').insert([payload]);
-          } catch (e) {}
+            const entry: FinancialEntry = {
+              id: crypto.randomUUID(),
+              numeroDocumento: docNum,
+              tipo: 'Despesa',
+              origem: 'Compra',
+              origemId: compra.id,
+              fornecedor: compra.fornecedor || 'Fornecedor',
+              dataEmissao: rawDate,
+              dataVencimento: rawDate,
+              valorBruto: valor,
+              desconto: 0,
+              acrescimo: 0,
+              valorLiquido: valor,
+              formaPagamento: 'PIX',
+              status: 'Aberto',
+              conciliado: false,
+              observacoes: `Despesa retroativa sincronizada da Compra: ${compra.descricaoItem || 'Insumo'}`
+            };
 
-          newEntries.push(entry);
-          syncedPurchases++;
+            try {
+              const payload = mapFinancialEntryToDB(entry, activeTenant);
+              await supabase.from('lancamentos_financeiros').insert([payload]);
+            } catch (e) {
+              console.error('[useSyncFinancialEntries] Erro ao inserir compra no Supabase:', e);
+            }
+
+            newEntries.push(entry);
+            syncedPurchases++;
+          }
         }
-      }
 
-      if (newEntries.length > 0) {
-        const allUpdated = [...cachedEntries, ...newEntries];
-        setLocalCache('lancamentos_financeiros', allUpdated);
+        if (newEntries.length > 0) {
+          const allUpdated = [...entriesList, ...newEntries];
+          setLocalCache('lancamentos_financeiros', allUpdated);
+        }
+
+      } catch (err) {
+        console.error('[useSyncFinancialEntries] Exceção geral durante sincronização:', err);
       }
 
       return { syncedSales, syncedPurchases, total: syncedSales + syncedPurchases };
