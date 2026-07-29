@@ -660,8 +660,8 @@ export default function Budgets() {
 
       {/* --- FORM MODAL (NEW / EDIT BUDGET) --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="budget-form-modal">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-2xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden text-neutral-100 font-sans">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in" id="budget-form-modal">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-neutral-100 font-sans">
             
             {/* STICKY HEADER */}
             <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
@@ -672,7 +672,7 @@ export default function Budgets() {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+                className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
                 title="Fechar Modal"
               >
                 <X size={18} />
@@ -681,12 +681,12 @@ export default function Budgets() {
 
             {/* SCROLLABLE FORM BODY */}
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden font-mono text-xs text-left">
-              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
                   
                   {/* Cliente */}
-                  <div>
+                  <div className="lg:col-span-2">
                     <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Cliente *</label>
                     <select
                       value={clienteId}
@@ -700,11 +700,11 @@ export default function Budgets() {
                   </div>
 
                   {/* Status */}
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Situação da Proposta *</label>
+                  <div className="lg:col-span-1">
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Situação *</label>
                     {editingBudget && isBudgetInvoiced(editingBudget) ? (
                       <div className="px-3 py-2 bg-purple-950/40 border border-purple-800/60 text-purple-300 rounded-lg text-xs font-mono font-bold flex items-center gap-2">
-                        <Check size={14} className="text-purple-400" /> Faturado (Bloqueado para refaturamento)
+                        <Check size={14} className="text-purple-400" /> Faturado
                       </div>
                     ) : (
                       <select
@@ -722,7 +722,7 @@ export default function Budgets() {
 
                   {/* Emissão */}
                   <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Data Emissão *</label>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Emissão *</label>
                     <input
                       type="date"
                       required
@@ -734,7 +734,7 @@ export default function Budgets() {
 
                   {/* Validade */}
                   <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Validade da Proposta *</label>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Validade *</label>
                     <input
                       type="date"
                       required
@@ -744,20 +744,9 @@ export default function Budgets() {
                     />
                   </div>
 
-                  {/* Previsão Entrega */}
-                  <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Previsão de Entrega</label>
-                    <input
-                      type="date"
-                      value={previsaoEntrega}
-                      onChange={(e) => setPrevisaoEntrega(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
-
                   {/* Desconto Geral R$ */}
-                  <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Desconto Comercial (R$)</label>
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Desconto (R$)</label>
                     <input
                       type="number"
                       step="0.01"
