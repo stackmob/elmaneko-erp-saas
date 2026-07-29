@@ -927,5 +927,48 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.converter_orcamento_em_venda(UUID, TEXT) TO authenticated;
 
+-- ============================================================
+-- 17. SCRIPT DE VINCULAÇÃO E BACKFILL DE DADOS EXISTENTES À EMPRESA
+-- ============================================================
+
+DO $$
+DECLARE
+  v_target_empresa_id UUID;
+  v_table TEXT;
+BEGIN
+  -- 1. Garante a existência de ao menos uma empresa cadastrada
+  SELECT id INTO v_target_empresa_id FROM empresas ORDER BY created_at ASC LIMIT 1;
+
+  IF v_target_empresa_id IS NULL THEN
+    INSERT INTO empresas (id, nome)
+    VALUES ('00000000-0000-0000-0000-000000000001', 'Empresa Principal')
+    RETURNING id INTO v_target_empresa_id;
+  END IF;
+
+  -- 2. Vincula todos os usuários autenticados sem empresa vinculada a esta empresa principal
+  INSERT INTO usuario_empresa (user_id, empresa_id, role)
+  SELECT u.id, v_target_empresa_id, 'admin'
+  FROM auth.users u
+  WHERE NOT EXISTS (
+    SELECT 1 FROM usuario_empresa ue WHERE ue.user_id = u.id
+  );
+
+  -- 3. Atualiza registros órfãos (empresa_id nulo) em todas as tabelas do sistema
+  FOREACH v_table IN ARRAY ARRAY[
+    'filamentos', 'clientes', 'impressoras', 'tarifas_energia', 'produtos',
+    'produto_materiais', 'producoes', 'orcamentos', 'orcamento_itens', 'vendas',
+    'compras', 'insumos', 'contas_financeiras', 'categorias_financeiras',
+    'centros_custo', 'lancamentos_financeiros', 'movimentacoes_financeiras',
+    'transferencias_financeiras', 'auditoria_financeira'
+  ] LOOP
+    EXECUTE format('
+      UPDATE public.%I 
+      SET empresa_id = %L 
+      WHERE empresa_id IS NULL OR empresa_id = %L
+    ', v_table, v_target_empresa_id, '00000000-0000-0000-0000-000000000001');
+  END LOOP;
+END $$;
+
+
 
 
