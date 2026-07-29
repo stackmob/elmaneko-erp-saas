@@ -483,3 +483,93 @@ CREATE INDEX IF NOT EXISTS idx_categorias_financeiras_empresa ON categorias_fina
 CREATE INDEX IF NOT EXISTS idx_centros_custo_empresa ON centros_custo(empresa_id);
 CREATE INDEX IF NOT EXISTS idx_lancamentos_financeiros_empresa ON lancamentos_financeiros(empresa_id);
 CREATE INDEX IF NOT EXISTS idx_movimentacoes_financeiras_conta ON movimentacoes_financeiras(conta_financeira_id);
+
+-- ============================================================
+-- SCRIPT DE MIGRACAO / ALIMENTACAO FINANCEIRA RETROATIVA
+-- Sincroniza faturamentos de Vendas e Compras para o Financeiro
+-- ============================================================
+DO $$
+DECLARE
+  v_venda RECORD;
+  v_compra RECORD;
+BEGIN
+  -- 1. Sincronizar Faturamentos de Vendas Existentes (Títulos a Receber)
+  FOR v_venda IN SELECT * FROM vendas LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM lancamentos_financeiros 
+      WHERE origem_id = v_venda.id AND origem = 'Venda'
+    ) THEN
+      INSERT INTO lancamentos_financeiros (
+        empresa_id,
+        numero_documento,
+        tipo,
+        origem,
+        origem_id,
+        cliente_id,
+        data_emissao,
+        data_vencimento,
+        valor_bruto,
+        valor_liquido,
+        forma_pagamento,
+        status,
+        conciliado,
+        observacoes
+      ) VALUES (
+        v_venda.empresa_id,
+        COALESCE('VENDA-#' || v_venda.numero, 'VENDA-' || SUBSTRING(v_venda.id::text FROM 1 FOR 8)),
+        'Receita',
+        'Venda',
+        v_venda.id,
+        v_venda.cliente_id,
+        COALESCE(v_venda.data, CURRENT_DATE),
+        COALESCE(v_venda.data, CURRENT_DATE),
+        v_venda.valor_total,
+        v_venda.valor_total,
+        COALESCE(v_venda.forma_pagamento, 'PIX'),
+        'Aberto',
+        false,
+        'Faturamento retroativo importado automaticamente de Vendas'
+      );
+    END IF;
+  END LOOP;
+
+  -- 2. Sincronizar Compras de Insumos Existentes (Títulos a Pagar)
+  FOR v_compra IN SELECT * FROM compras LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM lancamentos_financeiros 
+      WHERE origem_id = v_compra.id AND origem = 'Compra'
+    ) THEN
+      INSERT INTO lancamentos_financeiros (
+        empresa_id,
+        numero_documento,
+        tipo,
+        origem,
+        origem_id,
+        fornecedor,
+        data_emissao,
+        data_vencimento,
+        valor_bruto,
+        valor_liquido,
+        forma_pagamento,
+        status,
+        conciliado,
+        observacoes
+      ) VALUES (
+        v_compra.empresa_id,
+        COALESCE('NF-' || v_compra.nota_fiscal, 'COMP-' || v_compra.id::text),
+        'Despesa',
+        'Compra',
+        v_compra.id,
+        v_compra.fornecedor,
+        COALESCE(v_compra.data, CURRENT_DATE),
+        COALESCE(v_compra.data, CURRENT_DATE),
+        v_compra.valor_pago,
+        v_compra.valor_pago,
+        'PIX',
+        'Aberto',
+        false,
+        'Despesa retroativa importada automaticamente de Compras'
+      );
+    END IF;
+  END LOOP;
+END $$;

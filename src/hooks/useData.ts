@@ -1826,6 +1826,95 @@ export const useData = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros', activeTenant] }),
   });
 
+  const useSyncFinancialEntries = () => useMutation({
+    mutationFn: async () => {
+      let syncedSales = 0;
+      let syncedPurchases = 0;
+
+      const cachedVendas = getLocalCache<Sale>('vendas');
+      const cachedCompras = getLocalCache<Purchase>('compras');
+      const cachedEntries = getLocalCache<FinancialEntry>('lancamentos_financeiros');
+
+      const newEntries: FinancialEntry[] = [];
+
+      // Sincronizar Vendas -> Títulos a Receber
+      for (const venda of cachedVendas) {
+        const exists = cachedEntries.some(e => e.origemId === venda.id && e.origem === 'Venda');
+        if (!exists) {
+          const docNum = venda.numero ? `VENDA-#${venda.numero}` : `VENDA-${venda.id.slice(0, 6)}`;
+          const entry: FinancialEntry = {
+            id: crypto.randomUUID(),
+            numeroDocumento: docNum,
+            tipo: 'Receita',
+            origem: 'Venda',
+            origemId: venda.id,
+            clienteId: venda.clienteId,
+            dataEmissao: venda.data || new Date().toISOString().split('T')[0],
+            dataVencimento: venda.data || new Date().toISOString().split('T')[0],
+            valorBruto: venda.valorTotal,
+            desconto: 0,
+            acrescimo: 0,
+            valorLiquido: venda.valorTotal,
+            formaPagamento: venda.formaPagamento || 'PIX',
+            status: 'Aberto',
+            conciliado: false,
+            observacoes: `Faturamento retroativo sincronizado da Venda #${venda.numero || ''}`
+          };
+
+          try {
+            const payload = mapFinancialEntryToDB(entry, activeTenant);
+            await supabase.from('lancamentos_financeiros').insert([payload]);
+          } catch (e) {}
+
+          newEntries.push(entry);
+          syncedSales++;
+        }
+      }
+
+      // Sincronizar Compras -> Títulos a Pagar
+      for (const compra of cachedCompras) {
+        const exists = cachedEntries.some(e => e.origemId === compra.id && e.origem === 'Compra');
+        if (!exists) {
+          const docNum = compra.notaFiscal ? `NF-${compra.notaFiscal}` : `COMP-${compra.data.replace(/-/g, '')}`;
+          const entry: FinancialEntry = {
+            id: crypto.randomUUID(),
+            numeroDocumento: docNum,
+            tipo: 'Despesa',
+            origem: 'Compra',
+            origemId: compra.id,
+            fornecedor: compra.fornecedor,
+            dataEmissao: compra.data || new Date().toISOString().split('T')[0],
+            dataVencimento: compra.data || new Date().toISOString().split('T')[0],
+            valorBruto: compra.valorPago,
+            desconto: 0,
+            acrescimo: 0,
+            valorLiquido: compra.valorPago,
+            formaPagamento: 'PIX',
+            status: 'Aberto',
+            conciliado: false,
+            observacoes: `Despesa retroativa sincronizada da Compra: ${compra.descricaoItem || 'Insumo'}`
+          };
+
+          try {
+            const payload = mapFinancialEntryToDB(entry, activeTenant);
+            await supabase.from('lancamentos_financeiros').insert([payload]);
+          } catch (e) {}
+
+          newEntries.push(entry);
+          syncedPurchases++;
+        }
+      }
+
+      if (newEntries.length > 0) {
+        const allUpdated = [...cachedEntries, ...newEntries];
+        setLocalCache('lancamentos_financeiros', allUpdated);
+      }
+
+      return { syncedSales, syncedPurchases, total: syncedSales + syncedPurchases };
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros', activeTenant] }),
+  });
+
   // --- 5. MOVIMENTAÇÕES FINANCEIRAS (EXTRATO) ---
   const useMovimentacoesFinanceiras = (contaId?: string) => useQuery({
     queryKey: ['movimentacoes_financeiras', activeTenant, contaId],
@@ -2083,7 +2172,7 @@ export const useData = () => {
     useContasFinanceiras, useAddContaFinanceira, useUpdateContaFinanceira, useDeleteContaFinanceira,
     useCategoriasFinanceiras, useAddCategoriaFinanceira, useUpdateCategoriaFinanceira, useDeleteCategoriaFinanceira,
     useCentrosCusto, useAddCentroCusto, useUpdateCentroCusto, useDeleteCentroCusto,
-    useLancamentosFinanceiros, useAddLancamentoFinanceiro, useUpdateLancamentoFinanceiro, useLiquidateLancamento, useConciliateLancamento, useDeleteLancamentoFinanceiro,
+    useLancamentosFinanceiros, useAddLancamentoFinanceiro, useUpdateLancamentoFinanceiro, useLiquidateLancamento, useConciliateLancamento, useDeleteLancamentoFinanceiro, useSyncFinancialEntries,
     useMovimentacoesFinanceiras, useTransferenciasFinanceiras, useAddTransferenciaFinanceira,
     useAuditoriaFinanceira, useAddAuditLog
   };

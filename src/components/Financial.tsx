@@ -22,7 +22,7 @@ export default function Financial() {
     useContasFinanceiras, useAddContaFinanceira, useUpdateContaFinanceira, useDeleteContaFinanceira,
     useCategoriasFinanceiras, useAddCategoriaFinanceira, useUpdateCategoriaFinanceira, useDeleteCategoriaFinanceira,
     useCentrosCusto, useAddCentroCusto, useUpdateCentroCusto, useDeleteCentroCusto,
-    useLancamentosFinanceiros, useAddLancamentoFinanceiro, useUpdateLancamentoFinanceiro, useLiquidateLancamento, useConciliateLancamento, useDeleteLancamentoFinanceiro,
+    useLancamentosFinanceiros, useAddLancamentoFinanceiro, useUpdateLancamentoFinanceiro, useLiquidateLancamento, useConciliateLancamento, useDeleteLancamentoFinanceiro, useSyncFinancialEntries,
     useMovimentacoesFinanceiras, useTransferenciasFinanceiras, useAddTransferenciaFinanceira,
     useAuditoriaFinanceira, useAddAuditLog,
     useClientes
@@ -52,8 +52,24 @@ export default function Financial() {
   const liquidateMutation = useLiquidateLancamento();
   const conciliateMutation = useConciliateLancamento();
   const deleteEntryMutation = useDeleteLancamentoFinanceiro();
+  const syncMutation = useSyncFinancialEntries();
   const addTransferMutation = useAddTransferenciaFinanceira();
   const addAuditMutation = useAddAuditLog();
+
+  const handleSyncFinancial = () => {
+    syncMutation.mutate(undefined, {
+      onSuccess: (res) => {
+        if (res && res.total > 0) {
+          showToast(`Sincronização concluída! ${res.syncedSales} faturamento(s) de vendas e ${res.syncedPurchases} compra(s) alimentaram o Financeiro.`, 'success');
+        } else {
+          showToast('Todos os faturamentos de vendas e compras já estão alimentados no Financeiro!', 'info');
+        }
+      },
+      onError: () => {
+        showToast('Erro ao sincronizar faturamentos com o financeiro.', 'error');
+      }
+    });
+  };
 
   const { toast, showToast, hideToast } = useToast();
 
@@ -631,6 +647,15 @@ export default function Financial() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleSyncFinancial}
+            className="py-2.5 px-3 bg-emerald-950/80 border border-emerald-500/30 hover:bg-emerald-900 text-emerald-300 font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer text-xs transition-colors"
+            title="Sincronizar faturamentos de vendas e compras retroativas para o financeiro"
+          >
+            <RefreshCw size={15} className={syncMutation.isPending ? 'animate-spin' : ''} />
+            Sincronizar Faturamentos
+          </button>
+
           <button
             onClick={handleOpenEntryModal}
             className="py-2.5 px-4 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl shadow-md shadow-orange-600/10 flex items-center gap-2 cursor-pointer text-xs"
