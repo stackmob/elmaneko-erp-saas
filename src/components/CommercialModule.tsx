@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  DollarSign, FileCheck, Users, BarChart3, TrendingUp, Sparkles, Plus, Clock, CheckCircle
+  DollarSign, FileCheck, Users, BarChart3, TrendingUp, Sparkles, Clock
 } from 'lucide-react';
 import Budgets from './Budgets';
 import Sales from './Sales';
@@ -49,61 +49,6 @@ export default function CommercialModule() {
         </div>
       </div>
 
-      {/* TOTALIZADORES DO MÓDULO COMERCIAL */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="commercial-kpis">
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
-          <div>
-            <span className="text-[11px] font-mono text-neutral-400 uppercase block">Total de Propostas</span>
-            <strong className="text-2xl font-black font-mono text-white mt-1 block">
-              {totalOrcamentos}
-            </strong>
-            <span className="text-[10px] text-neutral-500 mt-0.5 block">{orcamentosAprovados} aprovadas ({taxaConversao}%)</span>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-orange-950/50 border border-orange-500/30 flex items-center justify-center text-orange-400">
-            <FileCheck size={22} />
-          </div>
-        </div>
-
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
-          <div>
-            <span className="text-[11px] font-mono text-neutral-400 uppercase block">Provisão em Aberto</span>
-            <strong className="text-xl font-black font-mono text-amber-400 mt-1 block">
-              {formatCurrency(valorPendenteAprovacao)}
-            </strong>
-            <span className="text-[10px] text-neutral-500 mt-0.5 block">Aguardando aprovação</span>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-950/50 border border-amber-500/30 flex items-center justify-center text-amber-400">
-            <Clock size={22} />
-          </div>
-        </div>
-
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
-          <div>
-            <span className="text-[11px] font-mono text-neutral-400 uppercase block">Faturamento Realizado</span>
-            <strong className="text-xl font-black font-mono text-emerald-400 mt-1 block">
-              {formatCurrency(faturamentoTotal)}
-            </strong>
-            <span className="text-[10px] text-neutral-500 mt-0.5 block">Vendas consolidadas</span>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-950/50 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-            <DollarSign size={22} />
-          </div>
-        </div>
-
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
-          <div>
-            <span className="text-[11px] font-mono text-neutral-400 uppercase block">Ticket Médio por Venda</span>
-            <strong className="text-xl font-black font-mono text-cyan-400 mt-1 block">
-              {formatCurrency(ticketMedio)}
-            </strong>
-            <span className="text-[10px] text-neutral-500 mt-0.5 block">Média por pedido faturado</span>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-cyan-950/50 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-            <TrendingUp size={22} />
-          </div>
-        </div>
-      </div>
-
       {/* NAVIGATION TABS */}
       <div className="flex overflow-x-auto gap-2 border-b border-neutral-800 pb-2 scrollbar-none" id="commercial-tabs">
         {[
@@ -130,36 +75,37 @@ export default function CommercialModule() {
       {activeTab === 'dashboard' && (
         <div className="space-y-6 animate-fade-in" id="commercial-tab-dashboard">
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between">
+          {/* TOTALIZADORES DO MÓDULO (EXCLUSIVOS DA ABA DASHBOARD) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="commercial-kpis">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
               <div>
                 <span className="text-[11px] font-mono text-neutral-400 uppercase block">Total de Propostas</span>
                 <strong className="text-2xl font-black font-mono text-white mt-1 block">
                   {totalOrcamentos}
                 </strong>
-                <span className="text-[10px] text-neutral-500 mt-0.5 block">Orçamentos gerados</span>
+                <span className="text-[10px] text-neutral-500 mt-0.5 block">{orcamentosAprovados} aprovadas ({taxaConversao}%)</span>
               </div>
               <div className="w-12 h-12 rounded-xl bg-orange-950/50 border border-orange-500/30 flex items-center justify-center text-orange-400">
                 <FileCheck size={22} />
               </div>
             </div>
 
-            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
               <div>
-                <span className="text-[11px] font-mono text-neutral-400 uppercase block">Taxa de Conversão</span>
-                <strong className="text-2xl font-black font-mono text-emerald-400 mt-1 block">
-                  {taxaConversao}%
+                <span className="text-[11px] font-mono text-neutral-400 uppercase block">Provisão em Aberto</span>
+                <strong className="text-xl font-black font-mono text-amber-400 mt-1 block">
+                  {formatCurrency(valorPendenteAprovacao)}
                 </strong>
-                <span className="text-[10px] text-neutral-500 mt-0.5 block">{orcamentosAprovados} propostas aprovadas</span>
+                <span className="text-[10px] text-neutral-500 mt-0.5 block">Aguardando aprovação</span>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-emerald-950/50 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                <TrendingUp size={22} />
+              <div className="w-12 h-12 rounded-xl bg-amber-950/50 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <Clock size={22} />
               </div>
             </div>
 
-            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
               <div>
-                <span className="text-[11px] font-mono text-neutral-400 uppercase block">Faturamento Bruto</span>
+                <span className="text-[11px] font-mono text-neutral-400 uppercase block">Faturamento Realizado</span>
                 <strong className="text-xl font-black font-mono text-emerald-400 mt-1 block">
                   {formatCurrency(faturamentoTotal)}
                 </strong>
@@ -170,16 +116,16 @@ export default function CommercialModule() {
               </div>
             </div>
 
-            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
               <div>
-                <span className="text-[11px] font-mono text-neutral-400 uppercase block">Provisão em Aberto</span>
-                <strong className="text-xl font-black font-mono text-amber-400 mt-1 block">
-                  {formatCurrency(valorPendenteAprovacao)}
+                <span className="text-[11px] font-mono text-neutral-400 uppercase block">Ticket Médio por Venda</span>
+                <strong className="text-xl font-black font-mono text-cyan-400 mt-1 block">
+                  {formatCurrency(ticketMedio)}
                 </strong>
-                <span className="text-[10px] text-neutral-500 mt-0.5 block">Aguardando aprovação</span>
+                <span className="text-[10px] text-neutral-500 mt-0.5 block">Média por pedido faturado</span>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-amber-950/50 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                <Clock size={22} />
+              <div className="w-12 h-12 rounded-xl bg-cyan-950/50 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                <TrendingUp size={22} />
               </div>
             </div>
           </div>
