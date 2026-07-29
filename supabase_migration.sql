@@ -516,7 +516,7 @@ BEGIN
         observacoes
       ) VALUES (
         v_venda.empresa_id,
-        COALESCE('VENDA-#' || v_venda.numero, 'VENDA-' || SUBSTRING(v_venda.id::text FROM 1 FOR 8)),
+        'VENDA-' || SUBSTRING(v_venda.id::text FROM 1 FOR 8),
         'Receita',
         'Venda',
         v_venda.id,
@@ -556,7 +556,7 @@ BEGIN
         observacoes
       ) VALUES (
         v_compra.empresa_id,
-        COALESCE('NF-' || v_compra.nota_fiscal, 'COMP-' || v_compra.id::text),
+        CASE WHEN v_compra.nota_fiscal IS NOT NULL AND v_compra.nota_fiscal <> '' THEN 'NF-' || v_compra.nota_fiscal ELSE 'COMP-' || SUBSTRING(v_compra.id::text FROM 1 FOR 8) END,
         'Despesa',
         'Compra',
         v_compra.id,
