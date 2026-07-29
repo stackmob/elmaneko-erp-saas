@@ -293,126 +293,142 @@ export default function Supplies() {
 
       {/* MODAL FORM */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="supply-form-modal">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <Box size={20} className="text-orange-500" />
-              {editingItem ? 'Editar Insumo / Material' : 'Cadastrar Insumo no Catálogo'}
-            </h3>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="supply-form-modal">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-lg max-h-[88vh] flex flex-col shadow-2xl overflow-hidden text-neutral-100 font-sans">
+            
+            {/* STICKY HEADER */}
+            <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
+              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <Box size={20} className="text-orange-500" />
+                {editingItem ? 'Editar Insumo / Material' : 'Cadastrar Insumo no Catálogo'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+                title="Fechar Modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
-              
-              <div>
-                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome do Insumo / Material *</label>
-                <input
-                  type="text"
-                  required
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  placeholder="Ex: Cola em Bastão Kores 40g / Parafuso M3x10 Inox"
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {/* SCROLLABLE FORM BODY */}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 font-mono text-xs flex-1">
                 
                 <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Categoria *</label>
-                  <select
-                    value={categoria}
-                    onChange={(e) => setCategoria(e.target.value as PurchaseCategory)}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
-                  >
-                    <option value="Cola / Adesivo">Cola / Adesivo de Mesa</option>
-                    <option value="Embalagem / Caixas">Embalagem / Caixas</option>
-                    <option value="Acessórios / Componentes">Acessórios / Componentes</option>
-                    <option value="Filamento">Filamento</option>
-                    <option value="Impressoras 3D">Impressora 3D</option>
-                    <option value="Peças de Manutenção / Peças de Impressoras">Peça de Impressora / Manutenção</option>
-                    <option value="Outros Insumos">Outros Insumos</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Unidade de Medida *</label>
-                  <select
-                    value={unidadeMedida}
-                    onChange={(e) => setUnidadeMedida(e.target.value as SupplyUnit)}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
-                  >
-                    <option value="un">Unidade (un)</option>
-                    <option value="caixa">Caixa</option>
-                    <option value="pacote">Pacote</option>
-                    <option value="rolo">Rolo</option>
-                    <option value="g">Gramas (g)</option>
-                    <option value="Kg">Quilos (Kg)</option>
-                    <option value="metro">Metro (m)</option>
-                    <option value="litro">Litro (l)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Estoque Atual Inicial *</label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={quantidadeEstoque}
-                    onChange={(e) => setQuantidadeEstoque(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Estoque Mínimo (Alerta) *</label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={estoqueMinimo}
-                    onChange={(e) => setEstoqueMinimo(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Custo Unitário Estimado (R$)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={custoUnitarioPadrao}
-                    onChange={(e) => setCustoUnitarioPadrao(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Fornecedor Padrão (Opcional)</label>
+                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome do Insumo / Material *</label>
                   <input
                     type="text"
-                    value={fornecedorPadrao}
-                    onChange={(e) => setFornecedorPadrao(e.target.value)}
-                    placeholder="Ex: Mercado Livre / 3D Fila"
+                    required
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Ex: Cola em Bastão Kores 40g / Parafuso M3x10 Inox"
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Categoria *</label>
+                    <select
+                      value={categoria}
+                      onChange={(e) => setCategoria(e.target.value as PurchaseCategory)}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+                    >
+                      <option value="Cola / Adesivo">Cola / Adesivo de Mesa</option>
+                      <option value="Embalagem / Caixas">Embalagem / Caixas</option>
+                      <option value="Acessórios / Componentes">Acessórios / Componentes</option>
+                      <option value="Filamento">Filamento</option>
+                      <option value="Impressoras 3D">Impressora 3D</option>
+                      <option value="Peças de Manutenção / Peças de Impressoras">Peça de Impressora / Manutenção</option>
+                      <option value="Outros Insumos">Outros Insumos</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Unidade de Medida *</label>
+                    <select
+                      value={unidadeMedida}
+                      onChange={(e) => setUnidadeMedida(e.target.value as SupplyUnit)}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+                    >
+                      <option value="un">Unidade (un)</option>
+                      <option value="caixa">Caixa</option>
+                      <option value="pacote">Pacote</option>
+                      <option value="rolo">Rolo</option>
+                      <option value="g">Gramas (g)</option>
+                      <option value="Kg">Quilos (Kg)</option>
+                      <option value="metro">Metro (m)</option>
+                      <option value="litro">Litro (l)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Estoque Atual Inicial *</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={quantidadeEstoque}
+                      onChange={(e) => setQuantidadeEstoque(Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Estoque Mínimo (Alerta) *</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={estoqueMinimo}
+                      onChange={(e) => setEstoqueMinimo(Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Custo Unitário Estimado (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={custoUnitarioPadrao}
+                      onChange={(e) => setCustoUnitarioPadrao(Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Fornecedor Principal</label>
+                    <input
+                      type="text"
+                      value={fornecedorPadrao}
+                      onChange={(e) => setFornecedorPadrao(e.target.value)}
+                      placeholder="Ex: Kalunga / Mercado Livre"
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                </div>
+
+                <div>
+                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações / Especificações</label>
+                  <textarea
+                    value={observacoes}
+                    onChange={(e) => setObservacoes(e.target.value)}
+                    rows={2}
+                    placeholder="Especificações técnicas, compatibilidade ou marca..."
+                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
                   />
                 </div>
 
               </div>
 
-              <div>
-                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações / Especificações</label>
-                <textarea
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  rows={2}
-                  placeholder="Especificações técnicas, compatibilidade ou marca..."
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
-                />
-              </div>
-
-              {/* ACTION BUTTONS */}
-              <div className="flex justify-end gap-3 mt-6">
+              {/* STICKY ACTIONS FOOTER */}
+              <div className="p-4 border-t border-neutral-800 bg-neutral-950/80 flex justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}

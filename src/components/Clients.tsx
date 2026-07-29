@@ -232,110 +232,125 @@ export default function Clients() {
 
       {/* ── FORM MODAL ── */}
       {isModalOpen && (
-        <div
-          className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in"
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" 
           id="client-form-modal"
-          aria-modal="true"
-          role="dialog"
-          aria-label={editingClient ? 'Editar Cliente' : 'Novo Cliente'}
         >
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-white mb-5 flex items-center gap-2">
-              <User size={20} className="text-orange-500" />
-              {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
-            </h3>
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md max-h-[88vh] flex flex-col shadow-2xl overflow-hidden text-neutral-100 font-sans">
+            
+            {/* STICKY HEADER */}
+            <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
+              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <User size={20} className="text-orange-500" />
+                {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+                title="Fechar Modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 text-xs" noValidate>
-              {formError && (
-                <div role="alert" className="p-3 bg-red-950/50 border border-red-800/60 text-red-300 rounded-lg">
-                  {formError}
-                </div>
-              )}
+            {/* SCROLLABLE FORM BODY */}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden" noValidate>
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 font-mono text-xs flex-1">
+                {formError && (
+                  <div role="alert" className="p-3 bg-red-950/50 border border-red-800/60 text-red-300 rounded-lg">
+                    {formError}
+                  </div>
+                )}
 
-              <div>
-                <label htmlFor="client-nome" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
-                  Nome Completo / Razão Social <span className="text-orange-500">*</span>
-                </label>
-                <input
-                  id="client-nome"
-                  type="text"
-                  required
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="client-cpf" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
-                  CPF ou CNPJ <span className="text-neutral-600 normal-case font-normal">(opcional)</span>
-                </label>
-                <input
-                  id="client-cpf"
-                  type="text"
-                  value={cpfCnpj}
-                  onChange={(e) => setCpfCnpj(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label htmlFor="client-whatsapp" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
-                    WhatsApp <span className="text-orange-500">*</span>
+                  <label htmlFor="client-nome" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                    Nome Completo / Razão Social <span className="text-orange-500">*</span>
                   </label>
                   <input
-                    id="client-whatsapp"
-                    type="tel"
+                    id="client-nome"
+                    type="text"
                     required
-                    value={whatsapp}
-                    onChange={(e) => setWhatsapp(e.target.value)}
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors"
                   />
                 </div>
+
                 <div>
-                  <label htmlFor="client-email" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
-                    E-mail <span className="text-neutral-600 normal-case font-normal">(opcional)</span>
+                  <label htmlFor="client-cpf" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                    CPF ou CNPJ <span className="text-neutral-600 normal-case font-normal">(opcional)</span>
                   </label>
                   <input
-                    id="client-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="client-cpf"
+                    type="text"
+                    value={cpfCnpj}
+                    onChange={(e) => setCpfCnpj(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors"
                   />
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div>
+                    <label htmlFor="client-whatsapp" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                      WhatsApp <span className="text-orange-500">*</span>
+                    </label>
+                    <input
+                      id="client-whatsapp"
+                      type="tel"
+                      required
+                      value={whatsapp}
+                      onChange={(e) => setWhatsapp(e.target.value)}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="client-email" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                      E-mail <span className="text-neutral-600 normal-case font-normal">(opcional)</span>
+                    </label>
+                    <input
+                      id="client-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="client-endereco" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                    Endereço de Entrega <span className="text-neutral-600 normal-case font-normal">(opcional)</span>
+                  </label>
+                  <textarea
+                    id="client-endereco"
+                    value={endereco}
+                    onChange={(e) => setEndereco(e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors resize-none"
+                  />
+                </div>
+
               </div>
 
-              <div>
-                <label htmlFor="client-endereco" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
-                  Endereço de Entrega <span className="text-neutral-600 normal-case font-normal">(opcional)</span>
-                </label>
-                <textarea
-                  id="client-endereco"
-                  value={endereco}
-                  onChange={(e) => setEndereco(e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors resize-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
+              {/* STICKY ACTIONS FOOTER */}
+              <div className="p-4 border-t border-neutral-800 bg-neutral-950/80 flex justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-neutral-700 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer transition-colors"
+                  className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={addMutation.isPending || editMutation.isPending}
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer disabled:opacity-60 transition-colors"
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer disabled:opacity-60 transition-colors shadow-md shadow-orange-600/20"
                 >
                   {addMutation.isPending || editMutation.isPending ? 'Salvando...' : 'Gravar Cadastro'}
                 </button>
               </div>
+
             </form>
           </div>
         </div>

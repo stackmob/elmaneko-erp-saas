@@ -6,7 +6,7 @@ interface ModalProps {
   onClose: () => void;
   title: string | React.ReactNode;
   children: React.ReactNode;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -34,16 +34,20 @@ export const Modal: React.FC<ModalProps> = ({
     lg: 'max-w-lg',
     xl: 'max-w-xl',
     '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
   };
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
-      <div className={`bg-neutral-900 border border-neutral-800 rounded-2xl w-full ${maxWidthClasses[maxWidth]} p-5 sm:p-6 shadow-2xl space-y-4 relative text-neutral-100 font-sans`}>
-        <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-          <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+      <div className={`bg-neutral-900 border border-neutral-800 rounded-2xl w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-auto text-neutral-100 font-sans`}>
+        {/* STICKY MODAL HEADER */}
+        <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
+          <h3 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
             {title}
           </h3>
           <button
+            type="button"
             onClick={onClose}
             className="p-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
             title="Fechar (Esc)"
@@ -51,7 +55,9 @@ export const Modal: React.FC<ModalProps> = ({
             <X size={18} />
           </button>
         </div>
-        <div>
+
+        {/* SCROLLABLE MODAL BODY */}
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 font-mono text-xs space-y-4">
           {children}
         </div>
       </div>

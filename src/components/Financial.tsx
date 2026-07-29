@@ -1479,125 +1479,190 @@ export default function Financial() {
 
       {/* MODAL: NOVO LANÇAMENTO MANUAL (AVULSO) */}
       {isEntryModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-xl p-5 shadow-2xl">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <Plus size={20} className="text-orange-500" />
-              Novo Lançamento Financeiro Manual
-            </h3>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden text-neutral-100 font-sans">
+            
+            {/* STICKY HEADER */}
+            <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
+              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <Plus size={20} className="text-orange-500" />
+                Novo Lançamento Financeiro Manual
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsEntryModalOpen(false)}
+                className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+                title="Fechar Modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-            <form onSubmit={handleSaveEntry} className="space-y-4 font-mono text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase font-semibold">Tipo *</label>
-                  <select
-                    value={entryTipo}
-                    onChange={(e) => setEntryTipo(e.target.value as any)}
-                    className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white font-bold"
-                  >
-                    <option value="Receita">Receita (+ Entrar)</option>
-                    <option value="Despesa">Despesa (- Sair)</option>
-                  </select>
+            {/* SCROLLABLE FORM BODY */}
+            <form onSubmit={handleSaveEntry} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 font-mono text-xs flex-1">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Tipo *</label>
+                    <select
+                      value={entryTipo}
+                      onChange={(e) => setEntryTipo(e.target.value as any)}
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white font-bold"
+                    >
+                      <option value="Receita">Receita (+ Entrar)</option>
+                      <option value="Despesa">Despesa (- Sair)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Nº Documento *</label>
+                    <input
+                      type="text"
+                      required
+                      value={entryNumeroDoc}
+                      onChange={(e) => setEntryNumeroDoc(e.target.value)}
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white font-bold"
+                    />
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-neutral-400 mb-1 uppercase font-semibold">Nº Documento *</label>
+                  <label className="block text-neutral-400 mb-1 uppercase font-semibold">Fornecedor / Pagador / Descrição *</label>
                   <input
                     type="text"
                     required
-                    value={entryDoc}
-                    onChange={(e) => setEntryDoc(e.target.value)}
-                    className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase font-semibold">Cliente (se Receita)</label>
-                  <select
-                    value={entryClienteId}
-                    onChange={(e) => setEntryClienteId(e.target.value)}
-                    className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
-                  >
-                    <option value="">Nenhum / Selecionar...</option>
-                    {clients.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase font-semibold">Fornecedor (se Despesa)</label>
-                  <input
-                    type="text"
                     value={entryFornecedor}
                     onChange={(e) => setEntryFornecedor(e.target.value)}
-                    placeholder="Ex: Companhia de Energia / 3D Fila"
+                    placeholder="Ex: Compra de Bobinas / Pagamento Cliente X"
                     className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
                   />
                 </div>
 
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Data Emissão *</label>
+                    <input
+                      type="date"
+                      required
+                      value={entryDataEmissao}
+                      onChange={(e) => setEntryDataEmissao(e.target.value)}
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Data Vencimento *</label>
+                    <input
+                      type="date"
+                      required
+                      value={entryDataVencimento}
+                      onChange={(e) => setEntryDataVencimento(e.target.value)}
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Valor Bruto R$ *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={entryValorBruto}
+                      onChange={(e) => setEntryValorBruto(Number(e.target.value))}
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Desconto R$</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={entryDesconto}
+                      onChange={(e) => setEntryDesconto(Number(e.target.value))}
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Acréscimo R$</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={entryAcrescimo}
+                      onChange={(e) => setEntryAcrescimo(Number(e.target.value))}
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Forma de Pagamento *</label>
+                    <select
+                      value={entryFormaPagamento}
+                      onChange={(e) => setEntryFormaPagamento(e.target.value)}
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
+                    >
+                      <option value="PIX">PIX</option>
+                      <option value="Boleto">Boleto Bancário</option>
+                      <option value="Cartao Credito">Cartão de Crédito</option>
+                      <option value="Dinheiro">Dinheiro Físico</option>
+                      <option value="Transferencia">Transferência TED/DOC</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Conta Financeira *</label>
+                    <select
+                      value={entryContaId}
+                      onChange={(e) => setEntryContaId(e.target.value)}
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
+                    >
+                      <option value="">Nenhuma (Pendência)</option>
+                      {accounts.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Categoria (Plano de Contas)</label>
+                    <select
+                      value={entryCategoriaId}
+                      onChange={(e) => setEntryCategoriaId(e.target.value)}
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
+                    >
+                      <option value="">Sem categoria</option>
+                      {categories.map(c => <option key={c.id} value={c.id}>{c.nome} ({c.tipo})</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase font-semibold">Centro de Custo</label>
+                    <select
+                      value={entryCentroCustoId}
+                      onChange={(e) => setEntryCentroCustoId(e.target.value)}
+                      className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
+                    >
+                      <option value="">Sem centro de custo</option>
+                      {costCenters.map(cc => <option key={cc.id} value={cc.id}>{cc.codigo} - {cc.nome}</option>)}
+                    </select>
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-neutral-400 mb-1 uppercase font-semibold">Data Vencimento *</label>
-                  <input
-                    type="date"
-                    required
-                    value={entryDataVencimento}
-                    onChange={(e) => setEntryDataVencimento(e.target.value)}
-                    className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
+                  <label className="block text-neutral-400 mb-1 uppercase font-semibold">Observações</label>
+                  <textarea
+                    value={entryObservacoes}
+                    onChange={(e) => setEntryObservacoes(e.target.value)}
+                    rows={2}
+                    className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white resize-none"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase font-semibold">Valor Bruto R$ *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={entryValorBruto}
-                    onChange={(e) => setEntryValorBruto(Number(e.target.value))}
-                    className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-orange-400 font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase font-semibold">Parcelamento (1x a 24x)</label>
-                  <select
-                    value={entryTotalParcelas}
-                    onChange={(e) => setEntryTotalParcelas(Number(e.target.value))}
-                    className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white font-bold"
-                  >
-                    {Array.from({ length: 24 }, (_, i) => i + 1).map(n => (
-                      <option key={n} value={n}>{n}x {n > 1 ? 'parcelas' : 'à vista'}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase font-semibold">Forma de Pagamento</label>
-                  <select
-                    value={entryFormaPagamento}
-                    onChange={(e) => setEntryFormaPagamento(e.target.value)}
-                    className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white"
-                  >
-                    <option value="PIX">PIX</option>
-                    <option value="Cartão de Crédito">Cartão de Crédito</option>
-                    <option value="Cartão de Débito">Cartão de Débito</option>
-                    <option value="Boleto">Boleto</option>
-                    <option value="Dinheiro">Dinheiro</option>
-                    <option value="TED / DOC">TED / DOC</option>
-                  </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-neutral-400 mb-1 uppercase font-semibold">Observações</label>
-                <textarea
-                  value={entryObservacoes}
-                  onChange={(e) => setEntryObservacoes(e.target.value)}
-                  rows={2}
-                  className="w-full p-2 bg-neutral-950 border border-neutral-800 rounded text-white resize-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
+              {/* STICKY ACTIONS FOOTER */}
+              <div className="p-4 border-t border-neutral-800 bg-neutral-950/80 flex justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsEntryModalOpen(false)}
@@ -1607,7 +1672,7 @@ export default function Financial() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl"
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl shadow-md shadow-orange-600/20"
                 >
                   Salvar Lançamento
                 </button>

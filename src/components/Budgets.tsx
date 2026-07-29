@@ -660,198 +660,225 @@ export default function Budgets() {
 
       {/* --- FORM MODAL (NEW / EDIT BUDGET) --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="budget-form-modal">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-2xl p-5 sm:p-6 shadow-2xl relative my-auto max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <FileText className="text-orange-500" />
-              {editingBudget ? `Editar Orçamento ${editingBudget.numero}` : 'Gerar Orçamento Comercial'}
-            </h3>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="budget-form-modal">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-2xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden text-neutral-100 font-sans">
+            
+            {/* STICKY HEADER */}
+            <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
+              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <FileText className="text-orange-500" />
+                {editingBudget ? `Editar Orçamento ${editingBudget.numero}` : 'Gerar Orçamento Comercial'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+                title="Fechar Modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs text-left">
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {/* SCROLLABLE FORM BODY */}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden font-mono text-xs text-left">
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
                 
-                {/* Cliente */}
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Cliente *</label>
-                  <select
-                    value={clienteId}
-                    onChange={(e) => setClienteId(e.target.value)}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
-                  >
-                    {clients.map(c => (
-                      <option key={c.id} value={c.id}>{c.nome} ({c.cpfCnpj})</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Status */}
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Situação da Proposta *</label>
-                  {editingBudget && isBudgetInvoiced(editingBudget) ? (
-                    <div className="px-3 py-2 bg-purple-950/40 border border-purple-800/60 text-purple-300 rounded-lg text-xs font-mono font-bold flex items-center gap-2">
-                      <Check size={14} className="text-purple-400" /> Faturado (Bloqueado para refaturamento)
-                    </div>
-                  ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  
+                  {/* Cliente */}
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Cliente *</label>
                     <select
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value as Budget['status'])}
+                      value={clienteId}
+                      onChange={(e) => setClienteId(e.target.value)}
                       className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
                     >
-                      <option value="Aberto">Aberto</option>
-                      <option value="Enviado">Enviado (Aguardando cliente)</option>
-                      <option value="Aprovado">Aprovado pelo Cliente</option>
-                      <option value="Faturado">Faturado (Venda Realizada)</option>
-                      <option value="Rejeitado">Rejeitado</option>
-                      <option value="Expirado">Expirado</option>
+                      {clients.map(c => (
+                        <option key={c.id} value={c.id}>{c.nome} ({c.cpfCnpj})</option>
+                      ))}
                     </select>
-                  )}
-                </div>
-
-                {/* Datas */}
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Data Emissão *</label>
-                  <input
-                    type="date"
-                    required
-                    value={dataEmissao}
-                    onChange={(e) => setDataEmissao(e.target.value)}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Validade da Proposta *</label>
-                  <input
-                    type="date"
-                    required
-                    value={validade}
-                    onChange={(e) => setValidade(e.target.value)}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Previsão de Entrega</label>
-                  <input
-                    type="date"
-                    value={previsaoEntrega}
-                    onChange={(e) => setPrevisaoEntrega(e.target.value)}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                  />
-                </div>
-
-              </div>
-
-              {/* DYNAMIC ITEM LINE ROWS */}
-              <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-4">
-                <div className="flex justify-between items-center border-b border-neutral-900 pb-2">
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Itens e Quantidades do Orçamento</h4>
-                  <button
-                    type="button"
-                    onClick={handleAddItemRow}
-                    className="text-[10px] bg-orange-600 hover:bg-orange-500 text-white px-2.5 py-1 rounded font-bold cursor-pointer"
-                  >
-                    + Adicionar Item
-                  </button>
-                </div>
-
-                {itens.map((item, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end bg-neutral-900 p-3 rounded-lg border border-neutral-850">
-                    
-                    {/* Produto select */}
-                    <div className="col-span-1 md:col-span-2">
-                      <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Produto Acabado *</label>
-                      <select
-                        value={item.produtoId}
-                        onChange={(e) => handleProductSelectionChange(index, e.target.value)}
-                        className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none"
-                      >
-                        <option value="">Selecione o produto...</option>
-                        {products.map(p => (
-                          <option key={p.id} value={p.id}>{p.nome}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Quantidade */}
-                    <div>
-                      <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Qtd *</label>
-                      <input
-                        type="number"
-                        required
-                        min={1}
-                        value={item.quantidade}
-                        onChange={(e) => handleItemChange(index, 'quantidade', e.target.value)}
-                        className="w-full px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none"
-                      />
-                    </div>
-
-                    {/* Preco Unitario */}
-                    <div className="flex gap-2 items-center">
-                      <div className="flex-1">
-                        <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Preço Unit. R$ *</label>
-                        <input
-                          type="number"
-                          required
-                          step="0.01"
-                          min="0"
-                          value={item.valorUnitario}
-                          onChange={(e) => handleItemChange(index, 'valorUnitario', e.target.value)}
-                          className="w-full px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none"
-                        />
-                      </div>
-                      {itens.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItemRow(index)}
-                          className="text-red-500 hover:text-red-400 p-1 bg-neutral-950 rounded border border-neutral-850 mt-4"
-                        >
-                          <X size={14} />
-                        </button>
-                      )}
-                    </div>
-
                   </div>
-                ))}
-              </div>
 
-              {/* OVERALL DISCOUNT AND TOTAL CARD */}
-              <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-3">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <Percent size={14} className="text-neutral-400" />
-                    <span className="text-neutral-400 text-xs font-mono uppercase tracking-wider">Desconto Geral R$:</span>
+                  {/* Status */}
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Situação da Proposta *</label>
+                    {editingBudget && isBudgetInvoiced(editingBudget) ? (
+                      <div className="px-3 py-2 bg-purple-950/40 border border-purple-800/60 text-purple-300 rounded-lg text-xs font-mono font-bold flex items-center gap-2">
+                        <Check size={14} className="text-purple-400" /> Faturado (Bloqueado para refaturamento)
+                      </div>
+                    ) : (
+                      <select
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value as Budget['status'])}
+                        className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+                      >
+                        <option value="Aberto">Aberto</option>
+                        <option value="Aprovado">Aprovado</option>
+                        <option value="Rejeitado">Rejeitado</option>
+                        <option value="Cancelado">Cancelado</option>
+                      </select>
+                    )}
+                  </div>
+
+                  {/* Emissão */}
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Data Emissão *</label>
+                    <input
+                      type="date"
+                      required
+                      value={dataEmissao}
+                      onChange={(e) => setDataEmissao(e.target.value)}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  {/* Validade */}
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Validade da Proposta *</label>
+                    <input
+                      type="date"
+                      required
+                      value={validade}
+                      onChange={(e) => setValidade(e.target.value)}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  {/* Previsão Entrega */}
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Previsão de Entrega</label>
+                    <input
+                      type="date"
+                      value={previsaoEntrega}
+                      onChange={(e) => setPrevisaoEntrega(e.target.value)}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  {/* Desconto Geral R$ */}
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Desconto Comercial (R$)</label>
                     <input
                       type="number"
+                      step="0.01"
                       min="0"
                       value={descontoGeral}
                       onChange={(e) => setDescontoGeral(Number(e.target.value))}
-                      className="w-20 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-white text-center font-mono font-semibold"
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold text-emerald-400"
                     />
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-neutral-500 block uppercase">VALOR TOTAL DE ORÇAMENTO</span>
-                    <strong className="text-orange-400 text-base">
-                      R$ {calculateTotal(itens, descontoGeral).toFixed(2)}
-                    </strong>
-                  </div>
                 </div>
+
+                {/* ITEMS SELECTOR BUILDER */}
+                <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-4">
+                  <div className="flex justify-between items-center border-b border-neutral-900 pb-2">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <FolderHeart size={14} className="text-orange-500" /> Itens / Peças Adicionadas à Cotação
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={handleAddItem}
+                      className="text-[10px] bg-orange-600 hover:bg-orange-500 text-white px-2.5 py-1 rounded font-bold cursor-pointer"
+                    >
+                      + Adicionar Peça
+                    </button>
+                  </div>
+
+                  {items.map((item, index) => {
+                    const selectedProd = products.find(p => p.id === item.produtoId);
+
+                    return (
+                      <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end bg-neutral-900 p-3 rounded-lg border border-neutral-850 relative">
+                        
+                        {/* Select Produto */}
+                        <div className="col-span-1 md:col-span-2">
+                          <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Peça do Catálogo *</label>
+                          <select
+                            value={item.produtoId}
+                            onChange={(e) => handleProductSelect(index, e.target.value)}
+                            className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none"
+                          >
+                            {products.map(p => (
+                              <option key={p.id} value={p.id}>{p.nome} ({p.categoria})</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Qtd */}
+                        <div>
+                          <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Quantidade *</label>
+                          <input
+                            type="number"
+                            required
+                            min={1}
+                            value={item.quantidade}
+                            onChange={(e) => handleItemChange(index, 'quantidade', e.target.value)}
+                            className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none font-bold"
+                          />
+                        </div>
+
+                        {/* Valor Unitário */}
+                        <div>
+                          <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Valor Unit. (R$) *</label>
+                          <input
+                            type="number"
+                            required
+                            step="0.01"
+                            min="0"
+                            value={item.valorUnitario}
+                            onChange={(e) => handleItemChange(index, 'valorUnitario', e.target.value)}
+                            className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none font-bold text-orange-400"
+                          />
+                        </div>
+
+                        {/* Subtotal Item */}
+                        <div className="flex gap-2 items-center justify-between">
+                          <div>
+                            <span className="block text-neutral-500 text-[9px] uppercase">Total Item</span>
+                            <span className="font-mono text-xs font-bold text-white">
+                              R$ {((item.quantidade * item.valorUnitario) - item.desconto).toFixed(2)}
+                            </span>
+                          </div>
+                          {items.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItem(index)}
+                              className="text-red-500 hover:text-red-400 p-1 bg-neutral-950 rounded border border-neutral-850 cursor-pointer"
+                              title="Remover Item"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* TOTAL SUMMARY CARD */}
+                <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl flex justify-between items-center">
+                  <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider font-semibold">Valor Total Líquido da Cotação:</span>
+                  <span className="text-xl font-black font-mono text-emerald-400">
+                    R$ {calculateTotal(items, descontoGeral).toFixed(2)}
+                  </span>
+                </div>
+
+                {/* OBSERVATIONS */}
+                <div>
+                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações / Termos de Pagamento</label>
+                  <textarea
+                    value={observacoes}
+                    onChange={(e) => setObservacoes(e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
+                  />
+                </div>
+
               </div>
 
-              {/* OBSERVATIONS */}
-              <div>
-                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações / Termos de Pagamento</label>
-                <textarea
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
-                />
-              </div>
-
-              {/* SUBMIT BUTTONS */}
-              <div className="flex justify-end gap-3 mt-6">
+              {/* STICKY ACTIONS FOOTER */}
+              <div className="p-4 border-t border-neutral-800 bg-neutral-950/80 flex justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -861,7 +888,7 @@ export default function Budgets() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer"
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer shadow-md shadow-orange-600/20"
                 >
                   Gravar Proposta
                 </button>

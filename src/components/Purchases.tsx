@@ -407,162 +407,178 @@ export default function Purchases() {
 
       {/* FORM DIALOG MODAL WITH LIVE SEARCHABLE SELECT */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="purchase-form-modal">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <ShoppingCart size={20} className="text-orange-500" />
-              Registrar Compra de Insumo / Material
-            </h3>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="purchase-form-modal">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-lg max-h-[88vh] flex flex-col shadow-2xl overflow-hidden text-neutral-100 font-sans">
+            
+            {/* STICKY HEADER */}
+            <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
+              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <ShoppingCart size={20} className="text-orange-500" />
+                Registrar Compra de Insumo / Material
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+                title="Fechar Modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
-              
-              {/* SEARCHABLE SELECT COMBOBOX */}
-              <div className="p-3 bg-neutral-950 border border-neutral-800 rounded-xl space-y-2">
-                <SearchableSelect
-                  label="Buscar & Selecionar Item do Catálogo"
-                  placeholder="Digite qualquer parte do nome (ex: cola, caixa, m3, pla)..."
-                  options={searchableOptions}
-                  value={selectedItemId}
-                  onChange={handleSelectItemChange}
-                  emptyMessage="Nenhum item do catálogo encontrado com este nome."
-                />
-                <span className="text-[10px] text-neutral-500 block">
-                  💡 Digite o nome para autocompletar ou preencha os campos abaixo caso o item ainda não esteja cadastrado.
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {/* SCROLLABLE FORM BODY */}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 font-mono text-xs flex-1">
                 
-                {/* Data */}
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Data da Compra *</label>
-                  <input
-                    type="date"
-                    required
-                    value={data}
-                    onChange={(e) => setData(e.target.value)}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                {/* SEARCHABLE SELECT COMBOBOX */}
+                <div className="p-3 bg-neutral-950 border border-neutral-800 rounded-xl space-y-2">
+                  <SearchableSelect
+                    label="Buscar & Selecionar Item do Catálogo"
+                    placeholder="Digite qualquer parte do nome (ex: cola, caixa, m3, pla)..."
+                    options={searchableOptions}
+                    value={selectedItemId}
+                    onChange={handleSelectItemChange}
+                    emptyMessage="Nenhum item do catálogo encontrado com este nome."
                   />
+                  <span className="text-[10px] text-neutral-500 block">
+                    💡 Digite o nome para autocompletar ou preencha os campos abaixo caso o item ainda não esteja cadastrado.
+                  </span>
                 </div>
 
-                {/* Categoria do Insumo */}
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Categoria *</label>
-                  <select
-                    value={categoriaItem}
-                    onChange={(e) => setCategoriaItem(e.target.value as PurchaseCategory)}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer font-bold"
-                  >
-                    <option value="Filamento">Filamento</option>
-                    <option value="Cola / Adesivo">Cola / Adesivo</option>
-                    <option value="Embalagem / Caixas">Embalagem / Caixas</option>
-                    <option value="Acessórios / Componentes">Acessórios / Componentes</option>
-                    <option value="Impressoras 3D">Impressoras 3D</option>
-                    <option value="Peças de Manutenção / Peças de Impressoras">Peça de Impressora / Manutenção</option>
-                    <option value="Outros Insumos">Outros Insumos</option>
-                  </select>
-                </div>
-
-                {/* Item Description / Name */}
-                <div className="col-span-2">
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome / Descrição do Item Comprado *</label>
-                  <input
-                    type="text"
-                    required
-                    value={descricaoItem}
-                    onChange={(e) => setDescricaoItem(e.target.value)}
-                    placeholder="Ex: Cola Bastão 40g Kores / Caixa 20x20x20"
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                  />
-                </div>
-
-                {/* Quantity & Flexible Unit Selector (MT, UN, KG, G, CX, RL, PCT, L) */}
-                <div className="col-span-2 grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  
+                  {/* Data */}
                   <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Qtd. Adquirida *</label>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Data da Compra *</label>
                     <input
-                      type="number"
+                      type="date"
                       required
-                      min={1}
-                      value={quantidade}
-                      onChange={(e) => setQuantidade(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold"
+                      value={data}
+                      onChange={(e) => setData(e.target.value)}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
                     />
                   </div>
 
+                  {/* Categoria */}
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Categoria *</label>
+                    <select
+                      value={categoriaItem}
+                      onChange={(e) => setCategoriaItem(e.target.value as PurchaseCategory)}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+                    >
+                      <option value="Filamento">Filamento</option>
+                      <option value="Cola / Adesivo">Cola / Adesivo de Mesa</option>
+                      <option value="Embalagem / Caixas">Embalagem / Caixas</option>
+                      <option value="Acessórios / Componentes">Acessórios / Componentes</option>
+                      <option value="Impressoras 3D">Impressora 3D</option>
+                      <option value="Peças de Manutenção / Peças de Impressoras">Peça de Impressora / Manutenção</option>
+                      <option value="Outros Insumos">Outros Insumos</option>
+                    </select>
+                  </div>
+
+                  {/* Descrição do Item */}
+                  <div className="col-span-2">
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome / Descrição do Item *</label>
+                    <input
+                      type="text"
+                      required
+                      value={descricaoItem}
+                      onChange={(e) => setDescricaoItem(e.target.value)}
+                      placeholder="Ex: Cola em Bastão Kores / Bobina PLA Preto 1kg"
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  {/* Quantidade */}
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Quantidade *</label>
+                    <input
+                      type="number"
+                      required
+                      step="0.01"
+                      min="0.01"
+                      value={quantidade}
+                      onChange={(e) => setQuantidade(Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  {/* Unidade de Medida */}
                   <div>
                     <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Unidade de Medida *</label>
                     <select
                       value={unidadeMedida}
                       onChange={(e) => setUnidadeMedida(e.target.value as SupplyUnit)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer font-bold"
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
                     >
-                      <option value="un">UN (Unidade)</option>
-                      <option value="Kg">KG (Quilo)</option>
-                      <option value="g">G (Grama)</option>
-                      <option value="metro">MT (Metro)</option>
-                      <option value="caixa">CX (Caixa)</option>
-                      <option value="rolo">RL (Rolo)</option>
-                      <option value="pacote">PCT (Pacote)</option>
-                      <option value="litro">L (Litro)</option>
+                      <option value="un">Unidade (un)</option>
+                      <option value="g">Gramas (g)</option>
+                      <option value="Kg">Quilos (Kg)</option>
+                      <option value="metro">Metro (m)</option>
+                      <option value="rolo">Rolo</option>
+                      <option value="caixa">Caixa</option>
+                      <option value="pacote">Pacote</option>
+                      <option value="litro">Litro (l)</option>
                     </select>
+                  </div>
+
+                  {/* Fornecedor */}
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Fornecedor / Loja *</label>
+                    <input
+                      type="text"
+                      required
+                      value={fornecedor}
+                      onChange={(e) => setFornecedor(e.target.value)}
+                      placeholder="Ex: Mercado Livre / 3D Fila"
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  {/* Valor Pago */}
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Valor Total Pago (R$) *</label>
+                    <input
+                      type="number"
+                      required
+                      step="0.01"
+                      min="0"
+                      value={valorPago}
+                      onChange={(e) => setValorPago(Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold text-orange-400"
+                    />
+                  </div>
+
+                  {/* Nota Fiscal */}
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nota Fiscal (opcional)</label>
+                    <input
+                      type="text"
+                      value={notaFiscal}
+                      onChange={(e) => setNotaFiscal(e.target.value)}
+                      placeholder="Ex: NF-e 88102"
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  {/* Observações */}
+                  <div className="col-span-2">
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações</label>
+                    <textarea
+                      value={observacoes}
+                      onChange={(e) => setObservacoes(e.target.value)}
+                      rows={2}
+                      placeholder="Notas adicionais sobre a compra..."
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
+                    />
                   </div>
                 </div>
 
-                {/* Fornecedor */}
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Fornecedor *</label>
-                  <input
-                    type="text"
-                    required
-                    value={fornecedor}
-                    onChange={(e) => setFornecedor(e.target.value)}
-                    placeholder="Ex: Mercado Livre / 3D Fila"
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                  />
-                </div>
-
-                {/* Valor Pago */}
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Valor Total Pago R$ *</label>
-                  <input
-                    type="number"
-                    required
-                    step="0.01"
-                    min="0"
-                    value={valorPago}
-                    onChange={(e) => setValorPago(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold text-orange-400"
-                  />
-                </div>
-
-                {/* Nota Fiscal */}
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nota Fiscal (opcional)</label>
-                  <input
-                    type="text"
-                    value={notaFiscal}
-                    onChange={(e) => setNotaFiscal(e.target.value)}
-                    placeholder="Ex: NF-e 88102"
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                  />
-                </div>
-
-                {/* Observações */}
-                <div className="col-span-2">
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações</label>
-                  <textarea
-                    value={observacoes}
-                    onChange={(e) => setObservacoes(e.target.value)}
-                    rows={2}
-                    placeholder="Notas adicionais sobre a compra..."
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
-                  />
-                </div>
               </div>
 
-              {/* ACTION BUTTONS */}
-              <div className="flex justify-end gap-3 mt-6">
+              {/* STICKY ACTIONS FOOTER */}
+              <div className="p-4 border-t border-neutral-800 bg-neutral-950/80 flex justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -574,7 +590,7 @@ export default function Purchases() {
                   type="submit"
                   className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer shadow-md shadow-orange-600/20"
                 >
-                  Registrar Compra & Atualizar Estoque
+                  Registrar Compra
                 </button>
               </div>
 

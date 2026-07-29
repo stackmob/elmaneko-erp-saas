@@ -227,73 +227,93 @@ export default function Printers() {
 
       {/* ── FORM MODAL ── */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="printer-form-modal" aria-modal="true" role="dialog">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-white mb-5">
-              {editingPrinter ? 'Editar Impressora' : 'Nova Impressora 3D'}
-            </h3>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="printer-form-modal">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md max-h-[88vh] flex flex-col shadow-2xl overflow-hidden text-neutral-100 font-sans">
+            
+            {/* STICKY HEADER */}
+            <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
+              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <Cpu size={20} className="text-orange-500" />
+                {editingPrinter ? 'Editar Impressora' : 'Nova Impressora 3D'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+                title="Fechar Modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
-              <div>
-                <label htmlFor="printer-nome" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
-                  Nome de Identificação <span className="text-orange-500">*</span>
-                </label>
-                <input id="printer-nome" type="text" required value={nome} onChange={(e) => setNome(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors" />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {/* SCROLLABLE FORM BODY */}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 font-mono text-xs flex-1">
+                
                 <div>
-                  <label htmlFor="printer-marca" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
-                    Marca <span className="text-orange-500">*</span>
+                  <label htmlFor="printer-nome" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                    Nome de Identificação <span className="text-orange-500">*</span>
                   </label>
-                  <input id="printer-marca" type="text" required value={marca} onChange={(e) => setMarca(e.target.value)}
+                  <input id="printer-nome" type="text" required value={nome} onChange={(e) => setNome(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors" />
                 </div>
-                <div>
-                  <label htmlFor="printer-modelo" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
-                    Modelo <span className="text-orange-500">*</span>
-                  </label>
-                  <input id="printer-modelo" type="text" required value={modelo} onChange={(e) => setModelo(e.target.value)}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors" />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div>
+                    <label htmlFor="printer-marca" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                      Marca <span className="text-orange-500">*</span>
+                    </label>
+                    <input id="printer-marca" type="text" required value={marca} onChange={(e) => setMarca(e.target.value)}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors" />
+                  </div>
+                  <div>
+                    <label htmlFor="printer-modelo" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                      Modelo <span className="text-orange-500">*</span>
+                    </label>
+                    <input id="printer-modelo" type="text" required value={modelo} onChange={(e) => setModelo(e.target.value)}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors" />
+                  </div>
+                  <div>
+                    <label htmlFor="printer-potencia" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                      Potência (W) <span className="text-orange-500">*</span>
+                    </label>
+                    <input id="printer-potencia" type="number" required min={1} value={potenciaWatts} onChange={(e) => setPotenciaWatts(Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors" />
+                  </div>
+                  <div>
+                    <label htmlFor="printer-status" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
+                      Status <span className="text-orange-500">*</span>
+                    </label>
+                    <select id="printer-status" value={status} onChange={(e) => setStatus(e.target.value as 'Ativa' | 'Manutenção' | 'Inativa')}
+                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer transition-colors">
+                      <option value="Ativa">Ativa</option>
+                      <option value="Manutenção">Manutenção</option>
+                      <option value="Inativa">Inativa</option>
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label htmlFor="printer-potencia" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
-                    Potência (W) <span className="text-orange-500">*</span>
-                  </label>
-                  <input id="printer-potencia" type="number" required min={1} value={potenciaWatts} onChange={(e) => setPotenciaWatts(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 transition-colors" />
+
+                {/* Live energy estimate */}
+                <div className="p-3 bg-neutral-950 rounded-lg border border-neutral-800 space-y-1 text-[11px] font-mono text-neutral-400">
+                  <span className="text-orange-400 font-bold block mb-1">Previsão de Energia</span>
+                  <p>Consumo: <span className="text-white">{(potenciaWatts / 1000).toFixed(3)} kWh / hora</span></p>
+                  <p>Custo: <span className="text-white">R$ {((potenciaWatts / 1000) * currentTariffKwh).toFixed(4)} / hora</span></p>
                 </div>
-                <div>
-                  <label htmlFor="printer-status" className="block text-neutral-300 mb-1.5 font-semibold uppercase tracking-wider text-[11px]">
-                    Status <span className="text-orange-500">*</span>
-                  </label>
-                  <select id="printer-status" value={status} onChange={(e) => setStatus(e.target.value as 'Ativa' | 'Manutenção' | 'Inativa')}
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer transition-colors">
-                    <option value="Ativa">Ativa</option>
-                    <option value="Manutenção">Manutenção</option>
-                    <option value="Inativa">Inativa</option>
-                  </select>
-                </div>
+
               </div>
 
-              {/* Live energy estimate */}
-              <div className="p-3 bg-neutral-950 rounded-lg border border-neutral-800 space-y-1 text-[11px] font-mono text-neutral-400">
-                <span className="text-orange-400 font-bold block mb-1">Previsão de Energia</span>
-                <p>Consumo: <span className="text-white">{(potenciaWatts / 1000).toFixed(3)} kWh / hora</span></p>
-                <p>Custo: <span className="text-white">R$ {((potenciaWatts / 1000) * currentTariffKwh).toFixed(4)} / hora</span></p>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
+              {/* STICKY ACTIONS FOOTER */}
+              <div className="p-4 border-t border-neutral-800 bg-neutral-950/80 flex justify-end gap-3 shrink-0">
                 <button type="button" onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-neutral-700 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer transition-colors">
+                  className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer transition-colors">
                   Cancelar
                 </button>
                 <button type="submit"
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer transition-colors">
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer shadow-md shadow-orange-600/20 transition-colors">
                   Salvar Impressora
                 </button>
               </div>
+
             </form>
           </div>
         </div>
