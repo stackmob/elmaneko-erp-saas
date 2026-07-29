@@ -3,19 +3,13 @@ import React, { useState, useEffect } from 'react';
 // Component Imports
 import AuthPage from './components/AuthPage';
 import Dashboard from './components/Dashboard';
-import Filaments from './components/Filaments';
-import Purchases from './components/Purchases';
-import Printers from './components/Printers';
-import EnergyTariffModule from './components/EnergyTariff';
-import Products from './components/Products';
-import Production from './components/Production';
-import Budgets from './components/Budgets';
-import Sales from './components/Sales';
-import Clients from './components/Clients';
-import Supplies from './components/Supplies';
-import BackupModule from './components/Backup';
-import CompanyModule from './components/Company';
 import Financial from './components/Financial';
+import CommercialModule from './components/CommercialModule';
+import ProcurementModule from './components/ProcurementModule';
+import InventoryModule from './components/InventoryModule';
+import EnergyTariffModule from './components/EnergyTariff';
+import CompanyModule from './components/Company';
+import BackupModule from './components/Backup';
 
 // Icons
 import { 
@@ -79,16 +73,10 @@ export default function App() {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard HUD', icon: LayoutDashboard },
     { id: 'financial', label: 'Módulo Financeiro', icon: Wallet },
-    { id: 'clients', label: 'Clientes (CRM)', icon: Users },
-    { id: 'filaments', label: 'Estoque Filamentos', icon: Layers },
-    { id: 'supplies', label: 'Catálogo de Insumos', icon: Package },
-    { id: 'purchases', label: 'Compras Insumos', icon: ShoppingBag },
-    { id: 'printers', label: 'Impressoras 3D', icon: Cpu },
+    { id: 'commercial', label: 'Comercial & Vendas', icon: DollarSign },
+    { id: 'procurement', label: 'Compras & Suprimentos', icon: ShoppingBag },
+    { id: 'inventory', label: 'Estoque, Ativos & Produção', icon: Layers },
     { id: 'tariffs', label: 'Tarifa de Energia', icon: Zap },
-    { id: 'products', label: 'Produtos / BOM', icon: FolderHeart },
-    { id: 'production', label: 'Produção (Fila)', icon: PlayCircle },
-    { id: 'budgets', label: 'Orçamentos', icon: FileCheck },
-    { id: 'sales', label: 'Vendas Realizadas', icon: DollarSign },
     { id: 'company', label: 'Dados da Empresa', icon: Building2 },
     { id: 'backup', label: 'Segurança / Backup', icon: Shield },
   ];
@@ -262,16 +250,10 @@ export default function App() {
         <div className="flex-1 p-3 sm:p-4 md:p-6" id="workspace-viewport">
           {currentView === 'dashboard' && <Dashboard />}
           {currentView === 'financial' && <Financial />}
-          {currentView === 'clients' && <Clients />}
-          {currentView === 'filaments' && <Filaments />}
-          {currentView === 'supplies' && <Supplies />}
-          {currentView === 'purchases' && <Purchases />}
-          {currentView === 'printers' && <Printers />}
+          {currentView === 'commercial' && <CommercialModule />}
+          {currentView === 'procurement' && <ProcurementModule />}
+          {currentView === 'inventory' && <InventoryModule />}
           {currentView === 'tariffs' && <EnergyTariffModule />}
-          {currentView === 'products' && <Products />}
-          {currentView === 'production' && <Production />}
-          {currentView === 'budgets' && <Budgets />}
-          {currentView === 'sales' && <Sales />}
           {currentView === 'company' && <CompanyModule />}
           {currentView === 'backup' && <BackupModule />}
         </div>
@@ -279,4 +261,5 @@ export default function App() {
     </div>
   );
 }
+
 
