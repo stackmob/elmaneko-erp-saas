@@ -16,14 +16,15 @@ export default function CommercialModule() {
   const { data: sales = [] } = useVendas();
   const { data: clients = [] } = useClientes();
 
-  // KPIs
+  // KPIs do Módulo Comercial
   const totalOrcamentos = budgets.length;
   const orcamentosAprovados = budgets.filter(b => b.status === 'Aprovado' || b.status === 'Faturado').length;
   const taxaConversao = totalOrcamentos > 0 ? Math.round((orcamentosAprovados / totalOrcamentos) * 100) : 0;
   const faturamentoTotal = sales.reduce((acc, s) => acc + (s.valorTotal || 0), 0);
+  const ticketMedio = sales.length > 0 ? faturamentoTotal / sales.length : 0;
   const valorPendenteAprovacao = budgets
     .filter(b => b.status === 'Aberto')
-    .reduce((acc, b) => acc + b.itens.reduce((total, item) => total + item.quantidade * item.valorUnitario - item.desconto, 0) - b.descontoGeral, 0);
+    .reduce((acc, b) => acc + b.itens.reduce((total, item) => total + item.quantidade * item.valorUnitario - item.desconto, 0) - (b.descontoGeral || 0), 0);
 
   return (
     <div className="space-y-6" id="commercial-module-root">
@@ -45,6 +46,61 @@ export default function CommercialModule() {
             <Sparkles size={14} className="text-orange-400" />
             <strong className="text-white">{clients.length}</strong> Clientes Ativos
           </span>
+        </div>
+      </div>
+
+      {/* TOTALIZADORES DO MÓDULO COMERCIAL */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="commercial-kpis">
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
+          <div>
+            <span className="text-[11px] font-mono text-neutral-400 uppercase block">Total de Propostas</span>
+            <strong className="text-2xl font-black font-mono text-white mt-1 block">
+              {totalOrcamentos}
+            </strong>
+            <span className="text-[10px] text-neutral-500 mt-0.5 block">{orcamentosAprovados} aprovadas ({taxaConversao}%)</span>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-orange-950/50 border border-orange-500/30 flex items-center justify-center text-orange-400">
+            <FileCheck size={22} />
+          </div>
+        </div>
+
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
+          <div>
+            <span className="text-[11px] font-mono text-neutral-400 uppercase block">Provisão em Aberto</span>
+            <strong className="text-xl font-black font-mono text-amber-400 mt-1 block">
+              {formatCurrency(valorPendenteAprovacao)}
+            </strong>
+            <span className="text-[10px] text-neutral-500 mt-0.5 block">Aguardando aprovação</span>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-amber-950/50 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <Clock size={22} />
+          </div>
+        </div>
+
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
+          <div>
+            <span className="text-[11px] font-mono text-neutral-400 uppercase block">Faturamento Realizado</span>
+            <strong className="text-xl font-black font-mono text-emerald-400 mt-1 block">
+              {formatCurrency(faturamentoTotal)}
+            </strong>
+            <span className="text-[10px] text-neutral-500 mt-0.5 block">Vendas consolidadas</span>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-emerald-950/50 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <DollarSign size={22} />
+          </div>
+        </div>
+
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
+          <div>
+            <span className="text-[11px] font-mono text-neutral-400 uppercase block">Ticket Médio por Venda</span>
+            <strong className="text-xl font-black font-mono text-cyan-400 mt-1 block">
+              {formatCurrency(ticketMedio)}
+            </strong>
+            <span className="text-[10px] text-neutral-500 mt-0.5 block">Média por pedido faturado</span>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-cyan-950/50 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <TrendingUp size={22} />
+          </div>
         </div>
       </div>
 

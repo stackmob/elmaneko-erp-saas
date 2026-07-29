@@ -109,57 +109,6 @@ export default function Sales() {
         </div>
       </div>
 
-      {/* SALES KPIS BOARD */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 animate-fade-in" id="sales-kpis">
-        {/* Total Faturado */}
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-          <div className="flex justify-between items-center text-[10px] font-mono uppercase text-neutral-400">
-            <span>Faturamento Líquido (Pago)</span>
-            <TrendingUp size={14} className="text-emerald-500" />
-          </div>
-          <div className="text-xl font-black text-emerald-400 mt-1">
-            R$ {totalFaturadoVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </div>
-          <p className="text-[10px] text-neutral-500 mt-1 font-mono">de {paidSales.length} transações liquidadas</p>
-        </div>
-
-        {/* Pendentes */}
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-          <div className="flex justify-between items-center text-[10px] font-mono uppercase text-neutral-400">
-            <span>Valores Pendentes</span>
-            <AlertCircle size={14} className="text-orange-500" />
-          </div>
-          <div className="text-xl font-black text-orange-400 mt-1">
-            R$ {totalPendenteVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </div>
-          <p className="text-[10px] text-neutral-500 mt-1 font-mono">em {pendingSales.length} ordens abertas</p>
-        </div>
-
-        {/* Ticket Medio */}
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-          <div className="flex justify-between items-center text-[10px] font-mono uppercase text-neutral-400">
-            <span>Ticket Médio por Venda</span>
-            <DollarSign size={14} className="text-neutral-500" />
-          </div>
-          <div className="text-xl font-black text-white mt-1">
-            R$ {averageTicket.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </div>
-          <p className="text-[10px] text-neutral-500 mt-1 font-mono">Média ponderada faturada</p>
-        </div>
-
-        {/* Cancelados */}
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-          <div className="flex justify-between items-center text-[10px] font-mono uppercase text-neutral-400">
-            <span>Cancelamentos</span>
-            <XCircle size={14} className="text-neutral-600" />
-          </div>
-          <div className="text-xl font-black text-neutral-500 mt-1">
-            {cancelledSales.length} <span className="text-xs font-normal">pedidos</span>
-          </div>
-          <p className="text-[10px] text-neutral-600 mt-1 font-mono">Taxa de rejeição pós-orçamento</p>
-        </div>
-      </div>
-
       {/* FILTER & SORT BAR ROW */}
       <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3" id="sales-filters">
         <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
