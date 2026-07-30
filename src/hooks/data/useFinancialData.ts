@@ -443,7 +443,7 @@ export function useAddLancamentoFinanceiro() {
 export function useLiquidarLancamento() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, contaFinanceiraId, dataLiquidacao, valorPago, jurosMulta }: {
+    mutationFn: async ({ id, contaFinanceiraId, dataLiquidacao, valorPago }: {
       id: string;
       contaFinanceiraId: string;
       dataLiquidacao: string;
@@ -451,7 +451,7 @@ export function useLiquidarLancamento() {
       jurosMulta?: number;
     }) => {
       if (isValidUuid(id)) {
-        // Tenta executar a RPC atômica no banco de dados
+        // Executa obrigatoriamente a RPC atômica no banco de dados
         const { error: rpcError } = await supabase.rpc('liquidar_lancamento_financeiro', {
           p_lancamento_id: id,
           p_conta_id: contaFinanceiraId,
@@ -460,39 +460,8 @@ export function useLiquidarLancamento() {
         });
 
         if (rpcError) {
-          console.warn("RPC liquidar_lancamento_financeiro falhou ou não existe, executando fallback:", rpcError.message);
-          const { data: entry } = await supabase.from('lancamentos_financeiros').select('*').eq('id', id).single();
-          
-          await supabase.from('lancamentos_financeiros').update({
-            status: 'Liquidado',
-            data_liquidacao: dataLiquidacao,
-            valor_pago: valorPago,
-            juros_multa: jurosMulta || 0,
-            conta_financeira_id: contaFinanceiraId
-          }).eq('id', id);
-
-          if (entry && contaFinanceiraId) {
-            const { data: conta } = await supabase.from('contas_financeiras').select('*').eq('id', contaFinanceiraId).single();
-            if (conta) {
-              const novoSaldo = entry.tipo === 'Receita' 
-                ? Number(conta.saldo_atual || 0) + valorPago 
-                : Number(conta.saldo_atual || 0) - valorPago;
-
-              await supabase.from('contas_financeiras').update({ saldo_atual: novoSaldo }).eq('id', contaFinanceiraId);
-
-              await supabase.from('movimentacoes_financeiras').insert([{
-                empresa_id: conta.empresa_id,
-                conta_financeira_id: contaFinanceiraId,
-                lancamento_id: id,
-                data: dataLiquidacao,
-                tipo: entry.tipo === 'Receita' ? 'Entrada' : 'Saida',
-                valor: valorPago,
-                saldo_anterior: conta.saldo_atual,
-                saldo_posterior: novoSaldo,
-                descricao: `Baixa de título ${entry.numero_documento} (${entry.origem})`
-              }]);
-            }
-          }
+          console.error("RPC liquidar_lancamento_financeiro falhou:", rpcError.message);
+          throw rpcError;
         }
       }
       return { id, valorPago };
@@ -509,8 +478,9 @@ export function useCancelLancamento() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const empresaId = getFallbackEmpresaId();
       if (isValidUuid(id)) {
-        await supabase.from('lancamentos_financeiros').update({ status: 'Cancelado' }).eq('id', id);
+        await supabase.from('lancamentos_financeiros').update({ status: 'Cancelado' }).eq('id', id).eq('empresa_id', empresaId);
       }
       return id;
     },
@@ -603,7 +573,7 @@ export function useAddTransferenciaFinanceira() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (nova: Omit<FinancialTransfer, 'id'>) => {
-      // 1. Tenta a RPC atômica no banco de dados
+      // Executa obrigatoriamente a RPC atômica no banco de dados
       const { data: rpcRes, error: rpcError } = await supabase.rpc('transferir_saldo_financeiro', {
         p_conta_origem_id: nova.contaOrigemId,
         p_conta_destino_id: nova.contaDestinoId,
@@ -612,60 +582,19 @@ export function useAddTransferenciaFinanceira() {
         p_observacoes: nova.observacoes
       });
 
-      if (!rpcError && rpcRes && rpcRes.transferencia_id) {
-        const created: FinancialTransfer = {
-          id: rpcRes.transferencia_id,
-          data: nova.data,
-          contaOrigemId: nova.contaOrigemId,
-          contaDestinoId: nova.contaDestinoId,
-          valor: nova.valor,
-          observacoes: nova.observacoes
-        };
-        addToLocalCache('transferencias_financeiras', created);
-        return created;
+      if (rpcError) {
+        console.error("RPC transferir_saldo_financeiro falhou:", rpcError.message);
+        throw rpcError;
       }
 
-      // Fallback se a RPC não existir ou falhar
-      console.warn("RPC transferir_saldo_financeiro falhou ou não existe, executando fallback:", rpcError?.message);
-      const empresaId = getFallbackEmpresaId();
-      const payload = {
-        empresa_id: empresaId,
+      const created: FinancialTransfer = {
+        id: rpcRes.transferencia_id,
         data: nova.data,
-        conta_origem_id: nova.contaOrigemId,
-        conta_destino_id: nova.contaDestinoId,
+        contaOrigemId: nova.contaOrigemId,
+        contaDestinoId: nova.contaDestinoId,
         valor: nova.valor,
         observacoes: nova.observacoes
       };
-
-      const { data, error } = await supabase.from('transferencias_financeiras').insert([payload]).select().single();
-      if (error) {
-        const offlineItem: FinancialTransfer = { ...nova, id: crypto.randomUUID() };
-        addToLocalCache('transferencias_financeiras', offlineItem);
-        return offlineItem;
-      }
-
-      try {
-        const { data: cOrig } = await supabase.from('contas_financeiras').select('*').eq('id', nova.contaOrigemId).single();
-        const { data: cDest } = await supabase.from('contas_financeiras').select('*').eq('id', nova.contaDestinoId).single();
-
-        if (cOrig) {
-          await supabase.from('contas_financeiras').update({ saldo_atual: Number(cOrig.saldo_atual || 0) - nova.valor }).eq('id', nova.contaOrigemId);
-        }
-
-        if (cDest) {
-          await supabase.from('contas_financeiras').update({ saldo_atual: Number(cDest.saldo_atual || 0) + nova.valor }).eq('id', nova.contaDestinoId);
-        }
-      } catch (e) {}
-
-      const created: FinancialTransfer = {
-        id: data.id,
-        data: data.data,
-        contaOrigemId: data.conta_origem_id,
-        contaDestinoId: data.conta_destino_id,
-        valor: Number(data.valor),
-        observacoes: data.observacoes
-      };
-
       addToLocalCache('transferencias_financeiras', created);
       return created;
     },

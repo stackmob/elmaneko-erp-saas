@@ -26,29 +26,12 @@ ALTER TABLE empresas ADD COLUMN IF NOT EXISTS slogan TEXT;
 ALTER TABLE empresas ADD COLUMN IF NOT EXISTS logotipo_url TEXT;
 ALTER TABLE empresas ADD COLUMN IF NOT EXISTS observacoes TEXT;
 
--- Garantir Empresa Demo Padrão
-INSERT INTO empresas (id, nome, razao_social, cnpj, email, telefone, whatsapp, endereco, responsavel, cargo_responsavel, pix_chave, slogan)
-VALUES (
-  '00000000-0000-0000-0000-000000000001', 
-  'ELMANEKO 3D',
-  'ELMANEKO 3D LTDA',
-  '12.345.678/0001-99',
-  'contato@elmaneko3d.com',
-  '(11) 3333-3333',
-  '(11) 99999-9999',
-  'Rua da Extrusora, 3D - Parque Tecnológico, SP',
-  'Guilherme Braga',
-  'Gestor Administrativo',
-  '12.345.678/0001-99',
-  'Impressão 3D de Alta Fidelidade'
-)
-ON CONFLICT (id) DO NOTHING;
-
 -- 2. USUÁRIO -> EMPRESA
 CREATE TABLE IF NOT EXISTS usuario_empresa (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
   empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'admin',
   created_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(user_id, empresa_id)
 );
@@ -253,130 +236,8 @@ CREATE TABLE IF NOT EXISTS insumos (
 );
 
 ALTER TABLE compras ADD COLUMN IF NOT EXISTS insumo_id UUID REFERENCES insumos(id) ON DELETE SET NULL;
-ALTER TABLE insumos ENABLE ROW LEVEL SECURITY;
 
--- ============================================================
--- SEGURANÇA: HABILITAR RLS EM TODAS AS TABELAS
--- ============================================================
-ALTER TABLE empresas ENABLE ROW LEVEL SECURITY;
-ALTER TABLE usuario_empresa ENABLE ROW LEVEL SECURITY;
-ALTER TABLE filamentos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE impressoras ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tarifas_energia ENABLE ROW LEVEL SECURITY;
-ALTER TABLE produtos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE produto_materiais ENABLE ROW LEVEL SECURITY;
-ALTER TABLE producoes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE orcamentos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE orcamento_itens ENABLE ROW LEVEL SECURITY;
-ALTER TABLE vendas ENABLE ROW LEVEL SECURITY;
-ALTER TABLE compras ENABLE ROW LEVEL SECURITY;
-
--- ============================================================
--- POLÍTICAS DE ACESSO (RLS PERMISSIVO DEMO / MULTI-TENANT)
--- ============================================================
-DO $$ 
-BEGIN
-  -- Permissões gerais baseadas na empresa_id ou modo demo
-  DROP POLICY IF EXISTS "filamentos_policy" ON filamentos;
-  CREATE POLICY "filamentos_policy" ON filamentos FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "clientes_policy" ON clientes;
-  CREATE POLICY "clientes_policy" ON clientes FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "impressoras_policy" ON impressoras;
-  CREATE POLICY "impressoras_policy" ON impressoras FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "tarifas_energia_policy" ON tarifas_energia;
-  CREATE POLICY "tarifas_energia_policy" ON tarifas_energia FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "produtos_policy" ON produtos;
-  CREATE POLICY "produtos_policy" ON produtos FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "produto_materiais_policy" ON produto_materiais;
-  CREATE POLICY "produto_materiais_policy" ON produto_materiais FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "producoes_policy" ON producoes;
-  CREATE POLICY "producoes_policy" ON producoes FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "orcamentos_policy" ON orcamentos;
-  CREATE POLICY "orcamentos_policy" ON orcamentos FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "orcamento_itens_policy" ON orcamento_itens;
-  CREATE POLICY "orcamento_itens_policy" ON orcamento_itens FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "vendas_policy" ON vendas;
-  CREATE POLICY "vendas_policy" ON vendas FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "compras_policy" ON compras;
-  CREATE POLICY "compras_policy" ON compras FOR ALL USING (true);
-END $$;
-
--- ============================================================
--- SEGURANÃ‡A MULTI-TENANT: substitui as polÃ­ticas permissivas acima.
--- ============================================================
-CREATE OR REPLACE FUNCTION public.is_empresa_member(target_empresa_id UUID)
-RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.usuario_empresa ue
-    WHERE ue.empresa_id = target_empresa_id AND ue.user_id = auth.uid()
-  );
-$$;
-
-REVOKE ALL ON FUNCTION public.is_empresa_member(UUID) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.is_empresa_member(UUID) TO authenticated;
-
-DROP POLICY IF EXISTS empresas_select_member ON empresas;
-DROP POLICY IF EXISTS empresas_insert_authenticated ON empresas;
-DROP POLICY IF EXISTS empresas_update_member ON empresas;
-CREATE POLICY empresas_select_member ON empresas FOR SELECT TO authenticated USING (public.is_empresa_member(id));
-CREATE POLICY empresas_insert_authenticated ON empresas FOR INSERT TO authenticated WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY empresas_update_member ON empresas FOR UPDATE TO authenticated USING (public.is_empresa_member(id)) WITH CHECK (public.is_empresa_member(id));
-
-DROP POLICY IF EXISTS usuario_empresa_select_self ON usuario_empresa;
-DROP POLICY IF EXISTS usuario_empresa_insert_self ON usuario_empresa;
-CREATE POLICY usuario_empresa_select_self ON usuario_empresa FOR SELECT TO authenticated USING (user_id = auth.uid());
-CREATE POLICY usuario_empresa_insert_self ON usuario_empresa FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
-
-DO $$
-DECLARE tenant_table TEXT;
-BEGIN
-  FOREACH tenant_table IN ARRAY ARRAY[
-    'filamentos', 'clientes', 'impressoras', 'tarifas_energia', 'produtos',
-    'produto_materiais', 'producoes', 'orcamentos', 'orcamento_itens', 'vendas',
-    'compras', 'insumos'
-  ] LOOP
-    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', tenant_table || '_policy', tenant_table);
-    EXECUTE format('DROP POLICY IF EXISTS tenant_access ON public.%I', tenant_table);
-    EXECUTE format('CREATE POLICY tenant_access ON public.%I FOR ALL TO authenticated USING (public.is_empresa_member(empresa_id)) WITH CHECK (public.is_empresa_member(empresa_id))', tenant_table);
-  END LOOP;
-END $$;
-
--- Aplica as mesmas polÃ­ticas apÃ³s a criaÃ§Ã£o das tabelas financeiras.
-DO $$
-DECLARE tenant_table TEXT;
-BEGIN
-  FOREACH tenant_table IN ARRAY ARRAY[
-    'contas_financeiras', 'categorias_financeiras', 'centros_custo',
-    'lancamentos_financeiros', 'movimentacoes_financeiras',
-    'transferencias_financeiras', 'auditoria_financeira'
-  ] LOOP
-    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', tenant_table || '_policy', tenant_table);
-    EXECUTE format('DROP POLICY IF EXISTS tenant_access ON public.%I', tenant_table);
-    EXECUTE format('CREATE POLICY tenant_access ON public.%I FOR ALL TO authenticated USING (public.is_empresa_member(empresa_id)) WITH CHECK (public.is_empresa_member(empresa_id))', tenant_table);
-  END LOOP;
-END $$;
-
--- ============================================================
--- 14. MÓDULO FINANCEIRO (TABELAS & ESTRUTURAS)
--- ============================================================
-
--- 14.1 CONTAS FINANCEIRAS (BANCOS, CARTÕES, CARTEIRAS)
+-- 14. MÓDULO FINANCEIRO
 CREATE TABLE IF NOT EXISTS contas_financeiras (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
@@ -398,7 +259,6 @@ CREATE TABLE IF NOT EXISTS contas_financeiras (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 14.2 CATEGORIAS FINANCEIRAS (PLANO DE CONTAS)
 CREATE TABLE IF NOT EXISTS categorias_financeiras (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
@@ -409,7 +269,6 @@ CREATE TABLE IF NOT EXISTS categorias_financeiras (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 14.3 CENTROS DE CUSTO
 CREATE TABLE IF NOT EXISTS centros_custo (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
@@ -419,7 +278,6 @@ CREATE TABLE IF NOT EXISTS centros_custo (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 14.4 LANÇAMENTOS FINANCEIROS (TÍTULOS A RECEBER & A PAGAR)
 CREATE TABLE IF NOT EXISTS lancamentos_financeiros (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
@@ -453,7 +311,6 @@ CREATE TABLE IF NOT EXISTS lancamentos_financeiros (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 14.5 MOVIMENTAÇÕES FINANCEIRAS (EXTRATO)
 CREATE TABLE IF NOT EXISTS movimentacoes_financeiras (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
@@ -468,7 +325,6 @@ CREATE TABLE IF NOT EXISTS movimentacoes_financeiras (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 14.6 TRANSFERÊNCIAS FINANCEIRAS
 CREATE TABLE IF NOT EXISTS transferencias_financeiras (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
@@ -480,7 +336,6 @@ CREATE TABLE IF NOT EXISTS transferencias_financeiras (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 14.7 AUDITORIA FINANCEIRA (TRILHA IMUTÁVEL)
 CREATE TABLE IF NOT EXISTS auditoria_financeira (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
@@ -494,7 +349,23 @@ CREATE TABLE IF NOT EXISTS auditoria_financeira (
   valor_novo TEXT
 );
 
--- HABILITAR RLS NAS TABELAS FINANCEIRAS
+-- ============================================================
+-- HABILITAR RLS NAS 20 TABELAS DO SISTEMA
+-- ============================================================
+ALTER TABLE empresas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE usuario_empresa ENABLE ROW LEVEL SECURITY;
+ALTER TABLE filamentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE impressoras ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tarifas_energia ENABLE ROW LEVEL SECURITY;
+ALTER TABLE produtos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE produto_materiais ENABLE ROW LEVEL SECURITY;
+ALTER TABLE producoes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orcamentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orcamento_itens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vendas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE compras ENABLE ROW LEVEL SECURITY;
+ALTER TABLE insumos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contas_financeiras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categorias_financeiras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE centros_custo ENABLE ROW LEVEL SECURITY;
@@ -503,28 +374,53 @@ ALTER TABLE movimentacoes_financeiras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transferencias_financeiras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE auditoria_financeira ENABLE ROW LEVEL SECURITY;
 
+-- ============================================================
+-- SEGURANÇA MULTI-TENANT (POLÍTICAS ESTRITAS VIA HAS_ACCESS)
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.is_empresa_member(target_empresa_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.usuario_empresa ue
+    WHERE ue.empresa_id = target_empresa_id AND ue.user_id = auth.uid()
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.is_empresa_member(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_empresa_member(UUID) TO authenticated;
+
+-- Políticas Específicas para Empresas e Usuario_Empresa
+DROP POLICY IF EXISTS empresas_select_member ON empresas;
+DROP POLICY IF EXISTS empresas_insert_authenticated ON empresas;
+DROP POLICY IF EXISTS empresas_update_member ON empresas;
+CREATE POLICY empresas_select_member ON empresas FOR SELECT TO authenticated USING (public.is_empresa_member(id));
+CREATE POLICY empresas_insert_authenticated ON empresas FOR INSERT TO authenticated WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY empresas_update_member ON empresas FOR UPDATE TO authenticated USING (public.is_empresa_member(id)) WITH CHECK (public.is_empresa_member(id));
+
+DROP POLICY IF EXISTS usuario_empresa_select_self ON usuario_empresa;
+DROP POLICY IF EXISTS usuario_empresa_insert_self ON usuario_empresa;
+CREATE POLICY usuario_empresa_select_self ON usuario_empresa FOR SELECT TO authenticated USING (user_id = auth.uid());
+CREATE POLICY usuario_empresa_insert_self ON usuario_empresa FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+
+-- Aplicação Única e Estrita das Políticas Multi-Tenant em TODAS as Tabelas Operacionais e Financeiras
 DO $$
+DECLARE tenant_table TEXT;
 BEGIN
-  DROP POLICY IF EXISTS "contas_financeiras_policy" ON contas_financeiras;
-  CREATE POLICY "contas_financeiras_policy" ON contas_financeiras FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "categorias_financeiras_policy" ON categorias_financeiras;
-  CREATE POLICY "categorias_financeiras_policy" ON categorias_financeiras FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "centros_custo_policy" ON centros_custo;
-  CREATE POLICY "centros_custo_policy" ON centros_custo FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "lancamentos_financeiros_policy" ON lancamentos_financeiros;
-  CREATE POLICY "lancamentos_financeiros_policy" ON lancamentos_financeiros FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "movimentacoes_financeiras_policy" ON movimentacoes_financeiras;
-  CREATE POLICY "movimentacoes_financeiras_policy" ON movimentacoes_financeiras FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "transferencias_financeiras_policy" ON transferencias_financeiras;
-  CREATE POLICY "transferencias_financeiras_policy" ON transferencias_financeiras FOR ALL USING (true);
-
-  DROP POLICY IF EXISTS "auditoria_financeira_policy" ON auditoria_financeira;
-  CREATE POLICY "auditoria_financeira_policy" ON auditoria_financeira FOR ALL USING (true);
+  FOREACH tenant_table IN ARRAY ARRAY[
+    'filamentos', 'clientes', 'impressoras', 'tarifas_energia', 'produtos',
+    'produto_materiais', 'producoes', 'orcamentos', 'orcamento_itens', 'vendas',
+    'compras', 'insumos', 'contas_financeiras', 'categorias_financeiras',
+    'centros_custo', 'lancamentos_financeiros', 'movimentacoes_financeiras',
+    'transferencias_financeiras', 'auditoria_financeira'
+  ] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', tenant_table || '_policy', tenant_table);
+    EXECUTE format('DROP POLICY IF EXISTS tenant_access ON public.%I', tenant_table);
+    EXECUTE format('CREATE POLICY tenant_access ON public.%I FOR ALL TO authenticated USING (public.is_empresa_member(empresa_id)) WITH CHECK (public.is_empresa_member(empresa_id))', tenant_table);
+  END LOOP;
 END $$;
 
 -- ============================================================
@@ -547,97 +443,7 @@ CREATE INDEX IF NOT EXISTS idx_lancamentos_financeiros_empresa ON lancamentos_fi
 CREATE INDEX IF NOT EXISTS idx_movimentacoes_financeiras_conta ON movimentacoes_financeiras(conta_financeira_id);
 
 -- ============================================================
--- SCRIPT DE MIGRACAO / ALIMENTACAO FINANCEIRA RETROATIVA
--- Sincroniza faturamentos de Vendas e Compras para o Financeiro
--- ============================================================
-DO $$
-DECLARE
-  v_venda RECORD;
-  v_compra RECORD;
-BEGIN
-  -- 1. Sincronizar Faturamentos de Vendas Existentes (Títulos a Receber)
-  FOR v_venda IN SELECT * FROM vendas LOOP
-    IF NOT EXISTS (
-      SELECT 1 FROM lancamentos_financeiros 
-      WHERE origem_id = v_venda.id AND origem = 'Venda'
-    ) THEN
-      INSERT INTO lancamentos_financeiros (
-        empresa_id,
-        numero_documento,
-        tipo,
-        origem,
-        origem_id,
-        cliente_id,
-        data_emissao,
-        data_vencimento,
-        valor_bruto,
-        valor_liquido,
-        forma_pagamento,
-        status,
-        conciliado,
-        observacoes
-      ) VALUES (
-        v_venda.empresa_id,
-        'VENDA-' || SUBSTRING(v_venda.id::text FROM 1 FOR 8),
-        'Receita',
-        'Venda',
-        v_venda.id,
-        v_venda.cliente_id,
-        COALESCE(v_venda.data, CURRENT_DATE),
-        COALESCE(v_venda.data, CURRENT_DATE),
-        v_venda.valor_total,
-        v_venda.valor_total,
-        COALESCE(v_venda.forma_pagamento, 'PIX'),
-        'Aberto',
-        false,
-        'Faturamento retroativo importado automaticamente de Vendas'
-      );
-    END IF;
-  END LOOP;
-
-  -- 2. Sincronizar Compras de Insumos Existentes (Títulos a Pagar)
-  FOR v_compra IN SELECT * FROM compras LOOP
-    IF NOT EXISTS (
-      SELECT 1 FROM lancamentos_financeiros 
-      WHERE origem_id = v_compra.id AND origem = 'Compra'
-    ) THEN
-      INSERT INTO lancamentos_financeiros (
-        empresa_id,
-        numero_documento,
-        tipo,
-        origem,
-        origem_id,
-        fornecedor,
-        data_emissao,
-        data_vencimento,
-        valor_bruto,
-        valor_liquido,
-        forma_pagamento,
-        status,
-        conciliado,
-        observacoes
-      ) VALUES (
-        v_compra.empresa_id,
-        CASE WHEN v_compra.nota_fiscal IS NOT NULL AND v_compra.nota_fiscal <> '' THEN 'NF-' || v_compra.nota_fiscal ELSE 'COMP-' || SUBSTRING(v_compra.id::text FROM 1 FOR 8) END,
-        'Despesa',
-        'Compra',
-        v_compra.id,
-        v_compra.fornecedor,
-        COALESCE(v_compra.data, CURRENT_DATE),
-        COALESCE(v_compra.data, CURRENT_DATE),
-        v_compra.valor_pago,
-        v_compra.valor_pago,
-        'PIX',
-        'Aberto',
-        false,
-        'Despesa retroativa importada automaticamente de Compras'
-      );
-    END IF;
-  END LOOP;
-END $$;
-
--- ============================================================
--- 15. PROCEDURES / RPCs ATÔMICAS FINANCEIRAS
+-- PROCEDURES / RPCs ATÔMICAS FINANCEIRAS
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION public.liquidar_lancamento_financeiro(
@@ -823,10 +629,6 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.transferir_saldo_financeiro(UUID, UUID, NUMERIC, DATE, TEXT) TO authenticated;
 
--- ============================================================
--- 16. PROCEDURE ATÔMICA DE CONVERSÃO DE ORÇAMENTO EM VENDA
--- ============================================================
-
 CREATE OR REPLACE FUNCTION public.converter_orcamento_em_venda(
   p_orcamento_id UUID,
   p_forma_pagamento TEXT DEFAULT 'Pix'
@@ -928,9 +730,8 @@ $$;
 GRANT EXECUTE ON FUNCTION public.converter_orcamento_em_venda(UUID, TEXT) TO authenticated;
 
 -- ============================================================
--- 17. SCRIPT DE VINCULAÇÃO E BACKFILL DE DADOS EXISTENTES À EMPRESA
+-- SCRIPT DE VINCULAÇÃO E BACKFILL DE DADOS EXISTENTES À EMPRESA
 -- ============================================================
-
 DO $$
 DECLARE
   v_target_empresa_id UUID;
@@ -940,8 +741,8 @@ BEGIN
   SELECT id INTO v_target_empresa_id FROM empresas ORDER BY created_at ASC LIMIT 1;
 
   IF v_target_empresa_id IS NULL THEN
-    INSERT INTO empresas (id, nome)
-    VALUES ('00000000-0000-0000-0000-000000000001', 'Empresa Principal')
+    INSERT INTO empresas (nome)
+    VALUES ('Empresa Principal')
     RETURNING id INTO v_target_empresa_id;
   END IF;
 
@@ -964,11 +765,7 @@ BEGIN
     EXECUTE format('
       UPDATE public.%I 
       SET empresa_id = %L 
-      WHERE empresa_id IS NULL OR empresa_id = %L
-    ', v_table, v_target_empresa_id, '00000000-0000-0000-0000-000000000001');
+      WHERE empresa_id IS NULL
+    ', v_table, v_target_empresa_id);
   END LOOP;
 END $$;
-
-
-
-
