@@ -384,4 +384,55 @@ ALTER TABLE lancamentos_financeiros ENABLE ROW LEVEL SECURITY;
 ALTER TABLE movimentacoes_financeiras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transferencias_financeiras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE auditoria_financeira ENABLE ROW LEVEL SECURITY;
+
+-- MIGRAÇÃO DE PRESERVAÇÃO DE DADOS EXISTENTES (Garantir que todos os registros fiquem vinculados à Empresa Padrão)
+UPDATE filamentos SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+UPDATE clientes SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+UPDATE impressoras SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+UPDATE tarifas_energia SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+UPDATE produtos SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+UPDATE producoes SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+UPDATE orcamentos SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+UPDATE vendas SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+UPDATE compras SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+UPDATE insumos SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+UPDATE contas_financeiras SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+UPDATE categorias_financeiras SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+UPDATE centros_custo SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+UPDATE lancamentos_financeiros SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+UPDATE movimentacoes_financeiras SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+UPDATE transferencias_financeiras SET empresa_id = '00000000-0000-0000-0000-000000000001' WHERE empresa_id IS NULL;
+
+-- ASSOCIAR USUÁRIO AUTENTICADO ATUAL À EMPRESA PADRÃO
+INSERT INTO usuario_empresa (user_id, empresa_id)
+SELECT auth.uid(), '00000000-0000-0000-0000-000000000001'
+WHERE auth.uid() IS NOT NULL
+ON CONFLICT (user_id, empresa_id) DO NOTHING;
+
+-- FUNÇÃO AUXILIAR DE SEGURANÇA MULTI-TENANT
+CREATE OR REPLACE FUNCTION get_user_empresa_ids()
+RETURNS SETOF UUID AS $$
+  SELECT empresa_id FROM usuario_empresa WHERE user_id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- POLÍTICAS RLS ESTRITAS POR TENANT
+DO $$
+DECLARE
+  tbl text;
+BEGIN
+  FOR tbl IN SELECT unnest(ARRAY[
+    'empresas', 'filamentos', 'clientes', 'impressoras', 'tarifas_energia', 
+    'produtos', 'produto_materiais', 'producoes', 'orcamentos', 'orcamento_itens', 
+    'vendas', 'compras', 'insumos', 'contas_financeiras', 'categorias_financeiras', 
+    'centros_custo', 'lancamentos_financeiros', 'movimentacoes_financeiras', 
+    'transferencias_financeiras', 'auditoria_financeira'
+  ]) LOOP
+    EXECUTE format('DROP POLICY IF EXISTS "tenant_isolation_%s" ON %I;', tbl, tbl);
+    IF tbl = 'empresas' THEN
+      EXECUTE format('CREATE POLICY "tenant_isolation_%s" ON %I FOR ALL USING (id IN (SELECT get_user_empresa_ids())) WITH CHECK (id IN (SELECT get_user_empresa_ids()));', tbl, tbl);
+    ELSE
+      EXECUTE format('CREATE POLICY "tenant_isolation_%s" ON %I FOR ALL USING (empresa_id IN (SELECT get_user_empresa_ids())) WITH CHECK (empresa_id IN (SELECT get_user_empresa_ids()));', tbl, tbl);
+    END IF;
+  END LOOP;
+END $$;
 `;
