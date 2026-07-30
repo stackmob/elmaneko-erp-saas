@@ -2,25 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { Filament, Purchase, SupplyItem } from '../../types';
 import { 
-  getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid 
+  getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid, getActiveTenantId
 } from '../../utils/storage';
-
-const getFallbackEmpresaId = (): string => {
-  try {
-    const empresaId = localStorage.getItem('elmaneko_empresa_id');
-    if (empresaId) return empresaId;
-  } catch (e) {
-    // The caller receives a clear tenant error below.
-  }
-  throw new Error('Nenhuma empresa ativa para a sessão atual.');
-};
 
 // 1. FILAMENTOS
 export function useFilamentos() {
   return useQuery({
     queryKey: ['filamentos'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('filamentos').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('filamentos').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<Filament>('filamentos');
 
       const mapped: Filament[] = data.map(item => ({
@@ -48,7 +38,7 @@ export function useAddFilamento() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (novo: Omit<Filament, 'id'>) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const payload = {
         empresa_id: empresaId,
         nome: novo.nome,
@@ -95,7 +85,7 @@ export function useUpdateFilamento() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (filamento: Filament) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const payload = {
         nome: filamento.nome,
         tipo: filamento.tipo,
@@ -124,7 +114,7 @@ export function useDeleteFilamento() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       if (isValidUuid(id)) {
         await supabase.from('filamentos').delete().eq('id', id).eq('empresa_id', empresaId);
       }
@@ -140,7 +130,7 @@ export function useInsumos() {
   return useQuery({
     queryKey: ['insumos'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('insumos').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('insumos').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<SupplyItem>('insumos');
 
       const mapped: SupplyItem[] = data.map(item => ({
@@ -166,7 +156,7 @@ export function useAddInsumo() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (novo: Omit<SupplyItem, 'id'>) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const payload = {
         empresa_id: empresaId,
         nome: novo.nome,
@@ -209,7 +199,7 @@ export function useUpdateInsumo() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (item: SupplyItem) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const payload = {
         nome: item.nome,
         categoria: item.categoria,
@@ -236,7 +226,7 @@ export function useDeleteInsumo() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       if (isValidUuid(id)) {
         await supabase.from('insumos').delete().eq('id', id).eq('empresa_id', empresaId);
       }
@@ -252,7 +242,7 @@ export function useCompras() {
   return useQuery({
     queryKey: ['compras'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('compras').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('compras').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<Purchase>('compras');
 
       const mapped: Purchase[] = data.map(item => ({
@@ -282,7 +272,7 @@ export function useAddCompra() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (nova: Omit<Purchase, 'id'>) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const payload = {
         empresa_id: empresaId,
         data: nova.data,
@@ -357,7 +347,7 @@ export function useUpdateCompra() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (compra: Purchase) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const payload = {
         data: compra.data,
         fornecedor: compra.fornecedor,
@@ -408,7 +398,7 @@ export function useDeleteCompra() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       if (isValidUuid(id)) {
         await supabase.from('compras').delete().eq('id', id).eq('empresa_id', empresaId);
         try {

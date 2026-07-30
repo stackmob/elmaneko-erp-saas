@@ -5,31 +5,21 @@ import {
   FinancialMovement, FinancialTransfer, FinancialAuditLog
 } from '../../types';
 import { 
-  getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid 
+  getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid, getActiveTenantId
 } from '../../utils/storage';
-
-const getFallbackEmpresaId = (): string => {
-  try {
-    const empresaId = localStorage.getItem('elmaneko_empresa_id');
-    if (empresaId) return empresaId;
-  } catch (e) {
-    // The caller receives a clear tenant error below.
-  }
-  throw new Error('Nenhuma empresa ativa para a sessão atual.');
-};
 
 // 1. CONTAS FINANCEIRAS
 export function useContasFinanceiras() {
   return useQuery({
     queryKey: ['contas_financeiras'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contas_financeiras').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('contas_financeiras').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<FinancialAccount>('contas_financeiras');
 
       const mapped: FinancialAccount[] = data.map(item => ({
         id: item.id,
         nome: item.nome,
-        tipo: item.tipo as any,
+        tipo: item.tipo as FinancialAccount['tipo'],
         banco: item.banco || '',
         agencia: item.agencia || '',
         conta: item.conta || '',
@@ -41,7 +31,7 @@ export function useContasFinanceiras() {
         diaVencimento: item.dia_vencimento,
         saldoInicial: Number(item.saldo_inicial || 0),
         saldoAtual: Number(item.saldo_atual || 0),
-        situacao: item.situacao as any,
+        situacao: item.situacao as FinancialAccount['situacao'],
         observacoes: item.observacoes || ''
       }));
 
@@ -56,7 +46,7 @@ export function useAddContaFinanceira() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (nova: Omit<FinancialAccount, 'id'>) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const payload = {
         empresa_id: empresaId,
         nome: nova.nome,
@@ -161,13 +151,13 @@ export function useCategoriasFinanceiras() {
   return useQuery({
     queryKey: ['categorias_financeiras'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('categorias_financeiras').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('categorias_financeiras').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<FinancialCategory>('categorias_financeiras');
 
       const mapped: FinancialCategory[] = data.map(item => ({
         id: item.id,
         nome: item.nome,
-        tipo: item.tipo as any,
+        tipo: item.tipo as FinancialCategory['tipo'],
         categoriaPaiId: item.categoria_pai_id,
         descricao: item.descricao || ''
       }));
@@ -183,7 +173,7 @@ export function useAddCategoriaFinanceira() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (nova: Omit<FinancialCategory, 'id'>) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const payload = {
         empresa_id: empresaId,
         nome: nova.nome,
@@ -255,7 +245,7 @@ export function useCentrosCusto() {
   return useQuery({
     queryKey: ['centros_custo'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('centros_custo').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('centros_custo').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<CostCenter>('centros_custo');
 
       const mapped: CostCenter[] = data.map(item => ({
@@ -276,7 +266,7 @@ export function useAddCentroCusto() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (novo: Omit<CostCenter, 'id'>) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const payload = {
         empresa_id: empresaId,
         codigo: novo.codigo,
@@ -348,7 +338,7 @@ export function useLancamentosFinanceiros() {
       const { data, error } = await supabase
         .from('lancamentos_financeiros')
         .select('*')
-        .eq('empresa_id', getFallbackEmpresaId())
+        .eq('empresa_id', getActiveTenantId())
         .eq('is_deleted', false)
         .order('created_at', { ascending: false });
 
@@ -357,8 +347,8 @@ export function useLancamentosFinanceiros() {
       const mapped: FinancialEntry[] = data.map(item => ({
         id: item.id,
         numeroDocumento: item.numero_documento,
-        tipo: item.tipo as any,
-        origem: item.origem as any,
+        tipo: item.tipo as FinancialEntry['tipo'],
+        origem: item.origem as FinancialEntry['origem'],
         origemId: item.origem_id,
         clienteId: item.cliente_id,
         fornecedor: item.fornecedor || '',
@@ -378,7 +368,7 @@ export function useLancamentosFinanceiros() {
         parcelaAtual: item.parcela_atual || 1,
         totalParcelas: item.total_parcelas || 1,
         parcelaPaiId: item.parcela_pai_id,
-        status: item.status as any,
+        status: item.status as FinancialEntry['status'],
         conciliado: !!item.conciliado,
         tipoConciliacao: item.tipo_conciliacao,
         observacoes: item.observacoes || '',
@@ -396,7 +386,7 @@ export function useAddLancamentoFinanceiro() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (novo: Omit<FinancialEntry, 'id'>) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const payload = {
         empresa_id: empresaId,
         numero_documento: novo.numeroDocumento,
@@ -478,7 +468,7 @@ export function useCancelLancamento() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       if (isValidUuid(id)) {
         await supabase.from('lancamentos_financeiros').update({ status: 'Cancelado' }).eq('id', id).eq('empresa_id', empresaId);
       }
@@ -523,7 +513,7 @@ export function useMovimentacoesFinanceiras() {
   return useQuery({
     queryKey: ['movimentacoes_financeiras'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('movimentacoes_financeiras').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('movimentacoes_financeiras').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<FinancialMovement>('movimentacoes_financeiras');
 
       const mapped: FinancialMovement[] = data.map(item => ({
@@ -531,7 +521,7 @@ export function useMovimentacoesFinanceiras() {
         contaFinanceiraId: item.conta_financeira_id,
         lancamentoId: item.lancamento_id,
         data: item.data,
-        tipo: item.tipo as any,
+        tipo: item.tipo as FinancialMovement['tipo'],
         valor: Number(item.valor),
         saldoAnterior: Number(item.saldo_anterior || 0),
         saldoPosterior: Number(item.saldo_posterior || 0),
@@ -550,7 +540,7 @@ export function useTransferenciasFinanceiras() {
   return useQuery({
     queryKey: ['transferencias_financeiras'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('transferencias_financeiras').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('transferencias_financeiras').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<FinancialTransfer>('transferencias_financeiras');
 
       const mapped: FinancialTransfer[] = data.map(item => ({
@@ -611,7 +601,7 @@ export function useAuditoriaFinanceira() {
   return useQuery({
     queryKey: ['auditoria_financeira'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('auditoria_financeira').select('*').eq('empresa_id', getFallbackEmpresaId()).order('data_hora', { ascending: false });
+      const { data, error } = await supabase.from('auditoria_financeira').select('*').eq('empresa_id', getActiveTenantId()).order('data_hora', { ascending: false });
       if (error || !data) return getLocalCache<FinancialAuditLog>('auditoria_financeira');
 
       const mapped: FinancialAuditLog[] = data.map(item => ({
@@ -637,7 +627,7 @@ export function useAddAuditLog() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (log: Omit<FinancialAuditLog, 'id'> & { id?: string }) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const { data, error } = await supabase.from('auditoria_financeira').insert([{
         empresa_id: empresaId,
         data_hora: log.dataHora,
@@ -663,7 +653,7 @@ export function useSyncFinancialEntries() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       
       try {
         const { data: vendas, error: errVendas } = await supabase.from('vendas').select('*').eq('empresa_id', empresaId);

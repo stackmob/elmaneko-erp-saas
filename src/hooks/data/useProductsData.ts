@@ -2,25 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { Product, ProductionOrder } from '../../types';
 import { 
-  getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid 
+  getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid, getActiveTenantId
 } from '../../utils/storage';
-
-const getFallbackEmpresaId = (): string => {
-  try {
-    const empresaId = localStorage.getItem('elmaneko_empresa_id');
-    if (empresaId) return empresaId;
-  } catch (e) {
-    // The caller receives a clear tenant error below.
-  }
-  throw new Error('Nenhuma empresa ativa para a sessão atual.');
-};
 
 // PRODUTOS & BOM
 export function useProdutos() {
   return useQuery({
     queryKey: ['produtos'],
     queryFn: async () => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const { data: prods, error: pErr } = await supabase.from('produtos').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false });
       if (pErr || !prods) return getLocalCache<Product>('produtos');
 
@@ -67,7 +57,7 @@ export function useAddProduto() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (novo: Omit<Product, 'id'>) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const payload = {
         empresa_id: empresaId,
         nome: novo.nome,
@@ -146,7 +136,7 @@ export function useUpdateProduto() {
         await supabase.from('produto_materiais').delete().eq('produto_id', produto.id);
 
         if (produto.materials && produto.materials.length > 0) {
-          const empresaId = getFallbackEmpresaId();
+          const empresaId = getActiveTenantId();
           const matPayloads = produto.materials.map(m => ({
             empresa_id: empresaId,
             produto_id: produto.id,
@@ -184,7 +174,7 @@ export function useProducoes() {
   return useQuery({
     queryKey: ['producoes'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('producoes').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('producoes').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<ProductionOrder>('producoes');
 
       const mapped: ProductionOrder[] = data.map(item => ({
@@ -195,13 +185,13 @@ export function useProducoes() {
         quantidade: item.quantidade,
         impressoraId: item.impressora_id,
         operador: item.operador,
-        status: item.status as any,
+        status: item.status as ProductionOrder['status'],
         custoFilamento: Number(item.custo_filamento),
         custoEnergia: Number(item.custo_energia),
         custoMaoDeObra: Number(item.custo_mao_de_obra),
         custoTotal: Number(item.custo_total),
         custoUnitario: Number(item.custo_unitario),
-        maoDeObraEscolha: item.mao_de_obra_escolha as any,
+        maoDeObraEscolha: item.mao_de_obra_escolha as ProductionOrder['maoDeObraEscolha'],
         maoDeObraValor: Number(item.mao_de_obra_valor || 0),
         observacoes: item.observacoes
       }));
@@ -217,7 +207,7 @@ export function useAddProducao() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (nova: Omit<ProductionOrder, 'id'>) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const payload = {
         empresa_id: empresaId,
         numero: nova.numero,

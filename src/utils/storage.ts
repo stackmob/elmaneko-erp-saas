@@ -2,21 +2,24 @@
  * Storage & Local Cache Utilities for Elmaneko 3D ERP
  */
 
-export interface SyncQueueItem {
+export interface SyncQueueItem<T = Record<string, unknown>> {
   id: string;
+  empresaId: string;
   table: string;
   action: 'INSERT' | 'UPDATE' | 'DELETE';
-  payload: any;
+  payload: T;
   timestamp: string;
 }
 
-export const getActiveEmpresaId = (): string => {
+export const getActiveTenantId = (): string => {
   try {
     const id = typeof localStorage !== 'undefined' ? localStorage.getItem('elmaneko_empresa_id') : null;
     if (id) return id;
   } catch (e) {}
   throw new Error('Nenhuma empresa ativa selecionada para a sessão atual.');
 };
+
+export const getActiveEmpresaId = getActiveTenantId;
 
 export const getEmpresaPrefix = (empresaId?: string): string => {
   let empId = empresaId;

@@ -2,25 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { Printer, EnergyTariff } from '../../types';
 import { 
-  getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid 
+  getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid, getActiveTenantId
 } from '../../utils/storage';
-
-const getFallbackEmpresaId = (): string => {
-  try {
-    const empresaId = localStorage.getItem('elmaneko_empresa_id');
-    if (empresaId) return empresaId;
-  } catch (e) {
-    // The caller receives a clear tenant error below.
-  }
-  throw new Error('Nenhuma empresa ativa para a sessão atual.');
-};
 
 // IMPRESSORAS 3D
 export function useImpressoras() {
   return useQuery({
     queryKey: ['impressoras'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('impressoras').select('*').eq('empresa_id', getFallbackEmpresaId()).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('impressoras').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
       if (error || !data) return getLocalCache<Printer>('impressoras');
 
       const mapped: Printer[] = data.map(item => ({
@@ -29,7 +19,7 @@ export function useImpressoras() {
         marca: item.marca,
         modelo: item.modelo,
         potenciaWatts: Number(item.potencia_watts),
-        status: item.status as any
+        status: item.status as Printer['status']
       }));
 
       setLocalCache('impressoras', mapped);
@@ -43,7 +33,7 @@ export function useAddImpressora() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (nova: Omit<Printer, 'id'>) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const payload = {
         empresa_id: empresaId,
         nome: nova.nome,
@@ -80,7 +70,7 @@ export function useUpdateImpressora() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (printer: Printer) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const payload = {
         nome: printer.nome,
         marca: printer.marca,
@@ -104,7 +94,7 @@ export function useDeleteImpressora() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       if (isValidUuid(id)) {
         await supabase.from('impressoras').delete().eq('id', id).eq('empresa_id', empresaId);
       }
@@ -120,7 +110,7 @@ export function useTarifasEnergia() {
   return useQuery({
     queryKey: ['tarifas_energia'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('tarifas_energia').select('*').eq('empresa_id', getFallbackEmpresaId()).order('data_inicio_vigencia', { ascending: false });
+      const { data, error } = await supabase.from('tarifas_energia').select('*').eq('empresa_id', getActiveTenantId()).order('data_inicio_vigencia', { ascending: false });
       if (error || !data) return getLocalCache<EnergyTariff>('tarifas_energia');
 
       const mapped: EnergyTariff[] = data.map(item => ({
@@ -140,7 +130,7 @@ export function useAddTarifaEnergia() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (nova: Omit<EnergyTariff, 'id'>) => {
-      const empresaId = getFallbackEmpresaId();
+      const empresaId = getActiveTenantId();
       const payload = {
         empresa_id: empresaId,
         data_inicio_vigencia: nova.dataInicio,
