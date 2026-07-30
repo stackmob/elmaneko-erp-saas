@@ -7,6 +7,7 @@ import Toast from './ui/Toast';
 import ConfirmDialog from './ui/ConfirmDialog';
 import { DataList } from './ui/DataList';
 import { Modal } from './ui/Modal';
+import { TooltipHint } from './ui/TooltipHint';
 
 export default function Supplies() {
   const { useInsumos, useAddInsumo, useUpdateInsumo, useDeleteInsumo } = useData();
@@ -29,7 +30,7 @@ export default function Supplies() {
   const [unidadeMedida, setUnidadeMedida] = useState<SupplyUnit>('un');
   const [quantidadeEstoque, setQuantidadeEstoque] = useState(0);
   const [estoqueMinimo, setEstoqueMinimo] = useState(5);
-  const [custoUnitarioPadrao, setCustoUnitarioPadrao] = useState(10.00);
+  const [custoUnitarioPadrao, setCustoUnitarioPadrao] = useState(0);
   const [fornecedorPadrao, setFornecedorPadrao] = useState('');
   const [tipoFilamento, setTipoFilamento] = useState<FilamentType>('PLA');
   const [cor, setCor] = useState('');
@@ -59,9 +60,9 @@ export default function Supplies() {
     setNome('');
     setCategoria('Cola / Adesivo');
     setUnidadeMedida('un');
-    setQuantidadeEstoque(10);
-    setEstoqueMinimo(2);
-    setCustoUnitarioPadrao(15.00);
+    setQuantidadeEstoque(0);
+    setEstoqueMinimo(5);
+    setCustoUnitarioPadrao(0);
     setFornecedorPadrao('');
     setTipoFilamento('PLA');
     setCor('');
@@ -73,10 +74,10 @@ export default function Supplies() {
     setEditingItem(item);
     setNome(item.nome);
     setCategoria(item.categoria);
-    setUnidadeMedida(item.unidadeMedida || 'un');
-    setQuantidadeEstoque(item.quantidadeEstoque || 0);
-    setEstoqueMinimo(item.estoqueMinimo !== undefined ? item.estoqueMinimo : 5);
-    setCustoUnitarioPadrao(item.custoUnitarioPadrao || 0);
+    setUnidadeMedida(item.unidadeMedida);
+    setQuantidadeEstoque(item.quantidadeEstoque);
+    setEstoqueMinimo(item.estoqueMinimo);
+    setCustoUnitarioPadrao(item.custoUnitarioPadrao);
     setFornecedorPadrao(item.fornecedorPadrao || '');
     setTipoFilamento(item.tipoFilamento || 'PLA');
     setCor(item.cor || '');
@@ -86,14 +87,14 @@ export default function Supplies() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nome || !categoria) {
-      showToast('Preencha o nome do insumo e a categoria.', 'error');
+    if (!nome.trim()) {
+      showToast('Por favor, informe o nome do insumo.', 'error');
       return;
     }
 
     const itemData: SupplyItem = {
       id: editingItem ? editingItem.id : crypto.randomUUID(),
-      nome,
+      nome: nome.trim(),
       categoria,
       unidadeMedida,
       quantidadeEstoque: Number(quantidadeEstoque),
@@ -162,17 +163,17 @@ export default function Supplies() {
 
       {/* HEADER ACTIONS */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="supplies-header">
-        <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Catálogo de Insumos & Materiais Diversos</h2>
-          <p className="text-sm text-neutral-400 mt-1">Cadastre colas, caixas/embalagens, parafusos, bicos, peças e matérias-primas para selecionar rapidamente ao registrar compras.</p>
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-bold text-white tracking-tight">Catálogo de Insumos & Materiais</h2>
+          <TooltipHint content="Cadastre componentes, colas, embalagens e peças para seleção rápida no registro de compras." />
         </div>
         <button
           onClick={handleOpenAddModal}
           id="add-new-supply-btn"
-          className="py-2.5 px-4 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-md shadow-orange-600/10 flex items-center justify-center gap-2 hover:translate-y-[-1px] transition-all cursor-pointer"
+          className="py-2.5 px-4 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-md shadow-orange-600/10 flex items-center justify-center gap-2 hover:translate-y-[-1px] transition-all cursor-pointer text-xs"
         >
           <Plus size={18} />
-          Cadastrar Novo Insumo
+          Novo Insumo
         </button>
       </div>
 
@@ -333,26 +334,16 @@ export default function Supplies() {
         }
       >
         <form id="supply-form-element" onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
-          
-          {/* HELPER CARD */}
-          <div className="p-3 bg-neutral-950 border border-neutral-800 rounded-xl space-y-1">
-            <span className="text-white font-semibold flex items-center gap-1.5 text-xs">
-              <Sparkles size={14} className="text-orange-400" />
-              Catálogo de Insumos Diversos
-            </span>
-            <span className="text-[10px] text-neutral-400 block">
-              💡 Insira os dados do item para mantê-lo disponível no catálogo do sistema e facilitar o registro rápido de novas compras.
-            </span>
-          </div>
-
           <div>
-            <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome do Insumo / Material *</label>
+            <label className="flex items-center text-neutral-400 mb-1 uppercase tracking-wider font-semibold">
+              Nome do Insumo *
+            </label>
             <input
               type="text"
               required
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              placeholder="Ex: Cola em Bastão Kores 40g / Parafuso M3x10 Inox"
+              placeholder="Ex: Cola em Bastão Kores 40g / Parafuso M3x10"
               className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
             />
           </div>
@@ -360,7 +351,9 @@ export default function Supplies() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             
             <div>
-              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Categoria *</label>
+              <label className="flex items-center text-neutral-400 mb-1 uppercase tracking-wider font-semibold">
+                Categoria *
+              </label>
               <select
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value as PurchaseCategory)}
@@ -377,7 +370,9 @@ export default function Supplies() {
             </div>
 
             <div>
-              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Unidade de Medida *</label>
+              <label className="flex items-center text-neutral-400 mb-1 uppercase tracking-wider font-semibold">
+                Unidade de Medida *
+              </label>
               <select
                 value={unidadeMedida}
                 onChange={(e) => setUnidadeMedida(e.target.value as SupplyUnit)}
@@ -395,7 +390,10 @@ export default function Supplies() {
             </div>
 
             <div>
-              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Estoque Atual Inicial *</label>
+              <label className="flex items-center text-neutral-400 mb-1 uppercase tracking-wider font-semibold">
+                Estoque Atual *
+                <TooltipHint content="Quantidade física armazenada atualmente no seu inventário." />
+              </label>
               <input
                 type="number"
                 required
@@ -407,7 +405,10 @@ export default function Supplies() {
             </div>
 
             <div>
-              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Estoque Mínimo (Alerta) *</label>
+              <label className="flex items-center text-neutral-400 mb-1 uppercase tracking-wider font-semibold">
+                Estoque Mínimo *
+                <TooltipHint content="Quantidade limite para emissão automática de alerta de reposição." />
+              </label>
               <input
                 type="number"
                 required
@@ -419,7 +420,10 @@ export default function Supplies() {
             </div>
 
             <div>
-              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Custo Unitário Estimado (R$)</label>
+              <label className="flex items-center text-neutral-400 mb-1 uppercase tracking-wider font-semibold">
+                Custo Unitário (R$)
+                <TooltipHint content="Valor de referência utilizado em cálculos de formação de preço de vendas." />
+              </label>
               <input
                 type="number"
                 step="0.01"
@@ -431,7 +435,9 @@ export default function Supplies() {
             </div>
 
             <div>
-              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Fornecedor Principal</label>
+              <label className="flex items-center text-neutral-400 mb-1 uppercase tracking-wider font-semibold">
+                Fornecedor Principal
+              </label>
               <input
                 type="text"
                 value={fornecedorPadrao}

@@ -7,6 +7,7 @@ import Toast from './ui/Toast';
 import { Modal } from './ui/Modal';
 import SearchableSelect, { SelectOption } from './ui/SearchableSelect';
 import { formatDateBR } from '../utils/formatters';
+import { TooltipHint } from './ui/TooltipHint';
 
 export default function Purchases() {
   const { useCompras, useFilamentos, useInsumos, useAddCompra, useUpdateCompra, useDeleteCompra } = useData();
@@ -32,11 +33,11 @@ export default function Purchases() {
   const [filamentoId, setFilamentoId] = useState<string>('');
   const [categoriaItem, setCategoriaItem] = useState<PurchaseCategory>('Filamento');
   const [descricaoItem, setDescricaoItem] = useState('');
-  const [quantidade, setQuantidade] = useState(1);
+  const [quantidade, setQuantidade] = useState<number>(1);
   const [unidadeMedida, setUnidadeMedida] = useState<SupplyUnit>('un');
-  const [quantidadeAdquirida, setQuantidadeAdquirida] = useState(1000); // grams if filament
+  const [quantidadeAdquirida, setQuantidadeAdquirida] = useState<number>(1000);
   const [fornecedor, setFornecedor] = useState('');
-  const [valorPago, setValorPago] = useState(120.00);
+  const [valorPago, setValorPago] = useState<number>(0);
   const [notaFiscal, setNotaFiscal] = useState('');
   const [observacoes, setObservacoes] = useState('');
 
@@ -44,7 +45,7 @@ export default function Purchases() {
   const searchableOptions: SelectOption[] = [
     // 1. Filaments
     ...filaments.map((f) => ({
-      id: `fil_${f.id}`,
+      id: `filamento:${f.id}`,
       label: f.nome,
       sublabel: `Filamento ${f.tipo} - ${f.cor} • Est: ${f.quantidadeDisponivel}g`,
       category: 'Filamento',
@@ -52,7 +53,7 @@ export default function Purchases() {
     })),
     // 2. Supplies / Insumos
     ...supplies.map((s) => ({
-      id: `ins_${s.id}`,
+      id: `insumo:${s.id}`,
       label: s.nome,
       sublabel: `${s.categoria} • Est: ${s.quantidadeEstoque} ${s.unidadeMedida}`,
       category: s.categoria,
@@ -64,17 +65,6 @@ export default function Purchases() {
     if (purchaseToEdit) {
       setEditingPurchase(purchaseToEdit);
       setData(purchaseToEdit.data || new Date().toISOString().split('T')[0]);
-      setInsumoId(purchaseToEdit.insumoId || '');
-      setFilamentoId(purchaseToEdit.filamentoId || '');
-      
-      if (purchaseToEdit.filamentoId) {
-        setSelectedItemId(`fil_${purchaseToEdit.filamentoId}`);
-      } else if (purchaseToEdit.insumoId) {
-        setSelectedItemId(`ins_${purchaseToEdit.insumoId}`);
-      } else {
-        setSelectedItemId('');
-      }
-
       setCategoriaItem(purchaseToEdit.categoriaItem || 'Filamento');
       setDescricaoItem(purchaseToEdit.descricaoItem || '');
       setQuantidade(purchaseToEdit.quantidade || 1);
@@ -84,60 +74,70 @@ export default function Purchases() {
       setValorPago(purchaseToEdit.valorPago || 0);
       setNotaFiscal(purchaseToEdit.notaFiscal || '');
       setObservacoes(purchaseToEdit.observacoes || '');
+      
+      if (purchaseToEdit.filamentoId) {
+        setSelectedItemId(`filamento:${purchaseToEdit.filamentoId}`);
+        setFilamentoId(purchaseToEdit.filamentoId);
+        setInsumoId('');
+      } else if (purchaseToEdit.insumoId) {
+        setSelectedItemId(`insumo:${purchaseToEdit.insumoId}`);
+        setInsumoId(purchaseToEdit.insumoId);
+        setFilamentoId('');
+      } else {
+        setSelectedItemId('manual');
+        setFilamentoId('');
+        setInsumoId('');
+      }
     } else {
       setEditingPurchase(null);
       setData(new Date().toISOString().split('T')[0]);
-      setSelectedItemId('');
-      setInsumoId('');
-      setFilamentoId('');
       setCategoriaItem('Filamento');
       setDescricaoItem('');
       setQuantidade(1);
-      setUnidadeMedida('g');
+      setUnidadeMedida('un');
       setQuantidadeAdquirida(1000);
       setFornecedor('');
-      setValorPago(120.00);
+      setValorPago(0);
       setNotaFiscal('');
       setObservacoes('');
+      setSelectedItemId('');
+      setFilamentoId('');
+      setInsumoId('');
     }
     setIsModalOpen(true);
   };
 
-  const handleSelectItemChange = (id: string) => {
-    setSelectedItemId(id);
-    if (!id) {
-      setInsumoId('');
-      setFilamentoId('');
-      return;
-    }
+  const handleItemSelect = (optionId: string) => {
+    setSelectedItemId(optionId);
 
-    if (id.startsWith('fil_')) {
-      const realId = id.replace('fil_', '');
-      const fil = filaments.find((f) => f.id === realId);
-      if (fil) {
-        setFilamentoId(realId);
+    if (optionId.startsWith('filamento:')) {
+      const id = optionId.replace('filamento:', '');
+      const f = filaments.find((fil) => fil.id === id);
+      if (f) {
+        setFilamentoId(f.id);
         setInsumoId('');
         setCategoriaItem('Filamento');
-        setDescricaoItem(fil.nome);
-        setUnidadeMedida('g');
-        setQuantidade(1000);
-        setQuantidadeAdquirida(1000);
-        if (fil.fornecedor) setFornecedor(fil.fornecedor);
-        if (fil.valorCompra) setValorPago(fil.valorCompra);
+        setDescricaoItem(`${f.nome} (${f.tipo} ${f.marca} - ${f.cor})`);
+        setUnidadeMedida('rolo');
+        setQuantidadeAdquirida(f.pesoTotal || 1000);
+        if (f.fornecedor) setFornecedor(f.fornecedor);
+        if (f.valorCompra) setValorPago(f.valorCompra);
       }
-    } else if (id.startsWith('ins_')) {
-      const realId = id.replace('ins_', '');
-      const ins = supplies.find((s) => s.id === realId);
-      if (ins) {
-        setInsumoId(realId);
+    } else if (optionId.startsWith('insumo:')) {
+      const id = optionId.replace('insumo:', '');
+      const s = supplies.find((sup) => sup.id === id);
+      if (s) {
+        setInsumoId(s.id);
         setFilamentoId('');
-        setCategoriaItem(ins.categoria);
-        setDescricaoItem(ins.nome);
-        setUnidadeMedida(ins.unidadeMedida || 'un');
-        setQuantidade(1);
-        if (ins.fornecedorPadrao) setFornecedor(ins.fornecedorPadrao);
-        if (ins.custoUnitarioPadrao) setValorPago(ins.custoUnitarioPadrao);
+        setCategoriaItem(s.categoria);
+        setDescricaoItem(s.nome);
+        setUnidadeMedida(s.unidadeMedida || 'un');
+        if (s.fornecedorPadrao) setFornecedor(s.fornecedorPadrao);
+        if (s.custoUnitarioPadrao) setValorPago(s.custoUnitarioPadrao * quantidade);
       }
+    } else {
+      setFilamentoId('');
+      setInsumoId('');
     }
   };
 
@@ -183,20 +183,15 @@ export default function Purchases() {
           setEditingPurchase(null);
           showToast('Registro de compra atualizado com sucesso!', 'success');
         },
-        onError: () => showToast('Erro ao atualizar registro de compra.', 'error'),
+        onError: () => showToast('Erro ao atualizar compra.', 'error'),
       });
     } else {
       addMutation.mutate(purchasePayload, {
         onSuccess: () => {
           setIsModalOpen(false);
-          showToast(
-            categoriaItem === 'Filamento' || insumoId
-              ? 'Compra registrada e estoque atualizado no catálogo!'
-              : 'Compra registrada com sucesso!',
-            'success'
-          );
+          showToast('Compra e movimentação financeira registradas com sucesso!', 'success');
         },
-        onError: () => showToast('Erro ao registrar compra.', 'error'),
+        onError: () => showToast('Erro ao salvar registro de compra.', 'error'),
       });
     }
   };
@@ -239,19 +234,14 @@ export default function Purchases() {
 
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
-    const filamentObj = filaments.find((f) => f.id === p.filamentoId);
-    const supplyObj = supplies.find((s) => s.id === p.insumoId);
-
     return (
       (p.fornecedor && p.fornecedor.toLowerCase().includes(q)) ||
       (p.descricaoItem && p.descricaoItem.toLowerCase().includes(q)) ||
-      (p.notaFiscal && p.notaFiscal.toLowerCase().includes(q)) ||
-      (filamentObj && filamentObj.nome.toLowerCase().includes(q)) ||
-      (supplyObj && supplyObj.nome.toLowerCase().includes(q))
+      (p.notaFiscal && p.notaFiscal.toLowerCase().includes(q))
     );
   });
 
-  const totalSpent = filteredPurchases.reduce((acc, p) => acc + p.valorPago, 0);
+  const totalSpent = filteredPurchases.reduce((acc, p) => acc + (p.valorPago || 0), 0);
   const totalFilamentGrams = filteredPurchases
     .filter((p) => (p.categoriaItem || 'Filamento') === 'Filamento')
     .reduce((acc, p) => acc + (p.quantidadeAdquirida || 0), 0);
@@ -262,14 +252,14 @@ export default function Purchases() {
 
       {/* HEADER ACTIONS */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="purchases-header">
-        <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Controle de Compras & Entrada de Insumos</h2>
-          <p className="text-sm text-neutral-400 mt-1">Registre, edite e acompanhe compras de insumos com atualização instantânea e controle total.</p>
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-bold text-white tracking-tight">Controle de Compras & Histórico</h2>
+          <TooltipHint content="Registre aquisições de insumos e filamentos com atualização automática do extrato financeiro." />
         </div>
         <button
           onClick={() => handleOpenModal()}
           id="add-new-purchase-btn"
-          className="py-2.5 px-4 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-md shadow-orange-600/10 flex items-center justify-center gap-2 hover:translate-y-[-1px] transition-all cursor-pointer"
+          className="py-2.5 px-4 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-md shadow-orange-600/10 flex items-center justify-center gap-2 hover:translate-y-[-1px] transition-all cursor-pointer text-xs"
         >
           <Plus size={18} />
           Registrar Compra
@@ -523,16 +513,13 @@ export default function Purchases() {
           {/* SEARCHABLE SELECT COMBOBOX */}
           <div className="p-3 bg-neutral-950 border border-neutral-800 rounded-xl space-y-2">
             <SearchableSelect
-              label="Buscar & Selecionar Item do Catálogo"
-              placeholder="Digite qualquer parte do nome (ex: cola, caixa, m3, pla)..."
+              label="Item do Catálogo"
+              placeholder="Digite o nome do insumo ou filamento..."
               options={searchableOptions}
               value={selectedItemId}
-              onChange={handleSelectItemChange}
+              onChange={handleItemSelect}
               emptyMessage="Nenhum item do catálogo encontrado com este nome."
             />
-            <span className="text-[10px] text-neutral-500 block">
-              💡 Digite o nome para autocompletar ou preencha os campos abaixo caso o item ainda não esteja cadastrado.
-            </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">

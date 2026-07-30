@@ -10,6 +10,7 @@ import Toast from './ui/Toast';
 import { ScrollableTabs } from './ui/ScrollableTabs';
 import { CompleteOrderModal } from './production/CompleteOrderModal';
 import { formatDateBR } from '../utils/formatters';
+import { TooltipHint } from './ui/TooltipHint';
 
 export default function Production() {
   const { useProducoes, useProdutos, useImpressoras, useFilamentos, useTarifas, useAddProducao, useUpdateProducao, useUpdateFilamento } = useData();
@@ -305,9 +306,9 @@ export default function Production() {
       
       {/* 1. VIEW TOGGLE BAR */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-neutral-900 border border-neutral-800 rounded-2xl">
-        <div>
+        <div className="flex items-center gap-2">
           <h2 className="text-xl font-bold text-white tracking-tight">Módulo de Produção 3D</h2>
-          <p className="text-sm text-neutral-400 mt-0.5">Faturamento de peças, consumo real de polímeros, e auditoria financeira congelada.</p>
+          <TooltipHint content="Gestão de ordens de impressão, faturamento de peças e consumo automatizado de matéria-prima." />
         </div>
         
         {/* Navigation Tabs */}
