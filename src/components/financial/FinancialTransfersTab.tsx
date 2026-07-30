@@ -69,12 +69,10 @@ export const FinancialTransfersTab: React.FC<FinancialTransfersTabProps> = ({
                   </td>
                   <td className="p-3 text-neutral-400">{tr.observacoes || '-'}</td>
                 </tr>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
