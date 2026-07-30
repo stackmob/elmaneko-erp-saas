@@ -95,6 +95,7 @@ export function useUpdateFilamento() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (filamento: Filament) => {
+      const empresaId = getFallbackEmpresaId();
       const payload = {
         nome: filamento.nome,
         tipo: filamento.tipo,
@@ -109,7 +110,7 @@ export function useUpdateFilamento() {
       };
 
       if (isValidUuid(filamento.id)) {
-        await supabase.from('filamentos').update(payload).eq('id', filamento.id);
+        await supabase.from('filamentos').update(payload).eq('id', filamento.id).eq('empresa_id', empresaId);
       }
 
       addToLocalCache('filamentos', filamento);
@@ -123,8 +124,9 @@ export function useDeleteFilamento() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const empresaId = getFallbackEmpresaId();
       if (isValidUuid(id)) {
-        await supabase.from('filamentos').delete().eq('id', id);
+        await supabase.from('filamentos').delete().eq('id', id).eq('empresa_id', empresaId);
       }
       removeFromLocalCache('filamentos', id);
       return id;
@@ -207,6 +209,7 @@ export function useUpdateInsumo() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (item: SupplyItem) => {
+      const empresaId = getFallbackEmpresaId();
       const payload = {
         nome: item.nome,
         categoria: item.categoria,
@@ -219,7 +222,7 @@ export function useUpdateInsumo() {
       };
 
       if (isValidUuid(item.id)) {
-        await supabase.from('insumos').update(payload).eq('id', item.id);
+        await supabase.from('insumos').update(payload).eq('id', item.id).eq('empresa_id', empresaId);
       }
 
       addToLocalCache('insumos', item);
@@ -233,8 +236,9 @@ export function useDeleteInsumo() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const empresaId = getFallbackEmpresaId();
       if (isValidUuid(id)) {
-        await supabase.from('insumos').delete().eq('id', id);
+        await supabase.from('insumos').delete().eq('id', id).eq('empresa_id', empresaId);
       }
       removeFromLocalCache('insumos', id);
       return id;
@@ -353,6 +357,7 @@ export function useUpdateCompra() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (compra: Purchase) => {
+      const empresaId = getFallbackEmpresaId();
       const payload = {
         data: compra.data,
         fornecedor: compra.fornecedor,
@@ -369,7 +374,7 @@ export function useUpdateCompra() {
       };
 
       if (isValidUuid(compra.id)) {
-        await supabase.from('compras').update(payload).eq('id', compra.id);
+        await supabase.from('compras').update(payload).eq('id', compra.id).eq('empresa_id', empresaId);
         
         try {
           await supabase
@@ -382,7 +387,8 @@ export function useUpdateCompra() {
               valor_liquido: Number(compra.valorPago),
               numero_documento: compra.notaFiscal ? `NF-${compra.notaFiscal}` : `COMP-${compra.id.slice(0, 8)}`,
             })
-            .eq('origem_id', compra.id);
+            .eq('origem_id', compra.id)
+            .eq('empresa_id', empresaId);
         } catch (e) {}
       }
 
@@ -402,10 +408,11 @@ export function useDeleteCompra() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const empresaId = getFallbackEmpresaId();
       if (isValidUuid(id)) {
-        await supabase.from('compras').delete().eq('id', id);
+        await supabase.from('compras').delete().eq('id', id).eq('empresa_id', empresaId);
         try {
-          await supabase.from('lancamentos_financeiros').delete().eq('origem_id', id);
+          await supabase.from('lancamentos_financeiros').delete().eq('origem_id', id).eq('empresa_id', empresaId);
         } catch (e) {}
       }
       removeFromLocalCache('compras', id);
@@ -419,4 +426,3 @@ export function useDeleteCompra() {
     },
   });
 }
-

@@ -86,6 +86,7 @@ export function useUpdateCliente() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (cliente: Client) => {
+      const empresaId = getFallbackEmpresaId();
       const payload = {
         nome: cliente.nome,
         cpf_cnpj: cliente.cpfCnpj,
@@ -97,7 +98,7 @@ export function useUpdateCliente() {
       };
 
       if (isValidUuid(cliente.id)) {
-        await supabase.from('clientes').update(payload).eq('id', cliente.id);
+        await supabase.from('clientes').update(payload).eq('id', cliente.id).eq('empresa_id', empresaId);
       }
 
       addToLocalCache('clientes', cliente);
@@ -111,8 +112,9 @@ export function useDeleteCliente() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const empresaId = getFallbackEmpresaId();
       if (isValidUuid(id)) {
-        await supabase.from('clientes').delete().eq('id', id);
+        await supabase.from('clientes').delete().eq('id', id).eq('empresa_id', empresaId);
       }
       removeFromLocalCache('clientes', id);
       return id;
@@ -214,6 +216,7 @@ export function useUpdateOrcamento() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (budget: Budget) => {
+      const empresaId = getFallbackEmpresaId();
       const payload = {
         cliente_id: budget.clienteId,
         data_emissao: budget.dataEmissao,
@@ -225,11 +228,10 @@ export function useUpdateOrcamento() {
       };
 
       if (isValidUuid(budget.id)) {
-        await supabase.from('orcamentos').update(payload).eq('id', budget.id);
-        await supabase.from('orcamento_itens').delete().eq('orcamento_id', budget.id);
+        await supabase.from('orcamentos').update(payload).eq('id', budget.id).eq('empresa_id', empresaId);
+        await supabase.from('orcamento_itens').delete().eq('orcamento_id', budget.id).eq('empresa_id', empresaId);
 
         if (budget.itens && budget.itens.length > 0) {
-          const empresaId = getFallbackEmpresaId();
           const itemPayloads = budget.itens.map(i => ({
             empresa_id: empresaId,
             orcamento_id: budget.id,
@@ -253,8 +255,9 @@ export function useDeleteOrcamento() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const empresaId = getFallbackEmpresaId();
       if (isValidUuid(id)) {
-        await supabase.from('orcamentos').delete().eq('id', id);
+        await supabase.from('orcamentos').delete().eq('id', id).eq('empresa_id', empresaId);
       }
       removeFromLocalCache('orcamentos', id);
       return id;
@@ -358,6 +361,7 @@ export function useUpdateVenda() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (venda: Sale) => {
+      const empresaId = getFallbackEmpresaId();
       if (isValidUuid(venda.id)) {
         const { error } = await supabase.from('vendas').update({
           cliente_id: venda.clienteId,
@@ -366,7 +370,7 @@ export function useUpdateVenda() {
           forma_pagamento: venda.formaPagamento,
           status: venda.statusPagamento,
           orcamento_origem_id: isValidUuid(venda.orcamentoOrigemId) ? venda.orcamentoOrigemId : null,
-        }).eq('id', venda.id);
+        }).eq('id', venda.id).eq('empresa_id', empresaId);
         if (error) throw error;
       }
       addToLocalCache('vendas', venda);
@@ -380,8 +384,9 @@ export function useDeleteVenda() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const empresaId = getFallbackEmpresaId();
       if (isValidUuid(id)) {
-        const { error } = await supabase.from('vendas').delete().eq('id', id);
+        const { error } = await supabase.from('vendas').delete().eq('id', id).eq('empresa_id', empresaId);
         if (error) throw error;
       }
       removeFromLocalCache('vendas', id);

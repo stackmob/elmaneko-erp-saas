@@ -12,15 +12,21 @@ export interface SyncQueueItem {
 
 export const getActiveEmpresaId = (): string => {
   try {
-    return (typeof localStorage !== 'undefined' ? localStorage.getItem('elmaneko_empresa_id') : null) || '00000000-0000-0000-0000-000000000001';
-  } catch (e) {
-    return '00000000-0000-0000-0000-000000000001';
-  }
+    const id = typeof localStorage !== 'undefined' ? localStorage.getItem('elmaneko_empresa_id') : null;
+    if (id) return id;
+  } catch (e) {}
+  throw new Error('Nenhuma empresa ativa selecionada para a sessão atual.');
 };
 
 export const getEmpresaPrefix = (empresaId?: string): string => {
-  const empId = empresaId || getActiveEmpresaId();
-  return `elmaneko_cache_${empId}_`;
+  let empId = empresaId;
+  if (!empId) {
+    try {
+      empId = (typeof localStorage !== 'undefined' ? localStorage.getItem('elmaneko_empresa_id') : null) || undefined;
+    } catch (e) {}
+  }
+  const safeId = empId || 'no_tenant';
+  return `elmaneko_cache_${safeId}_`;
 };
 
 export const getLocalCache = <T>(key: string, empresaId?: string): T[] => {

@@ -435,4 +435,108 @@ BEGIN
     END IF;
   END LOOP;
 END $$;
+
+-- STORED PROCEDURES (RPCs ATÔMICAS PARA INTEGRIDADE FINANCEIRA)
+
+-- 1. Liquidar Lançamento Financeiro
+CREATE OR REPLACE FUNCTION liquidar_lancamento_financeiro(
+  p_lancamento_id UUID,
+  p_conta_id UUID,
+  p_valor_pago NUMERIC,
+  p_data_liquidacao DATE DEFAULT CURRENT_DATE
+) RETURNS VOID AS $$
+DECLARE
+  v_empresa_id UUID;
+  v_tipo TEXT;
+  v_valor_bruto NUMERIC;
+BEGIN
+  SELECT empresa_id, tipo, valor_bruto INTO v_empresa_id, v_tipo, v_valor_bruto
+  FROM lancamentos_financeiros WHERE id = p_lancamento_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Lançamento financeiro não encontrado.';
+  END IF;
+
+  -- Atualizar Lançamento
+  UPDATE lancamentos_financeiros
+  SET status = 'Liquidado',
+      data_liquidacao = p_data_liquidacao,
+      valor_pago = p_valor_pago,
+      conta_financeira_id = p_conta_id
+  WHERE id = p_lancamento_id;
+
+  -- Atualizar Saldo da Conta
+  IF v_tipo = 'Receita' THEN
+    UPDATE contas_financeiras
+    SET saldo_atual = saldo_atual + p_valor_pago
+    WHERE id = p_conta_id;
+  ELSE
+    UPDATE contas_financeiras
+    SET saldo_atual = saldo_atual - p_valor_pago
+    WHERE id = p_conta_id;
+  END IF;
+
+  -- Registrar Movimentação
+  INSERT INTO movimentacoes_financeiras (
+    empresa_id, conta_financeira_id, lancamento_id, data, tipo, valor, descricao
+  ) VALUES (
+    v_empresa_id, p_conta_id, p_lancamento_id, p_data_liquidacao, v_tipo, p_valor_pago, 'Liquidação de lançamento'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 2. Transferência Entre Contas
+CREATE OR REPLACE FUNCTION transferir_saldo_financeiro(
+  p_conta_origem_id UUID,
+  p_conta_destino_id UUID,
+  p_valor NUMERIC,
+  p_observacoes TEXT DEFAULT NULL
+) RETURNS VOID AS $$
+DECLARE
+  v_empresa_id UUID;
+BEGIN
+  SELECT empresa_id INTO v_empresa_id FROM contas_financeiras WHERE id = p_conta_origem_id;
+
+  -- Debitar Origem
+  UPDATE contas_financeiras SET saldo_atual = saldo_atual - p_valor WHERE id = p_conta_origem_id;
+  -- Creditar Destino
+  UPDATE contas_financeiras SET saldo_atual = saldo_atual + p_valor WHERE id = p_conta_destino_id;
+
+  -- Registrar Transferência
+  INSERT INTO transferencias_financeiras (
+    empresa_id, conta_origem_id, conta_destino_id, valor, observacoes
+  ) VALUES (
+    v_empresa_id, p_conta_origem_id, p_conta_destino_id, p_valor, p_observacoes
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 3. Conversão de Orçamento em Venda
+CREATE OR REPLACE FUNCTION converter_orcamento_venda(
+  p_orcamento_id UUID
+) RETURNS UUID AS $$
+DECLARE
+  v_orc ORCAMENTOS%ROWTYPE;
+  v_venda_id UUID;
+BEGIN
+  SELECT * INTO v_orc FROM orcamentos WHERE id = p_orcamento_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Orçamento não encontrado.';
+  END IF;
+
+  v_venda_id := gen_random_uuid();
+
+  -- Criar Venda
+  INSERT INTO vendas (
+    id, empresa_id, cliente_id, data, valor_total, forma_pagamento, status, orcamento_origem_id
+  ) VALUES (
+    v_venda_id, v_orc.empresa_id, v_orc.cliente_id, CURRENT_DATE, v_orc.valor_total, 'PIX', 'Aprovada', p_orcamento_id
+  );
+
+  -- Atualizar Status do Orçamento
+  UPDATE orcamentos SET status = 'Aprovado' WHERE id = p_orcamento_id;
+
+  RETURN v_venda_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 `;

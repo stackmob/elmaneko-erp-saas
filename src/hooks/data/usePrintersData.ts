@@ -80,6 +80,7 @@ export function useUpdateImpressora() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (printer: Printer) => {
+      const empresaId = getFallbackEmpresaId();
       const payload = {
         nome: printer.nome,
         marca: printer.marca,
@@ -89,7 +90,7 @@ export function useUpdateImpressora() {
       };
 
       if (isValidUuid(printer.id)) {
-        await supabase.from('impressoras').update(payload).eq('id', printer.id);
+        await supabase.from('impressoras').update(payload).eq('id', printer.id).eq('empresa_id', empresaId);
       }
 
       addToLocalCache('impressoras', printer);
@@ -103,8 +104,9 @@ export function useDeleteImpressora() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const empresaId = getFallbackEmpresaId();
       if (isValidUuid(id)) {
-        await supabase.from('impressoras').delete().eq('id', id);
+        await supabase.from('impressoras').delete().eq('id', id).eq('empresa_id', empresaId);
       }
       removeFromLocalCache('impressoras', id);
       return id;
