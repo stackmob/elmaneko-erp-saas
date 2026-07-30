@@ -9,6 +9,7 @@ import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
 import { ScrollableTabs } from './ui/ScrollableTabs';
 import { CompleteOrderModal } from './production/CompleteOrderModal';
+import { formatDateBR } from '../utils/formatters';
 
 export default function Production() {
   const { useProducoes, useProdutos, useImpressoras, useFilamentos, useTarifas, useAddProducao, useUpdateProducao, useUpdateFilamento } = useData();
@@ -682,7 +683,7 @@ export default function Production() {
                             {po.numero}
                           </td>
                           <td className="py-3.5 px-4 font-mono text-xs whitespace-nowrap text-neutral-400">
-                            {po.data}
+                            {formatDateBR(po.data)}
                           </td>
                           <td className="py-3.5 px-4">
                             {prodObj ? (

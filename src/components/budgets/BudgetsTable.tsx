@@ -4,6 +4,7 @@ import {
   FileText, Calendar, User, DollarSign, Eye, Edit, Trash2, 
   CheckCircle2, ArrowUpDown, Filter 
 } from 'lucide-react';
+import { formatDateBR } from '../../utils/formatters';
 
 interface BudgetsTableProps {
   budgets: Budget[];
@@ -142,11 +143,11 @@ export const BudgetsTable: React.FC<BudgetsTableProps> = ({
                 <div className="text-xs text-neutral-400 space-y-1 mb-4 font-mono">
                   <div className="flex justify-between">
                     <span>Emissão:</span>
-                    <span>{b.dataEmissao}</span>
+                    <span>{formatDateBR(b.dataEmissao)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Validade:</span>
-                    <span>{b.validade}</span>
+                    <span>{formatDateBR(b.validade)}</span>
                   </div>
                   <div className="flex justify-between pt-1 border-t border-neutral-800 text-white font-bold text-sm">
                     <span>Total:</span>

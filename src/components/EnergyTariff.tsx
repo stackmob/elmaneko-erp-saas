@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { EnergyTariff } from '../types';
 import { Plus, Zap, Calendar, History, DollarSign } from 'lucide-react';
 import { useData } from '../hooks/useData';
+import { formatDateBR } from '../utils/formatters';
 
 export default function EnergyTariffModule() {
   const { useTarifas, useAddTarifa } = useData();
@@ -72,7 +73,7 @@ export default function EnergyTariffModule() {
               </div>
               <p className="text-xs text-neutral-400 font-mono flex items-center gap-1.5 pt-2 border-t border-neutral-800/60 mt-4">
                 <Calendar size={12} className="text-neutral-500" />
-                Vigência iniciada em: <strong>{activeTariff.dataInicio}</strong>
+                Vigência iniciada em: <strong>{formatDateBR(activeTariff.dataInicio)}</strong>
               </p>
             </div>
           ) : (
@@ -122,7 +123,7 @@ export default function EnergyTariffModule() {
                     <td className="py-3.5 px-6 font-mono text-xs">
                       <div className="flex items-center gap-1.5 font-bold text-white">
                         <Calendar size={14} className="text-neutral-500" />
-                        {t.dataInicio}
+                        {formatDateBR(t.dataInicio)}
                       </div>
                     </td>
                     <td className="py-3.5 px-6 font-mono font-bold text-orange-400">

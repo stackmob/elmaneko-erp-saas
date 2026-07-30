@@ -16,6 +16,7 @@ import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
 import ConfirmDialog from './ui/ConfirmDialog';
 import { DataList } from './ui/DataList';
+import { formatDateBR } from '../utils/formatters';
 
 export default function Financial() {
   const { 
@@ -1026,7 +1027,7 @@ export default function Financial() {
                 align: 'center',
                 render: (e) => (
                   <span className={`font-mono text-xs font-bold ${new Date(e.dataVencimento) < new Date() && e.status === 'Aberto' ? 'text-amber-400' : 'text-neutral-300'}`}>
-                    {e.dataVencimento}
+                    {formatDateBR(e.dataVencimento)}
                   </span>
                 )
               },
@@ -1235,7 +1236,7 @@ export default function Financial() {
 
                     return (
                       <tr key={tr.id} className="hover:bg-neutral-800/20">
-                        <td className="p-3.5">{tr.data}</td>
+                        <td className="p-3.5">{formatDateBR(tr.data)}</td>
                         <td className="p-3.5 font-bold text-red-400">{orig?.nome || tr.contaOrigemId}</td>
                         <td className="p-3.5 font-bold text-emerald-400">{dest?.nome || tr.contaDestinoId}</td>
                         <td className="p-3.5 text-right font-black text-white">R$ {tr.valor.toFixed(2)}</td>

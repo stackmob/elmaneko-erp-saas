@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { BackupLog, Filament, Purchase, Printer, Product, ProductionOrder, Budget, Sale, Client, EnergyTariff } from '../types';
 import { Database, Download, Upload, Shield, AlertTriangle, FileText, CheckCircle2, History, Info } from 'lucide-react';
 import { useData } from '../hooks/useData';
+import { formatDateBR } from '../utils/formatters';
 
 export default function BackupModule() {
   const { 
@@ -251,7 +252,7 @@ export default function BackupModule() {
               {backupLogs.length > 0 ? (
                 backupLogs.map(log => (
                   <tr key={log.id} className="hover:bg-neutral-800/10 transition-colors" id={`row-log-${log.id}`}>
-                    <td className="py-3 px-6 text-white font-bold">{log.data}</td>
+                    <td className="py-3 px-6 text-white font-bold">{formatDateBR(log.data)}</td>
                     <td className="py-3 px-6 text-neutral-200 font-semibold">{log.operacao}</td>
                     <td className="py-3 px-6 text-neutral-400">{log.usuario}</td>
                     <td className="py-3 px-6 text-neutral-500">{log.ipSimulado}</td>

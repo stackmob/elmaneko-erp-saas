@@ -6,6 +6,7 @@ import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
 import ConfirmDialog from './ui/ConfirmDialog';
 import { DataList } from './ui/DataList';
+import { Modal } from './ui/Modal';
 
 export default function Supplies() {
   const { useInsumos, useAddInsumo, useUpdateInsumo, useDeleteInsumo } = useData();
@@ -106,6 +107,7 @@ export default function Supplies() {
 
     const onSuccess = () => {
       setIsModalOpen(false);
+      setEditingItem(null);
       showToast(editingItem ? 'Insumo atualizado com sucesso!' : 'Insumo cadastrado no catálogo!', 'success');
     };
 
@@ -291,164 +293,205 @@ export default function Supplies() {
         emptyMessage={searchQuery ? 'Nenhum insumo encontrado para a pesquisa.' : 'Nenhum insumo cadastrado no catálogo ainda.'}
       />
 
-      {/* MODAL FORM */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="supply-form-modal">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-lg max-h-[88vh] flex flex-col shadow-2xl overflow-hidden text-neutral-100 font-sans">
+      {/* FORM DIALOG REUSABLE MODAL COMPONENT */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingItem(null);
+        }}
+        maxWidth="lg"
+        title={
+          <span className="flex items-center gap-2">
+            <Package size={20} className="text-orange-500" />
+            {editingItem ? 'Editar Insumo / Material' : 'Cadastrar Novo Insumo no Catálogo'}
+          </span>
+        }
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setIsModalOpen(false);
+                setEditingItem(null);
+              }}
+              className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const formEl = document.getElementById('supply-form-element') as HTMLFormElement;
+                if (formEl) formEl.requestSubmit();
+              }}
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer shadow-md shadow-orange-600/20 transition-all"
+            >
+              {editingItem ? 'Salvar Alterações' : 'Cadastrar Insumo'}
+            </button>
+          </>
+        }
+      >
+        <form id="supply-form-element" onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
+          
+          {/* HELPER CARD */}
+          <div className="p-3 bg-neutral-950 border border-neutral-800 rounded-xl space-y-1">
+            <span className="text-white font-semibold flex items-center gap-1.5 text-xs">
+              <Sparkles size={14} className="text-orange-400" />
+              Catálogo de Insumos Diversos
+            </span>
+            <span className="text-[10px] text-neutral-400 block">
+              💡 Insira os dados do item para mantê-lo disponível no catálogo do sistema e facilitar o registro rápido de novas compras.
+            </span>
+          </div>
+
+          <div>
+            <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome do Insumo / Material *</label>
+            <input
+              type="text"
+              required
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Ex: Cola em Bastão Kores 40g / Parafuso M3x10 Inox"
+              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             
-            {/* STICKY HEADER */}
-            <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
-              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                <Box size={20} className="text-orange-500" />
-                {editingItem ? 'Editar Insumo / Material' : 'Cadastrar Insumo no Catálogo'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-                title="Fechar Modal"
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Categoria *</label>
+              <select
+                value={categoria}
+                onChange={(e) => setCategoria(e.target.value as PurchaseCategory)}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
               >
-                <X size={18} />
-              </button>
+                <option value="Cola / Adesivo">Cola / Adesivo de Mesa</option>
+                <option value="Embalagem / Caixas">Embalagem / Caixas</option>
+                <option value="Acessórios / Componentes">Acessórios / Componentes</option>
+                <option value="Filamento">Filamento</option>
+                <option value="Impressoras 3D">Impressora 3D</option>
+                <option value="Peças de Manutenção / Peças de Impressoras">Peça de Impressora / Manutenção</option>
+                <option value="Outros Insumos">Outros Insumos</option>
+              </select>
             </div>
 
-            {/* SCROLLABLE FORM BODY */}
-            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 font-mono text-xs flex-1">
-                
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Nome do Insumo / Material *</label>
-                  <input
-                    type="text"
-                    required
-                    value={nome}
-                    onChange={(e) => setNome(e.target.value)}
-                    placeholder="Ex: Cola em Bastão Kores 40g / Parafuso M3x10 Inox"
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                  />
-                </div>
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Unidade de Medida *</label>
+              <select
+                value={unidadeMedida}
+                onChange={(e) => setUnidadeMedida(e.target.value as SupplyUnit)}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+              >
+                <option value="un">Unidade (un)</option>
+                <option value="caixa">Caixa</option>
+                <option value="pacote">Pacote</option>
+                <option value="rolo">Rolo</option>
+                <option value="g">Gramas (g)</option>
+                <option value="Kg">Quilos (Kg)</option>
+                <option value="metro">Metro (m)</option>
+                <option value="litro">Litro (l)</option>
+              </select>
+            </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Categoria *</label>
-                    <select
-                      value={categoria}
-                      onChange={(e) => setCategoria(e.target.value as PurchaseCategory)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
-                    >
-                      <option value="Cola / Adesivo">Cola / Adesivo de Mesa</option>
-                      <option value="Embalagem / Caixas">Embalagem / Caixas</option>
-                      <option value="Acessórios / Componentes">Acessórios / Componentes</option>
-                      <option value="Filamento">Filamento</option>
-                      <option value="Impressoras 3D">Impressora 3D</option>
-                      <option value="Peças de Manutenção / Peças de Impressoras">Peça de Impressora / Manutenção</option>
-                      <option value="Outros Insumos">Outros Insumos</option>
-                    </select>
-                  </div>
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Estoque Atual Inicial *</label>
+              <input
+                type="number"
+                required
+                min="0"
+                value={quantidadeEstoque}
+                onChange={(e) => setQuantidadeEstoque(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
 
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Unidade de Medida *</label>
-                    <select
-                      value={unidadeMedida}
-                      onChange={(e) => setUnidadeMedida(e.target.value as SupplyUnit)}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
-                    >
-                      <option value="un">Unidade (un)</option>
-                      <option value="caixa">Caixa</option>
-                      <option value="pacote">Pacote</option>
-                      <option value="rolo">Rolo</option>
-                      <option value="g">Gramas (g)</option>
-                      <option value="Kg">Quilos (Kg)</option>
-                      <option value="metro">Metro (m)</option>
-                      <option value="litro">Litro (l)</option>
-                    </select>
-                  </div>
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Estoque Mínimo (Alerta) *</label>
+              <input
+                type="number"
+                required
+                min="0"
+                value={estoqueMinimo}
+                onChange={(e) => setEstoqueMinimo(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
 
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Estoque Atual Inicial *</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      value={quantidadeEstoque}
-                      onChange={(e) => setQuantidadeEstoque(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Custo Unitário Estimado (R$)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={custoUnitarioPadrao}
+                onChange={(e) => setCustoUnitarioPadrao(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
 
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Estoque Mínimo (Alerta) *</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      value={estoqueMinimo}
-                      onChange={(e) => setEstoqueMinimo(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
+            <div>
+              <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Fornecedor Principal</label>
+              <input
+                type="text"
+                value={fornecedorPadrao}
+                onChange={(e) => setFornecedorPadrao(e.target.value)}
+                placeholder="Ex: Kalunga / Mercado Livre"
+                className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+              />
+            </div>
 
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Custo Unitário Estimado (R$)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={custoUnitarioPadrao}
-                      onChange={(e) => setCustoUnitarioPadrao(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Fornecedor Principal</label>
-                    <input
-                      type="text"
-                      value={fornecedorPadrao}
-                      onChange={(e) => setFornecedorPadrao(e.target.value)}
-                      placeholder="Ex: Kalunga / Mercado Livre"
-                      className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
-                    />
-                  </div>
-
-                </div>
-
-                <div>
-                  <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações / Especificações</label>
-                  <textarea
-                    value={observacoes}
-                    onChange={(e) => setObservacoes(e.target.value)}
-                    rows={2}
-                    placeholder="Especificações técnicas, compatibilidade ou marca..."
-                    className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
-                  />
-                </div>
-
-              </div>
-
-              {/* STICKY ACTIONS FOOTER */}
-              <div className="p-4 border-t border-neutral-800 bg-neutral-950/80 flex justify-end gap-3 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl cursor-pointer shadow-md shadow-orange-600/20"
-                >
-                  Salvar Insumo
-                </button>
-              </div>
-
-            </form>
           </div>
-        </div>
-      )}
+
+          {/* FILAMENT SPECIFIC FIELDS */}
+          {categoria === 'Filamento' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3 bg-orange-950/20 border border-orange-500/20 rounded-xl">
+              <div>
+                <label className="block text-orange-300 mb-1 uppercase tracking-wider font-semibold">Tipo de Filamento</label>
+                <select
+                  value={tipoFilamento}
+                  onChange={(e) => setTipoFilamento(e.target.value as FilamentType)}
+                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+                >
+                  <option value="PLA">PLA</option>
+                  <option value="ABS">ABS</option>
+                  <option value="PETG">PETG</option>
+                  <option value="TPU">TPU</option>
+                  <option value="ASA">ASA</option>
+                  <option value="Nylon">Nylon</option>
+                  <option value="Resin">Resin</option>
+                  <option value="PC">PC</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-orange-300 mb-1 uppercase tracking-wider font-semibold">Cor do Filamento</label>
+                <input
+                  type="text"
+                  value={cor}
+                  onChange={(e) => setCor(e.target.value)}
+                  placeholder="Ex: Preto, Branco, Vermelho Silk..."
+                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Observações / Especificações</label>
+            <textarea
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              rows={2}
+              placeholder="Especificações técnicas, compatibilidade ou marca..."
+              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
+            />
+          </div>
+
+        </form>
+      </Modal>
 
     </div>
   );
 }
+

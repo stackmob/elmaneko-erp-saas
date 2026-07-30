@@ -6,6 +6,7 @@ import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
 import { Modal } from './ui/Modal';
 import SearchableSelect, { SelectOption } from './ui/SearchableSelect';
+import { formatDateBR } from '../utils/formatters';
 
 export default function Purchases() {
   const { useCompras, useFilamentos, useInsumos, useAddCompra, useUpdateCompra, useDeleteCompra } = useData();
@@ -376,7 +377,7 @@ export default function Purchases() {
                       <td className="py-3.5 px-4 text-xs whitespace-nowrap">
                         <div className="flex items-center gap-1 text-neutral-400">
                           <Calendar size={12} />
-                          {p.data}
+                          {formatDateBR(p.data)}
                         </div>
                       </td>
 
