@@ -59,47 +59,16 @@ export function useAddProduto() {
   return useMutation({
     mutationFn: async (novo: Omit<Product, 'id'>) => {
       const empresaId = getActiveTenantId();
-      const payload = {
-        empresa_id: empresaId,
-        nome: novo.nome,
-        categoria: novo.categoria,
-        descricao: novo.descricao,
-        imagem: novo.imagem,
-        tempo_impressao: novo.tempoImpressao,
-        impressora_padrao_id: isValidUuid(novo.impressoraPadraoId) ? novo.impressoraPadraoId : null,
-        tempo_acabamento: novo.tempoAcabamento,
-        valor_mao_de_obra: novo.valorMaoDeObra,
-        margem_lucro: novo.margemLucro,
-        over_percent: novo.overPercent,
-        preco_venda: novo.precoVenda,
-        pdf_projeto: novo.pdfProjeto,
-        pdf_projeto_nome: novo.pdfProjetoNome,
-        link_projeto: novo.linkProjeto,
-        outras_despesas: novo.outrasDespesas,
-        observacoes: novo.observacoes
-      };
-
-      const { data: prodData, error } = await supabase.from('produtos').insert([payload]).select().single();
-      if (error) {
-        const offlineItem: Product = { ...novo, id: crypto.randomUUID() };
-        addToLocalCache('produtos', offlineItem);
-        return offlineItem;
-      }
-
-      if (novo.materials && novo.materials.length > 0) {
-        const matPayloads = novo.materials.map(m => ({
-          empresa_id: empresaId,
-          produto_id: prodData.id,
-          tipo_filamento: m.tipoFilamento,
-          quantidade_grams: m.quantidadeGrams,
-          filamento_id: m.filamentoId || 'any'
-        }));
-        await supabase.from('produto_materiais').insert(matPayloads);
-      }
+      const { data, error } = await supabase.rpc('salvar_produto_com_bom', {
+        p_empresa_id: empresaId,
+        p_produto: { ...novo, impressoraPadraoId: isValidUuid(novo.impressoraPadraoId) ? novo.impressoraPadraoId : '' },
+        p_materiais: novo.materials || [],
+      });
+      if (error) throw error;
 
       const created: Product = {
         ...novo,
-        id: prodData.id
+        id: data.id
       };
 
       addToLocalCache('produtos', created);
@@ -113,41 +82,13 @@ export function useUpdateProduto() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (produto: Product) => {
-      const payload = {
-        nome: produto.nome,
-        categoria: produto.categoria,
-        descricao: produto.descricao,
-        imagem: produto.imagem,
-        tempo_impressao: produto.tempoImpressao,
-        impressora_padrao_id: isValidUuid(produto.impressoraPadraoId) ? produto.impressoraPadraoId : null,
-        tempo_acabamento: produto.tempoAcabamento,
-        valor_mao_de_obra: produto.valorMaoDeObra,
-        margem_lucro: produto.margemLucro,
-        over_percent: produto.overPercent,
-        preco_venda: produto.precoVenda,
-        pdf_projeto: produto.pdfProjeto,
-        pdf_projeto_nome: produto.pdfProjetoNome,
-        link_projeto: produto.linkProjeto,
-        outras_despesas: produto.outrasDespesas,
-        observacoes: produto.observacoes
-      };
-
-      if (isValidUuid(produto.id)) {
-        await supabase.from('produtos').update(payload).eq('id', produto.id);
-        await supabase.from('produto_materiais').delete().eq('produto_id', produto.id);
-
-        if (produto.materials && produto.materials.length > 0) {
-          const empresaId = getActiveTenantId();
-          const matPayloads = produto.materials.map(m => ({
-            empresa_id: empresaId,
-            produto_id: produto.id,
-            tipo_filamento: m.tipoFilamento,
-            quantidade_grams: m.quantidadeGrams,
-            filamento_id: m.filamentoId || 'any'
-          }));
-          await supabase.from('produto_materiais').insert(matPayloads);
-        }
-      }
+      const empresaId = getActiveTenantId();
+      const { error } = await supabase.rpc('salvar_produto_com_bom', {
+        p_empresa_id: empresaId,
+        p_produto: { ...produto, impressoraPadraoId: isValidUuid(produto.impressoraPadraoId) ? produto.impressoraPadraoId : '' },
+        p_materiais: produto.materials || [],
+      });
+      if (error) throw error;
 
       addToLocalCache('produtos', produto);
       return produto;

@@ -940,6 +940,237 @@ $$;
 REVOKE ALL ON FUNCTION public.concluir_producao(UUID, UUID, NUMERIC) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.concluir_producao(UUID, UUID, NUMERIC) TO authenticated;
 
+CREATE OR REPLACE FUNCTION public.criar_compra_com_despesa(
+  p_empresa_id UUID,
+  p_compra JSONB
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_compra_id UUID;
+  v_valor NUMERIC := COALESCE((p_compra->>'valorPago')::NUMERIC, 0);
+  v_data DATE := COALESCE(NULLIF(p_compra->>'data', '')::DATE, CURRENT_DATE);
+  v_numero_documento TEXT;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
+  END IF;
+  IF COALESCE(trim(p_compra->>'fornecedor'), '') = '' OR v_valor < 0 THEN
+    RAISE EXCEPTION 'Fornecedor e valor da compra são obrigatórios.';
+  END IF;
+
+  IF NULLIF(p_compra->>'filamentoId', '') IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM filamentos WHERE id = (p_compra->>'filamentoId')::UUID AND empresa_id = p_empresa_id
+  ) THEN
+    RAISE EXCEPTION 'Filamento inválido para esta empresa.';
+  END IF;
+  IF NULLIF(p_compra->>'insumoId', '') IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM insumos WHERE id = (p_compra->>'insumoId')::UUID AND empresa_id = p_empresa_id
+  ) THEN
+    RAISE EXCEPTION 'Insumo inválido para esta empresa.';
+  END IF;
+
+  INSERT INTO compras (
+    empresa_id, data, fornecedor, categoria_item, descricao_item, quantidade,
+    unidade_medida, filamento_id, insumo_id, quantidade_adquirida, valor_pago, nota_fiscal, observacoes
+  ) VALUES (
+    p_empresa_id, v_data, p_compra->>'fornecedor', COALESCE(p_compra->>'categoriaItem', 'Filamento'),
+    p_compra->>'descricaoItem', COALESCE((p_compra->>'quantidade')::NUMERIC, 1),
+    COALESCE(p_compra->>'unidadeMedida', 'un'), NULLIF(p_compra->>'filamentoId', '')::UUID,
+    NULLIF(p_compra->>'insumoId', '')::UUID, COALESCE((p_compra->>'quantidadeAdquirida')::NUMERIC, 0),
+    v_valor, p_compra->>'notaFiscal', p_compra->>'observacoes'
+  ) RETURNING id INTO v_compra_id;
+
+  v_numero_documento := COALESCE(NULLIF(trim(p_compra->>'notaFiscal'), ''), 'COMP-' || substring(v_compra_id::text from 1 for 8));
+  INSERT INTO lancamentos_financeiros (
+    empresa_id, numero_documento, tipo, origem, origem_id, fornecedor,
+    data_emissao, data_vencimento, valor_bruto, valor_liquido, forma_pagamento, status
+  ) VALUES (
+    p_empresa_id, v_numero_documento, 'Despesa', 'Compra', v_compra_id, p_compra->>'fornecedor',
+    v_data, v_data, v_valor, v_valor, 'PIX', 'Aberto'
+  );
+
+  RETURN jsonb_build_object('id', v_compra_id, 'numero_documento', v_numero_documento);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.salvar_orcamento_com_itens(
+  p_empresa_id UUID,
+  p_orcamento JSONB,
+  p_itens JSONB
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_orcamento_id UUID := NULLIF(p_orcamento->>'id', '')::UUID;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
+  END IF;
+  IF jsonb_typeof(p_itens) <> 'array' OR jsonb_array_length(p_itens) = 0 THEN
+    RAISE EXCEPTION 'Um orçamento deve conter ao menos um item.';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM clientes WHERE id = (p_orcamento->>'clienteId')::UUID AND empresa_id = p_empresa_id) THEN
+    RAISE EXCEPTION 'Cliente inválido para esta empresa.';
+  END IF;
+  IF EXISTS (
+    SELECT 1
+    FROM jsonb_array_elements(p_itens) AS item
+    LEFT JOIN produtos p ON p.id = (item->>'produtoId')::UUID AND p.empresa_id = p_empresa_id
+    WHERE p.id IS NULL OR COALESCE((item->>'quantidade')::NUMERIC, 0) <= 0 OR COALESCE((item->>'valorUnitario')::NUMERIC, -1) < 0
+  ) THEN
+    RAISE EXCEPTION 'Itens de orçamento inválidos.';
+  END IF;
+
+  IF v_orcamento_id IS NULL THEN
+    INSERT INTO orcamentos (empresa_id, numero, cliente_id, data_emissao, validade, previsao_entrega, desconto_geral, observacoes, status)
+    VALUES (
+      p_empresa_id, p_orcamento->>'numero', (p_orcamento->>'clienteId')::UUID,
+      COALESCE(NULLIF(p_orcamento->>'dataEmissao', '')::DATE, CURRENT_DATE), NULLIF(p_orcamento->>'validade', '')::DATE,
+      NULLIF(p_orcamento->>'previsaoEntrega', '')::DATE, COALESCE((p_orcamento->>'descontoGeral')::NUMERIC, 0),
+      p_orcamento->>'observacoes', COALESCE(p_orcamento->>'status', 'Aberto')
+    ) RETURNING id INTO v_orcamento_id;
+  ELSE
+    IF NOT EXISTS (SELECT 1 FROM orcamentos WHERE id = v_orcamento_id AND empresa_id = p_empresa_id AND status NOT IN ('Cancelado')) THEN
+      RAISE EXCEPTION 'Orçamento não encontrado ou não pode ser alterado.';
+    END IF;
+    UPDATE orcamentos SET
+      cliente_id = (p_orcamento->>'clienteId')::UUID,
+      data_emissao = COALESCE(NULLIF(p_orcamento->>'dataEmissao', '')::DATE, CURRENT_DATE),
+      validade = NULLIF(p_orcamento->>'validade', '')::DATE,
+      previsao_entrega = NULLIF(p_orcamento->>'previsaoEntrega', '')::DATE,
+      desconto_geral = COALESCE((p_orcamento->>'descontoGeral')::NUMERIC, 0),
+      observacoes = p_orcamento->>'observacoes', status = COALESCE(p_orcamento->>'status', status)
+    WHERE id = v_orcamento_id;
+    DELETE FROM orcamento_itens WHERE orcamento_id = v_orcamento_id;
+  END IF;
+
+  INSERT INTO orcamento_itens (empresa_id, orcamento_id, produto_id, quantidade, valor_unitario, desconto)
+  SELECT p_empresa_id, v_orcamento_id, (item->>'produtoId')::UUID, (item->>'quantidade')::NUMERIC,
+    (item->>'valorUnitario')::NUMERIC, COALESCE((item->>'desconto')::NUMERIC, 0)
+  FROM jsonb_array_elements(p_itens) AS item;
+
+  RETURN jsonb_build_object('id', v_orcamento_id);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.salvar_produto_com_bom(
+  p_empresa_id UUID,
+  p_produto JSONB,
+  p_materiais JSONB
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_produto_id UUID := NULLIF(p_produto->>'id', '')::UUID;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
+  END IF;
+  IF COALESCE(trim(p_produto->>'nome'), '') = '' OR COALESCE(trim(p_produto->>'categoria'), '') = '' THEN
+    RAISE EXCEPTION 'Nome e categoria do produto são obrigatórios.';
+  END IF;
+  IF NULLIF(p_produto->>'impressoraPadraoId', '') IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM impressoras WHERE id = (p_produto->>'impressoraPadraoId')::UUID AND empresa_id = p_empresa_id
+  ) THEN
+    RAISE EXCEPTION 'Impressora inválida para esta empresa.';
+  END IF;
+  IF jsonb_typeof(COALESCE(p_materiais, '[]'::jsonb)) <> 'array' THEN
+    RAISE EXCEPTION 'Materiais inválidos.';
+  END IF;
+
+  IF v_produto_id IS NULL THEN
+    INSERT INTO produtos (empresa_id, nome, categoria, descricao, imagem, tempo_impressao, impressora_padrao_id, tempo_acabamento, valor_mao_de_obra, margem_lucro, over_percent, preco_venda, pdf_projeto, pdf_projeto_nome, link_projeto, outras_despesas, observacoes)
+    VALUES (p_empresa_id, p_produto->>'nome', p_produto->>'categoria', p_produto->>'descricao', p_produto->>'imagem', COALESCE((p_produto->>'tempoImpressao')::NUMERIC, 0), NULLIF(p_produto->>'impressoraPadraoId', '')::UUID, COALESCE((p_produto->>'tempoAcabamento')::NUMERIC, 0), COALESCE((p_produto->>'valorMaoDeObra')::NUMERIC, 0), COALESCE((p_produto->>'margemLucro')::NUMERIC, 100), COALESCE((p_produto->>'overPercent')::NUMERIC, 0), COALESCE((p_produto->>'precoVenda')::NUMERIC, 0), p_produto->>'pdfProjeto', p_produto->>'pdfProjetoNome', p_produto->>'linkProjeto', COALESCE((p_produto->>'outrasDespesas')::NUMERIC, 0), p_produto->>'observacoes') RETURNING id INTO v_produto_id;
+  ELSE
+    IF NOT EXISTS (SELECT 1 FROM produtos WHERE id = v_produto_id AND empresa_id = p_empresa_id) THEN
+      RAISE EXCEPTION 'Produto não encontrado.';
+    END IF;
+    UPDATE produtos SET nome = p_produto->>'nome', categoria = p_produto->>'categoria', descricao = p_produto->>'descricao', imagem = p_produto->>'imagem', tempo_impressao = COALESCE((p_produto->>'tempoImpressao')::NUMERIC, 0), impressora_padrao_id = NULLIF(p_produto->>'impressoraPadraoId', '')::UUID, tempo_acabamento = COALESCE((p_produto->>'tempoAcabamento')::NUMERIC, 0), valor_mao_de_obra = COALESCE((p_produto->>'valorMaoDeObra')::NUMERIC, 0), margem_lucro = COALESCE((p_produto->>'margemLucro')::NUMERIC, 100), over_percent = COALESCE((p_produto->>'overPercent')::NUMERIC, 0), preco_venda = COALESCE((p_produto->>'precoVenda')::NUMERIC, 0), pdf_projeto = p_produto->>'pdfProjeto', pdf_projeto_nome = p_produto->>'pdfProjetoNome', link_projeto = p_produto->>'linkProjeto', outras_despesas = COALESCE((p_produto->>'outrasDespesas')::NUMERIC, 0), observacoes = p_produto->>'observacoes' WHERE id = v_produto_id;
+    DELETE FROM produto_materiais WHERE produto_id = v_produto_id;
+  END IF;
+
+  INSERT INTO produto_materiais (empresa_id, produto_id, tipo_filamento, filamento_id, quantidade_grams)
+  SELECT p_empresa_id, v_produto_id, item->>'tipoFilamento', COALESCE(NULLIF(item->>'filamentoId', ''), 'any'), (item->>'quantidadeGrams')::NUMERIC
+  FROM jsonb_array_elements(COALESCE(p_materiais, '[]'::jsonb)) AS item
+  WHERE COALESCE((item->>'quantidadeGrams')::NUMERIC, 0) > 0;
+
+  RETURN jsonb_build_object('id', v_produto_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.criar_compra_com_despesa(UUID, JSONB) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.salvar_orcamento_com_itens(UUID, JSONB, JSONB) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.salvar_produto_com_bom(UUID, JSONB, JSONB) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.criar_compra_com_despesa(UUID, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.salvar_orcamento_com_itens(UUID, JSONB, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.salvar_produto_com_bom(UUID, JSONB, JSONB) TO authenticated;
+
+CREATE TABLE IF NOT EXISTS convites_empresa (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('admin', 'financeiro', 'operador', 'leitura')),
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT now() + interval '7 days',
+  accepted_at TIMESTAMPTZ,
+  revoked_at TIMESTAMPTZ,
+  created_by UUID NOT NULL REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE convites_empresa ENABLE ROW LEVEL SECURITY;
+
+CREATE OR REPLACE FUNCTION public.is_empresa_admin(target_empresa_id UUID)
+RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (SELECT 1 FROM usuario_empresa WHERE empresa_id = target_empresa_id AND user_id = auth.uid() AND role = 'admin');
+$$;
+
+CREATE POLICY convites_empresa_admin_access ON convites_empresa FOR ALL TO authenticated
+USING (public.is_empresa_admin(empresa_id)) WITH CHECK (public.is_empresa_admin(empresa_id));
+
+CREATE OR REPLACE FUNCTION public.criar_convite_empresa(p_empresa_id UUID, p_email TEXT, p_role TEXT)
+RETURNS TEXT LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_token TEXT := encode(gen_random_bytes(32), 'hex');
+BEGIN
+  IF NOT public.is_empresa_admin(p_empresa_id) THEN RAISE EXCEPTION 'Apenas administradores podem convidar membros.'; END IF;
+  IF p_role NOT IN ('admin', 'financeiro', 'operador', 'leitura') THEN RAISE EXCEPTION 'Papel inválido.'; END IF;
+  INSERT INTO convites_empresa (empresa_id, email, role, token_hash, created_by)
+  VALUES (p_empresa_id, lower(trim(p_email)), p_role, encode(digest(v_token, 'sha256'), 'hex'), auth.uid());
+  RETURN v_token;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.aceitar_convite_empresa(p_token TEXT)
+RETURNS UUID LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_convite convites_empresa%ROWTYPE;
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Autenticação obrigatória.'; END IF;
+  SELECT * INTO v_convite FROM convites_empresa
+  WHERE token_hash = encode(digest(p_token, 'sha256'), 'hex') AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > now()
+  FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Convite inválido ou expirado.'; END IF;
+  IF lower(coalesce(auth.jwt() ->> 'email', '')) <> v_convite.email THEN RAISE EXCEPTION 'O convite pertence a outro e-mail.'; END IF;
+  INSERT INTO usuario_empresa (user_id, empresa_id, role) VALUES (auth.uid(), v_convite.empresa_id, v_convite.role)
+  ON CONFLICT (user_id, empresa_id) DO NOTHING;
+  UPDATE convites_empresa SET accepted_at = now() WHERE id = v_convite.id;
+  RETURN v_convite.empresa_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.criar_convite_empresa(UUID, TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.aceitar_convite_empresa(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.criar_convite_empresa(UUID, TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.aceitar_convite_empresa(TEXT) TO authenticated;
+
 -- ============================================================
 -- SCRIPT DE VINCULAÇÃO E BACKFILL DE DADOS EXISTENTES À EMPRESA
 -- ============================================================

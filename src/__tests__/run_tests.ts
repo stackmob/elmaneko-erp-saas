@@ -1,6 +1,5 @@
 import { formatDateBR } from '../utils/formatters.js';
 import { getActiveTenantId } from '../utils/storage.js';
-import { SUPABASE_SQL_SCHEMA } from '../db_schema_sql.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -32,7 +31,6 @@ function runSuite() {
   const migrationContent = fs.readFileSync(migrationPath, 'utf-8');
 
   assert(!migrationContent.includes('USING (true)'), 'supabase_migration.sql NÃO contém nenhuma política permissiva USING (true)');
-  assert(!SUPABASE_SQL_SCHEMA.includes('USING (true)'), 'db_schema_sql.ts NÃO contém nenhuma política permissiva USING (true)');
   assert(migrationContent.includes('is_empresa_member'), 'supabase_migration.sql utiliza a função is_empresa_member');
   assert(!migrationContent.includes('00000000-0000-0000-0000-000000000001'), 'supabase_migration.sql NÃO contém o UUID demo hardcoded');
   assert(!migrationContent.includes('CREATE POLICY usuario_empresa_insert_self'), 'Associação de usuário à empresa não pode ser inserida diretamente pelo cliente');

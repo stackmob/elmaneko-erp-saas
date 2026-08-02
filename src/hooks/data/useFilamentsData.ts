@@ -276,65 +276,22 @@ export function useAddCompra() {
   return useMutation({
     mutationFn: async (nova: Omit<Purchase, 'id'>) => {
       const empresaId = getActiveTenantId();
-      const payload = {
-        empresa_id: empresaId,
-        data: nova.data,
-        fornecedor: nova.fornecedor,
-        categoria_item: nova.categoriaItem,
-        descricao_item: nova.descricaoItem,
-        quantidade: nova.quantidade,
-        unidade_medida: nova.unidadeMedida,
-        filamento_id: isValidUuid(nova.filamentoId) ? nova.filamentoId : null,
-        insumo_id: isValidUuid(nova.insumoId) ? nova.insumoId : null,
-        quantidade_adquirida: nova.quantidadeAdquirida,
-        valor_pago: nova.valorPago,
-        nota_fiscal: nova.notaFiscal,
-        observacoes: nova.observacoes
-      };
-
-      const { data, error } = await supabase.from('compras').insert([payload]).select().single();
-      if (error) {
-        const offlineItem: Purchase = { ...nova, id: crypto.randomUUID() };
-        addToLocalCache('compras', offlineItem);
-        return offlineItem;
-      }
+      const { data, error } = await supabase.rpc('criar_compra_com_despesa', {
+        p_empresa_id: empresaId,
+        p_compra: {
+          ...nova,
+          filamentoId: isValidUuid(nova.filamentoId) ? nova.filamentoId : '',
+          insumoId: isValidUuid(nova.insumoId) ? nova.insumoId : '',
+        },
+      });
+      if (error) throw error;
 
       const created: Purchase = {
         id: data.id,
-        data: data.data,
-        fornecedor: data.fornecedor,
-        categoriaItem: data.categoria_item,
-        descricaoItem: data.descricao_item,
-        quantidade: Number(data.quantidade),
-        unidadeMedida: data.unidade_medida,
-        filamentoId: data.filamento_id,
-        insumoId: data.insumo_id,
-        quantidadeAdquirida: Number(data.quantidade_adquirida),
-        valorPago: Number(data.valor_pago),
-        notaFiscal: data.nota_fiscal,
-        observacoes: data.observacoes
+        ...nova,
       };
 
       addToLocalCache('compras', created);
-
-      try {
-        await supabase.from('lancamentos_financeiros').insert([{
-          empresa_id: empresaId,
-          numero_documento: data.nota_fiscal ? `NF-${data.nota_fiscal}` : `COMP-${data.id.slice(0, 8)}`,
-          tipo: 'Despesa',
-          origem: 'Compra',
-          origem_id: data.id,
-          fornecedor: data.fornecedor,
-          data_emissao: data.data || new Date().toISOString().split('T')[0],
-          data_vencimento: data.data || new Date().toISOString().split('T')[0],
-          valor_bruto: Number(data.valor_pago),
-          valor_liquido: Number(data.valor_pago),
-          forma_pagamento: 'PIX',
-          status: 'Aberto',
-          observacoes: `Despesa gerada automaticamente pela Compra de Insumos #${data.id.slice(0, 8)}`
-        }]);
-      } catch (e) {}
-
       return created;
     },
     onSuccess: () => {

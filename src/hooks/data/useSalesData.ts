@@ -161,40 +161,16 @@ export function useAddOrcamento() {
   return useMutation({
     mutationFn: async (novo: Omit<Budget, 'id'>) => {
       const empresaId = getActiveTenantId();
-      const payload = {
-        empresa_id: empresaId,
-        numero: novo.numero,
-        cliente_id: novo.clienteId,
-        data_emissao: novo.dataEmissao,
-        validade: novo.validade,
-        previsao_entrega: novo.previsaoEntrega || null,
-        desconto_geral: novo.descontoGeral,
-        observacoes: novo.observacoes,
-        status: novo.status
-      };
-
-      const { data: orcData, error } = await supabase.from('orcamentos').insert([payload]).select().single();
-      if (error) {
-        const offlineItem: Budget = { ...novo, id: crypto.randomUUID() };
-        addToLocalCache('orcamentos', offlineItem);
-        return offlineItem;
-      }
-
-      if (novo.itens && novo.itens.length > 0) {
-        const itemPayloads = novo.itens.map(i => ({
-          empresa_id: empresaId,
-          orcamento_id: orcData.id,
-          produto_id: i.produtoId,
-          quantidade: i.quantidade,
-          valor_unitario: i.valorUnitario,
-          desconto: i.desconto
-        }));
-        await supabase.from('orcamento_itens').insert(itemPayloads);
-      }
+      const { data, error } = await supabase.rpc('salvar_orcamento_com_itens', {
+        p_empresa_id: empresaId,
+        p_orcamento: novo,
+        p_itens: novo.itens,
+      });
+      if (error) throw error;
 
       const created: Budget = {
         ...novo,
-        id: orcData.id
+        id: data.id
       };
 
       addToLocalCache('orcamentos', created);
@@ -209,32 +185,12 @@ export function useUpdateOrcamento() {
   return useMutation({
     mutationFn: async (budget: Budget) => {
       const empresaId = getActiveTenantId();
-      const payload = {
-        cliente_id: budget.clienteId,
-        data_emissao: budget.dataEmissao,
-        validade: budget.validade,
-        previsao_entrega: budget.previsaoEntrega || null,
-        desconto_geral: budget.descontoGeral,
-        observacoes: budget.observacoes,
-        status: budget.status
-      };
-
-      if (isValidUuid(budget.id)) {
-        await supabase.from('orcamentos').update(payload).eq('id', budget.id).eq('empresa_id', empresaId);
-        await supabase.from('orcamento_itens').delete().eq('orcamento_id', budget.id).eq('empresa_id', empresaId);
-
-        if (budget.itens && budget.itens.length > 0) {
-          const itemPayloads = budget.itens.map(i => ({
-            empresa_id: empresaId,
-            orcamento_id: budget.id,
-            produto_id: i.produtoId,
-            quantidade: i.quantidade,
-            valor_unitario: i.valorUnitario,
-            desconto: i.desconto
-          }));
-          await supabase.from('orcamento_itens').insert(itemPayloads);
-        }
-      }
+      const { error } = await supabase.rpc('salvar_orcamento_com_itens', {
+        p_empresa_id: empresaId,
+        p_orcamento: budget,
+        p_itens: budget.itens,
+      });
+      if (error) throw error;
 
       addToLocalCache('orcamentos', budget);
       return budget;
