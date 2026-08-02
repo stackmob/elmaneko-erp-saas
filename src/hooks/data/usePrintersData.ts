@@ -2,16 +2,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { Printer, EnergyTariff } from '../../types';
 import { 
-  getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid, getActiveTenantId
+  setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid, getActiveTenantId, getTenantQueryKey
 } from '../../utils/storage';
 
 // IMPRESSORAS 3D
 export function useImpressoras() {
   return useQuery({
-    queryKey: ['impressoras'],
+    queryKey: getTenantQueryKey('impressoras'),
     queryFn: async () => {
       const { data, error } = await supabase.from('impressoras').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
-      if (error || !data) return getLocalCache<Printer>('impressoras');
+      if (error) throw error;
+      if (!data) return [];
 
       const mapped: Printer[] = data.map(item => ({
         id: item.id,
@@ -108,10 +109,11 @@ export function useDeleteImpressora() {
 // TARIFAS DE ENERGIA
 export function useTarifasEnergia() {
   return useQuery({
-    queryKey: ['tarifas_energia'],
+    queryKey: getTenantQueryKey('tarifas_energia'),
     queryFn: async () => {
       const { data, error } = await supabase.from('tarifas_energia').select('*').eq('empresa_id', getActiveTenantId()).order('data_inicio_vigencia', { ascending: false });
-      if (error || !data) return getLocalCache<EnergyTariff>('tarifas_energia');
+      if (error) throw error;
+      if (!data) return [];
 
       const mapped: EnergyTariff[] = data.map(item => ({
         id: item.id,

@@ -2,16 +2,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { Filament, Purchase, SupplyItem } from '../../types';
 import { 
-  getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid, getActiveTenantId
+  setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid, getActiveTenantId, getTenantQueryKey
 } from '../../utils/storage';
 
 // 1. FILAMENTOS
 export function useFilamentos() {
   return useQuery({
-    queryKey: ['filamentos'],
+    queryKey: getTenantQueryKey('filamentos'),
     queryFn: async () => {
       const { data, error } = await supabase.from('filamentos').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
-      if (error || !data) return getLocalCache<Filament>('filamentos');
+      if (error) throw error;
+      if (!data) return [];
 
       const mapped: Filament[] = data.map(item => ({
         id: item.id,
@@ -128,10 +129,11 @@ export function useDeleteFilamento() {
 // 2. INSUMOS
 export function useInsumos() {
   return useQuery({
-    queryKey: ['insumos'],
+    queryKey: getTenantQueryKey('insumos'),
     queryFn: async () => {
       const { data, error } = await supabase.from('insumos').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
-      if (error || !data) return getLocalCache<SupplyItem>('insumos');
+      if (error) throw error;
+      if (!data) return [];
 
       const mapped: SupplyItem[] = data.map(item => ({
         id: item.id,
@@ -240,10 +242,11 @@ export function useDeleteInsumo() {
 // 3. COMPRAS
 export function useCompras() {
   return useQuery({
-    queryKey: ['compras'],
+    queryKey: getTenantQueryKey('compras'),
     queryFn: async () => {
       const { data, error } = await supabase.from('compras').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
-      if (error || !data) return getLocalCache<Purchase>('compras');
+      if (error) throw error;
+      if (!data) return [];
 
       const mapped: Purchase[] = data.map(item => ({
         id: item.id,

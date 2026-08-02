@@ -10,7 +10,7 @@ import {
 } from './data/usePrintersData';
 import { 
   useProdutos, useAddProduto, useUpdateProduto, useDeleteProduto,
-  useProducoes, useAddProducao, useUpdateProducaoStatus, useUpdateProducao
+  useProducoes, useAddProducao, useUpdateProducaoStatus, useUpdateProducao, useConcluirProducao
 } from './data/useProductsData';
 import { 
   useClientes, useAddCliente, useUpdateCliente, useDeleteCliente,
@@ -63,6 +63,7 @@ export function useData() {
     useAddProducao,
     useUpdateProducaoStatus,
     useUpdateProducao,
+    useConcluirProducao,
     // Clients & Sales & Budgets
     useClientes,
     useAddCliente,
@@ -136,6 +137,7 @@ export {
   useAddProducao,
   useUpdateProducaoStatus,
   useUpdateProducao,
+  useConcluirProducao,
   useClientes,
   useAddCliente,
   useUpdateCliente,

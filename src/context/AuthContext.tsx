@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [empresaId, setEmpresaId] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setEmpresaId(data.empresa_id);
         try { localStorage.setItem('elmaneko_empresa_id', data.empresa_id); } catch(e){}
       } else {
-        await bootstrapUserCompany(userId);
+        await bootstrapUserCompany();
       }
     } catch (err) {
       console.error("Erro ao buscar empresa:", err);
@@ -68,19 +70,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const bootstrapUserCompany = async (userId: string) => {
+  const bootstrapUserCompany = async () => {
     try {
-      const { data: newEmp, error: createErr } = await supabase
-        .from('empresas')
-        .insert([{ nome: 'Empresa Principal' }])
-        .select()
-        .single();
-      const targetEmpresaId = !createErr && newEmp ? newEmp.id : null;
+      const { data: targetEmpresaId, error } = await supabase.rpc('bootstrap_empresa_do_usuario');
 
-      if (targetEmpresaId) {
-        await supabase
-          .from('usuario_empresa')
-          .insert([{ user_id: userId, empresa_id: targetEmpresaId, role: 'admin' }]);
+      if (!error && targetEmpresaId) {
         setEmpresaId(targetEmpresaId);
         try { localStorage.setItem('elmaneko_empresa_id', targetEmpresaId); } catch(e){}
       } else setEmpresaId(null);
@@ -92,6 +86,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    queryClient.clear();
+    try { localStorage.removeItem('elmaneko_empresa_id'); } catch (e) {}
+    setEmpresaId(null);
   };
 
   return (

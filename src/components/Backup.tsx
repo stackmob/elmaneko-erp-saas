@@ -24,7 +24,6 @@ export default function BackupModule() {
 
   const [backupLogs, setBackupLogs] = useState<BackupLog[]>([]);
   const onAddBackupLog = (log: BackupLog) => setBackupLogs(prev => [log, ...prev]);
-  const onRestoreState = (data: any) => { alert('A restauração direta para o banco de dados online foi desabilitada por segurança nesta versão.'); };
   
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -101,25 +100,7 @@ export default function BackupModule() {
           throw new Error('Formato de backup inválido. Chave "data" ausente.');
         }
 
-        // Apply state restoration
-        onRestoreState(parsed.data);
-
-        // Count restored records
-        const data = parsed.data;
-        const restoredCounts = `Fili: ${data.filaments?.length || 0}, Comp: ${data.purchases?.length || 0}, Imp: ${data.printers?.length || 0}, Prod: ${data.products?.length || 0}, Ords: ${data.productions?.length || 0}, Orç: ${data.budgets?.length || 0}, Ven: ${data.sales?.length || 0}, Cli: ${data.clients?.length || 0}`;
-
-        // Add Log
-        const successLog: BackupLog = {
-          id: `log-${Date.now()}`,
-          data: new Date().toISOString().replace('T', ' ').substring(0, 19),
-          usuario: 'Administrador ERP',
-          status: 'Sucesso',
-          ipSimulado: '192.168.1.102',
-          registrosTabelas: restoredCounts,
-          operacao: 'Restauração (Importação)'
-        };
-        onAddBackupLog(successLog);
-        setSuccessMsg('Base de dados restaurada com sucesso!');
+        throw new Error('Restauração indisponível. Nenhum dado foi alterado.');
       } catch (err: any) {
         setErrorMsg(`Falha ao restaurar backup: ${err.message || 'Arquivo corrompido ou formato incompatível'}`);
         
@@ -144,7 +125,7 @@ export default function BackupModule() {
       {/* HEADER BAR */}
       <div>
         <h2 className="text-xl font-bold text-white tracking-tight">Segurança, Backup e Restauração</h2>
-        <p className="text-sm text-neutral-400 mt-1">Proteja as margens e faturamento de sua empresa. Exporte backups criptografados em JSON e audite as sessões de importação.</p>
+        <p className="text-sm text-neutral-400 mt-1">Exporte uma cópia local dos dados carregados. O arquivo JSON não é criptografado; armazene-o em local seguro.</p>
       </div>
 
       {/* FEEDBACK LABELS */}
@@ -195,7 +176,7 @@ export default function BackupModule() {
             Restaurar Base de Dados
           </h3>
           <p className="text-xs text-neutral-400 font-mono leading-relaxed mt-2 text-left">
-            ⚠️ <strong className="text-red-400">CUIDADO:</strong> A restauração substituirá os registros locais da aplicação pelos dados contidos no arquivo JSON selecionado. Certifique-se de exportar um backup antes.
+            A restauração online está temporariamente indisponível. Nenhum arquivo enviado altera a base de dados.
           </p>
 
           <div className="mt-6 pt-4 border-t border-neutral-800/60">
@@ -204,14 +185,15 @@ export default function BackupModule() {
               accept=".json"
               ref={fileInputRef}
               onChange={handleInitiateRestore}
+              disabled
               className="hidden"
             />
             <button
-              onClick={() => fileInputRef.current?.click()}
+              disabled
               id="import-backup-btn"
-              className="w-full py-2.5 bg-neutral-950 border border-neutral-800 text-neutral-300 hover:text-white font-bold rounded-xl text-xs font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full py-2.5 bg-neutral-950 border border-neutral-800 text-neutral-600 font-bold rounded-xl text-xs font-mono flex items-center justify-center gap-1.5 cursor-not-allowed"
             >
-              <Upload size={14} /> Fazer Upload de Arquivo JSON
+              <Upload size={14} /> Restauração indisponível
             </button>
           </div>
         </div>
@@ -224,7 +206,7 @@ export default function BackupModule() {
         <div>
           <strong>CONFORMIDADE DE SEGURANÇA E POLÍTICAS DE RLS:</strong>
           <p className="mt-1 text-neutral-400">
-            Todas as cargas úteis de restauração são validadas para evitar injeções arbitrárias de chaves estrangeiras fora do tenant logado no Supabase. O banco de dados PostgreSQL aplica regras de nível de linha (RLS) para blindar acessos.
+            Backups exportados devem ser protegidos fora do sistema. A restauração será reativada somente após existir um fluxo transacional, auditável e autorizado no servidor.
           </p>
         </div>
       </div>

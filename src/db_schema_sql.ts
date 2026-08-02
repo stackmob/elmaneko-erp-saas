@@ -193,6 +193,8 @@ CREATE TABLE IF NOT EXISTS vendas (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+ALTER TABLE vendas ADD COLUMN IF NOT EXISTS numero TEXT;
+
 -- 13. COMPRAS
 CREATE TABLE IF NOT EXISTS compras (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -231,6 +233,19 @@ CREATE TABLE IF NOT EXISTS insumos (
   filamento_id UUID REFERENCES filamentos(id) ON DELETE SET NULL,
   observacoes TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS movimentacoes_estoque (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  filamento_id UUID NOT NULL REFERENCES filamentos(id) ON DELETE RESTRICT,
+  producao_id UUID REFERENCES producoes(id) ON DELETE SET NULL,
+  tipo TEXT NOT NULL CHECK (tipo IN ('Entrada', 'Saida')),
+  quantidade NUMERIC NOT NULL CHECK (quantidade > 0),
+  saldo_anterior NUMERIC NOT NULL,
+  saldo_posterior NUMERIC NOT NULL,
+  descricao TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 ALTER TABLE compras ADD COLUMN IF NOT EXISTS insumo_id UUID REFERENCES insumos(id) ON DELETE SET NULL;
@@ -371,6 +386,7 @@ ALTER TABLE lancamentos_financeiros ENABLE ROW LEVEL SECURITY;
 ALTER TABLE movimentacoes_financeiras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transferencias_financeiras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE auditoria_financeira ENABLE ROW LEVEL SECURITY;
+ALTER TABLE movimentacoes_estoque ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
 -- SEGURANÇA MULTI-TENANT (POLÍTICAS ESTRITAS VIA HAS_ACCESS)
@@ -396,13 +412,52 @@ DROP POLICY IF EXISTS empresas_select_member ON empresas;
 DROP POLICY IF EXISTS empresas_insert_authenticated ON empresas;
 DROP POLICY IF EXISTS empresas_update_member ON empresas;
 CREATE POLICY empresas_select_member ON empresas FOR SELECT TO authenticated USING (public.is_empresa_member(id));
-CREATE POLICY empresas_insert_authenticated ON empresas FOR INSERT TO authenticated WITH CHECK (auth.uid() IS NOT NULL);
 CREATE POLICY empresas_update_member ON empresas FOR UPDATE TO authenticated USING (public.is_empresa_member(id)) WITH CHECK (public.is_empresa_member(id));
 
 DROP POLICY IF EXISTS usuario_empresa_select_self ON usuario_empresa;
 DROP POLICY IF EXISTS usuario_empresa_insert_self ON usuario_empresa;
 CREATE POLICY usuario_empresa_select_self ON usuario_empresa FOR SELECT TO authenticated USING (user_id = auth.uid());
-CREATE POLICY usuario_empresa_insert_self ON usuario_empresa FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+REVOKE INSERT, UPDATE, DELETE ON public.usuario_empresa FROM authenticated;
+
+CREATE OR REPLACE FUNCTION public.bootstrap_empresa_do_usuario()
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_user_id UUID := auth.uid();
+  v_empresa_id UUID;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Autenticação obrigatória.';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtext(v_user_id::text));
+
+  SELECT empresa_id INTO v_empresa_id
+  FROM public.usuario_empresa
+  WHERE user_id = v_user_id
+  ORDER BY created_at
+  LIMIT 1;
+
+  IF v_empresa_id IS NOT NULL THEN
+    RETURN v_empresa_id;
+  END IF;
+
+  INSERT INTO public.empresas (nome)
+  VALUES ('Empresa Principal')
+  RETURNING id INTO v_empresa_id;
+
+  INSERT INTO public.usuario_empresa (user_id, empresa_id, role)
+  VALUES (v_user_id, v_empresa_id, 'admin');
+
+  RETURN v_empresa_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.bootstrap_empresa_do_usuario() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.bootstrap_empresa_do_usuario() TO authenticated;
 
 -- Aplicação Única e Estrita das Políticas Multi-Tenant em TODAS as Tabelas Operacionais e Financeiras
 DO $$
@@ -413,7 +468,7 @@ BEGIN
     'produto_materiais', 'producoes', 'orcamentos', 'orcamento_itens', 'vendas',
     'compras', 'insumos', 'contas_financeiras', 'categorias_financeiras',
     'centros_custo', 'lancamentos_financeiros', 'movimentacoes_financeiras',
-    'transferencias_financeiras', 'auditoria_financeira'
+    'transferencias_financeiras', 'auditoria_financeira', 'movimentacoes_estoque'
   ] LOOP
     EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', tenant_table || '_policy', tenant_table);
     EXECUTE format('DROP POLICY IF EXISTS tenant_access ON public.%I', tenant_table);
@@ -439,6 +494,11 @@ CREATE INDEX IF NOT EXISTS idx_categorias_financeiras_empresa ON categorias_fina
 CREATE INDEX IF NOT EXISTS idx_centros_custo_empresa ON centros_custo(empresa_id);
 CREATE INDEX IF NOT EXISTS idx_lancamentos_financeiros_empresa ON lancamentos_financeiros(empresa_id);
 CREATE INDEX IF NOT EXISTS idx_movimentacoes_financeiras_conta ON movimentacoes_financeiras(conta_financeira_id);
+CREATE INDEX IF NOT EXISTS idx_movimentacoes_estoque_filamento ON movimentacoes_estoque(filamento_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_vendas_orcamento_origem_unique
+  ON vendas(orcamento_origem_id) WHERE orcamento_origem_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_producoes_empresa_numero_unique
+  ON producoes(empresa_id, numero);
 
 -- ============================================================
 -- PROCEDURES / RPCs ATÔMICAS FINANCEIRAS
@@ -462,6 +522,14 @@ DECLARE
   v_saldo_post NUMERIC;
   v_tipo_mov TEXT;
 BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Autenticação obrigatória.';
+  END IF;
+
+  IF p_valor_pago IS NULL OR p_valor_pago <= 0 THEN
+    RAISE EXCEPTION 'O valor de liquidação deve ser positivo.';
+  END IF;
+
   -- 1. Busca e valida lançamento
   SELECT * INTO v_lanc FROM lancamentos_financeiros WHERE id = p_lancamento_id FOR UPDATE;
   IF NOT FOUND THEN
@@ -471,6 +539,14 @@ BEGIN
   -- Verifica tenant
   IF NOT public.is_empresa_member(v_lanc.empresa_id) THEN
     RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
+  END IF;
+
+  IF v_lanc.status IN ('Liquidado', 'Cancelado') OR v_lanc.is_deleted THEN
+    RAISE EXCEPTION 'O lançamento não pode ser liquidado no estado atual.';
+  END IF;
+
+  IF p_valor_pago > (COALESCE(v_lanc.valor_liquido, 0) - COALESCE(v_lanc.valor_pago, 0)) THEN
+    RAISE EXCEPTION 'O valor de liquidação excede o saldo em aberto.';
   END IF;
 
   -- 2. Busca e valida conta
@@ -496,9 +572,13 @@ BEGIN
 
   -- 4. Atualiza lançamento
   UPDATE lancamentos_financeiros
-  SET status = 'Liquidado',
+  SET status = CASE
+        WHEN p_valor_pago + COALESCE(v_lanc.valor_pago, 0) >= COALESCE(v_lanc.valor_liquido, 0)
+          THEN 'Liquidado'
+        ELSE 'Pendente'
+      END,
       conta_financeira_id = p_conta_id,
-      valor_pago = p_valor_pago,
+      valor_pago = COALESCE(v_lanc.valor_pago, 0) + p_valor_pago,
       data_liquidacao = p_data_liquidacao
   WHERE id = p_lancamento_id;
 
@@ -652,6 +732,23 @@ BEGIN
     RAISE EXCEPTION 'Acesso negado ao orçamento.';
   END IF;
 
+  SELECT id, numero INTO v_venda_id, v_num_venda
+  FROM vendas
+  WHERE orcamento_origem_id = p_orcamento_id;
+
+  IF FOUND THEN
+    RETURN jsonb_build_object(
+      'success', true,
+      'already_converted', true,
+      'venda_id', v_venda_id,
+      'numero_venda', v_num_venda
+    );
+  END IF;
+
+  IF v_orc.status IN ('Cancelado', 'Reprovado') THEN
+    RAISE EXCEPTION 'Orçamento não pode ser convertido no estado atual.';
+  END IF;
+
   -- 2. Gera número da venda
   v_num_venda := 'VND-' || SUBSTRING(p_orcamento_id::text FROM 1 FOR 8);
 
@@ -666,10 +763,10 @@ BEGIN
     empresa_id,
     numero,
     cliente_id,
-    data_venda,
+    data,
     valor_total,
     forma_pagamento,
-    status_pagamento,
+    status,
     orcamento_origem_id
   ) VALUES (
     v_orc.empresa_id,
@@ -726,4 +823,94 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.converter_orcamento_em_venda(UUID, TEXT) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.criar_venda_com_lancamento(
+  p_empresa_id UUID,
+  p_cliente_id UUID,
+  p_data DATE,
+  p_valor_total NUMERIC,
+  p_forma_pagamento TEXT,
+  p_orcamento_origem_id UUID DEFAULT NULL,
+  p_numero TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_venda_id UUID;
+  v_numero TEXT;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
+  END IF;
+  IF p_valor_total IS NULL OR p_valor_total < 0 THEN
+    RAISE EXCEPTION 'O valor total da venda é inválido.';
+  END IF;
+
+  v_numero := COALESCE(NULLIF(trim(p_numero), ''), 'VND-' || substring(gen_random_uuid()::text from 1 for 8));
+  INSERT INTO public.vendas (empresa_id, numero, cliente_id, data, valor_total, forma_pagamento, status, orcamento_origem_id)
+  VALUES (p_empresa_id, v_numero, p_cliente_id, COALESCE(p_data, CURRENT_DATE), p_valor_total, p_forma_pagamento, 'Pendente', p_orcamento_origem_id)
+  RETURNING id INTO v_venda_id;
+
+  INSERT INTO public.lancamentos_financeiros (
+    empresa_id, numero_documento, tipo, origem, origem_id, cliente_id,
+    data_emissao, data_vencimento, valor_bruto, valor_liquido, forma_pagamento, status
+  ) VALUES (
+    p_empresa_id, v_numero, 'Receita', 'Venda', v_venda_id, p_cliente_id,
+    COALESCE(p_data, CURRENT_DATE), COALESCE(p_data, CURRENT_DATE), p_valor_total,
+    p_valor_total, p_forma_pagamento, 'Aberto'
+  );
+
+  RETURN jsonb_build_object('id', v_venda_id, 'numero', v_numero);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.criar_venda_com_lancamento(UUID, UUID, DATE, NUMERIC, TEXT, UUID, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.criar_venda_com_lancamento(UUID, UUID, DATE, NUMERIC, TEXT, UUID, TEXT) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.concluir_producao(p_producao_id UUID, p_filamento_id UUID, p_quantidade_gramas NUMERIC)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_producao RECORD;
+  v_filamento RECORD;
+  v_saldo_posterior NUMERIC;
+BEGIN
+  IF p_quantidade_gramas IS NULL OR p_quantidade_gramas <= 0 THEN
+    RAISE EXCEPTION 'A quantidade consumida deve ser positiva.';
+  END IF;
+  SELECT * INTO v_producao FROM public.producoes WHERE id = p_producao_id FOR UPDATE;
+  IF NOT FOUND OR NOT public.is_empresa_member(v_producao.empresa_id) THEN
+    RAISE EXCEPTION 'Ordem de produção não encontrada ou acesso negado.';
+  END IF;
+  IF v_producao.status = 'Finalizada' THEN
+    RAISE EXCEPTION 'A ordem de produção já foi concluída.';
+  END IF;
+  SELECT * INTO v_filamento FROM public.filamentos
+  WHERE id = p_filamento_id AND empresa_id = v_producao.empresa_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Filamento não encontrado para esta empresa.';
+  END IF;
+  IF v_filamento.quantidade_disponivel < p_quantidade_gramas THEN
+    RAISE EXCEPTION 'Estoque de filamento insuficiente.';
+  END IF;
+  v_saldo_posterior := v_filamento.quantidade_disponivel - p_quantidade_gramas;
+  UPDATE public.filamentos SET quantidade_disponivel = v_saldo_posterior WHERE id = p_filamento_id;
+  UPDATE public.producoes SET status = 'Finalizada' WHERE id = p_producao_id;
+  INSERT INTO public.movimentacoes_estoque (
+    empresa_id, filamento_id, producao_id, tipo, quantidade, saldo_anterior, saldo_posterior, descricao
+  ) VALUES (
+    v_producao.empresa_id, p_filamento_id, p_producao_id, 'Saida', p_quantidade_gramas,
+    v_filamento.quantidade_disponivel, v_saldo_posterior, 'Consumo da produção ' || v_producao.numero
+  );
+  RETURN jsonb_build_object('producao_id', p_producao_id, 'filamento_id', p_filamento_id, 'saldo_posterior', v_saldo_posterior);
+END;
+$$;
+REVOKE ALL ON FUNCTION public.concluir_producao(UUID, UUID, NUMERIC) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.concluir_producao(UUID, UUID, NUMERIC) TO authenticated;
 `;

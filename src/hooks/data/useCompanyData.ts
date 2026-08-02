@@ -69,48 +69,20 @@ const mapEmpresaToDB = (comp: Partial<Company>) => ({
 });
 
 export function useEmpresa() {
-  const { session } = useAuth();
-  const fallbackId = getFallbackEmpresaId();
+  const { empresaId } = useAuth();
 
   return useQuery({
-    queryKey: ['empresa', session?.user?.id],
+    queryKey: ['empresa', empresaId || 'no-active-tenant'],
+    enabled: Boolean(empresaId),
     queryFn: async () => {
-      try {
-        if (session?.user?.id) {
-          const { data: ueData } = await supabase
-            .from('usuario_empresa')
-            .select('empresa_id')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
-
-          const activeEmpresaId = ueData?.empresa_id || fallbackId;
-
-          const { data: empData, error: empErr } = await supabase
-            .from('empresas')
-            .select('*')
-            .eq('id', activeEmpresaId)
-            .maybeSingle();
-
-          if (empData && !empErr) {
-            return mapEmpresaFromDB(empData);
-          }
-        }
-
-        // Try querying demo empresa only if session exists or try-catch gracefully
-        const { data: demoData, error: demoErr } = await supabase
-          .from('empresas')
-          .select('*')
-          .eq('id', fallbackId)
-          .maybeSingle();
-
-        if (demoData && !demoErr) {
-          return mapEmpresaFromDB(demoData);
-        }
-
-        return DEFAULT_COMPANY_DATA;
-      } catch (e) {
-        return DEFAULT_COMPANY_DATA;
-      }
+      if (!empresaId) throw new Error('Nenhuma empresa ativa para a sessão atual.');
+      const { data, error } = await supabase
+        .from('empresas')
+        .select('*')
+        .eq('id', empresaId)
+        .single();
+      if (error) throw error;
+      return mapEmpresaFromDB(data);
     },
     staleTime: 1000 * 60 * 10,
     retry: false, // Prevent noisy console 403 retries
@@ -119,31 +91,18 @@ export function useEmpresa() {
 
 export function useUpdateEmpresa() {
   const queryClient = useQueryClient();
-  const { session } = useAuth();
-  const fallbackId = getFallbackEmpresaId();
+  const { empresaId } = useAuth();
 
   return useMutation({
     mutationFn: async (updated: Partial<Company>) => {
-      let activeEmpresaId = fallbackId;
-
-      if (session?.user?.id) {
-        const { data: ueData } = await supabase
-          .from('usuario_empresa')
-          .select('empresa_id')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-
-        if (ueData?.empresa_id) {
-          activeEmpresaId = ueData.empresa_id;
-        }
-      }
+      if (!empresaId) throw new Error('Nenhuma empresa ativa para a sessão atual.');
 
       const dbPayload = mapEmpresaToDB(updated);
 
       const { data, error } = await supabase
         .from('empresas')
         .update(dbPayload)
-        .eq('id', activeEmpresaId)
+        .eq('id', empresaId)
         .select()
         .single();
 

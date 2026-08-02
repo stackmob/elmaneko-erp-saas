@@ -13,7 +13,7 @@ import { formatDateBR } from '../utils/formatters';
 import { TooltipHint } from './ui/TooltipHint';
 
 export default function Production() {
-  const { useProducoes, useProdutos, useImpressoras, useFilamentos, useTarifas, useAddProducao, useUpdateProducao, useUpdateFilamento } = useData();
+  const { useProducoes, useProdutos, useImpressoras, useFilamentos, useTarifas, useAddProducao, useUpdateProducao, useConcluirProducao } = useData();
   const { data: productions = [] } = useProducoes();
   const { data: products = [] } = useProdutos();
   const { data: printers = [] } = useImpressoras();
@@ -21,7 +21,7 @@ export default function Production() {
   const { data: tariffs = [] } = useTarifas();
   const addMutation = useAddProducao();
   const updateMutation = useUpdateProducao();
-  const updateFilamentoMutation = useUpdateFilamento();
+  const completeMutation = useConcluirProducao();
   const { toast, showToast, hideToast } = useToast();
   
   const [completingOrder, setCompletingOrder] = useState<ProductionOrder | null>(null);
@@ -943,19 +943,11 @@ export default function Production() {
         filaments={filaments}
         onConfirmComplete={(orderId, filamentId, pesoGramas) => {
           if (!completingOrder) return;
-          const updatedOrder: ProductionOrder = { ...completingOrder, status: 'Finalizada' };
-          updateMutation.mutate(updatedOrder, {
+          completeMutation.mutate({ id: orderId, filamentoId: filamentId, quantidadeGramas: pesoGramas }, {
             onSuccess: () => {
-              const fil = filaments.find(f => f.id === filamentId);
-              if (fil) {
-                const novaQtd = Math.max(0, fil.quantidadeDisponivel - pesoGramas);
-                const updatedFilament = { ...fil, quantidadeDisponivel: novaQtd };
-                updateFilamentoMutation.mutate(updatedFilament);
-                showToast(`Ordem concluída! ${pesoGramas}g deduzidos da bobina ${fil.nome}. Novo saldo: ${novaQtd}g.`, 'success');
-              } else {
-                showToast('Ordem marcada como finalizada!', 'success');
-              }
-            }
+              showToast(`Ordem concluída! ${pesoGramas}g foram baixados do estoque.`, 'success');
+            },
+            onError: (error: Error) => showToast(error.message || 'Não foi possível concluir a produção.', 'error'),
           });
         }}
       />

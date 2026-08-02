@@ -2,17 +2,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { Product, ProductionOrder } from '../../types';
 import { 
-  getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid, getActiveTenantId
+  getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid, getActiveTenantId, getTenantQueryKey
 } from '../../utils/storage';
 
 // PRODUTOS & BOM
 export function useProdutos() {
   return useQuery({
-    queryKey: ['produtos'],
+    queryKey: getTenantQueryKey('produtos'),
     queryFn: async () => {
       const empresaId = getActiveTenantId();
       const { data: prods, error: pErr } = await supabase.from('produtos').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false });
-      if (pErr || !prods) return getLocalCache<Product>('produtos');
+      if (pErr) throw pErr;
+      if (!prods) return [];
 
       const { data: matRows } = await supabase.from('produto_materiais').select('*').eq('empresa_id', empresaId);
 
@@ -172,10 +173,11 @@ export function useDeleteProduto() {
 // PRODUÇÕES (FILA 3D)
 export function useProducoes() {
   return useQuery({
-    queryKey: ['producoes'],
+    queryKey: getTenantQueryKey('producoes'),
     queryFn: async () => {
       const { data, error } = await supabase.from('producoes').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
-      if (error || !data) return getLocalCache<ProductionOrder>('producoes');
+      if (error) throw error;
+      if (!data) return [];
 
       const mapped: ProductionOrder[] = data.map(item => ({
         id: item.id,
@@ -275,6 +277,25 @@ export function useUpdateProducaoStatus() {
       return { id, status };
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['producoes'] }),
+  });
+}
+
+export function useConcluirProducao() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, filamentoId, quantidadeGramas }: { id: string; filamentoId: string; quantidadeGramas: number }) => {
+      const { data, error } = await supabase.rpc('concluir_producao', {
+        p_producao_id: id,
+        p_filamento_id: filamentoId,
+        p_quantidade_gramas: quantidadeGramas,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['producoes'] });
+      queryClient.invalidateQueries({ queryKey: ['filamentos'] });
+    },
   });
 }
 

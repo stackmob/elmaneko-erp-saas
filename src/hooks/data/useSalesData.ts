@@ -2,16 +2,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { Client, Budget, Sale } from '../../types';
 import { 
-  getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid, getActiveTenantId
+  setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid, getActiveTenantId, getTenantQueryKey
 } from '../../utils/storage';
 
 // 1. CLIENTES (CRM)
 export function useClientes() {
   return useQuery({
-    queryKey: ['clientes'],
+    queryKey: getTenantQueryKey('clientes'),
     queryFn: async () => {
       const { data, error } = await supabase.from('clientes').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
-      if (error || !data) return getLocalCache<Client>('clientes');
+      if (error) throw error;
+      if (!data) return [];
 
       const mapped: Client[] = data.map(item => ({
         id: item.id,
@@ -116,11 +117,12 @@ export function useDeleteCliente() {
 // 2. ORÇAMENTOS
 export function useOrcamentos() {
   return useQuery({
-    queryKey: ['orcamentos'],
+    queryKey: getTenantQueryKey('orcamentos'),
     queryFn: async () => {
       const empresaId = getActiveTenantId();
       const { data: orcs, error: oErr } = await supabase.from('orcamentos').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false });
-      if (oErr || !orcs) return getLocalCache<Budget>('orcamentos');
+      if (oErr) throw oErr;
+      if (!orcs) return [];
 
       const { data: itemRows } = await supabase.from('orcamento_itens').select('*').eq('empresa_id', empresaId);
 
@@ -259,10 +261,11 @@ export function useDeleteOrcamento() {
 // 3. VENDAS REALIZADAS
 export function useVendas() {
   return useQuery({
-    queryKey: ['vendas'],
+    queryKey: getTenantQueryKey('vendas'),
     queryFn: async () => {
       const { data, error } = await supabase.from('vendas').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
-      if (error || !data) return getLocalCache<Sale>('vendas');
+      if (error) throw error;
+      if (!data) return [];
 
       const mapped: Sale[] = data.map(item => ({
         id: item.id,
@@ -288,55 +291,30 @@ export function useAddVenda() {
   return useMutation({
     mutationFn: async (nova: Omit<Sale, 'id'>) => {
       const empresaId = getActiveTenantId();
-      const payload = {
-        empresa_id: empresaId,
-        cliente_id: nova.clienteId,
-        data: nova.dataVenda,
-        valor_total: nova.valorTotal,
-        forma_pagamento: nova.formaPagamento,
-        status: nova.statusPagamento,
-        orcamento_origem_id: isValidUuid(nova.orcamentoOrigemId) ? nova.orcamentoOrigemId : null
-      };
-
-      const { data, error } = await supabase.from('vendas').insert([payload]).select().single();
-      if (error) {
-        const offlineItem: Sale = { ...nova, id: crypto.randomUUID() };
-        addToLocalCache('vendas', offlineItem);
-        return offlineItem;
-      }
+      const { data, error } = await supabase.rpc('criar_venda_com_lancamento', {
+        p_empresa_id: empresaId,
+        p_cliente_id: nova.clienteId,
+        p_data: nova.dataVenda,
+        p_valor_total: nova.valorTotal,
+        p_forma_pagamento: nova.formaPagamento,
+        p_orcamento_origem_id: isValidUuid(nova.orcamentoOrigemId) ? nova.orcamentoOrigemId : null,
+        p_numero: nova.numero,
+      });
+      if (error) throw error;
 
       const created: Sale = {
         id: data.id,
-        numero: nova.numero,
-        clienteId: data.cliente_id,
-        dataVenda: data.data,
+        numero: data.numero,
+        clienteId: nova.clienteId,
+        dataVenda: nova.dataVenda,
         itens: nova.itens,
-        valorTotal: Number(data.valor_total),
-        formaPagamento: data.forma_pagamento,
-        statusPagamento: data.status,
-        orcamentoOrigemId: data.orcamento_origem_id
+        valorTotal: nova.valorTotal,
+        formaPagamento: nova.formaPagamento,
+        statusPagamento: 'Pendente',
+        orcamentoOrigemId: nova.orcamentoOrigemId
       };
 
       addToLocalCache('vendas', created);
-
-      try {
-        await supabase.from('lancamentos_financeiros').insert([{
-          empresa_id: empresaId,
-          numero_documento: `VENDA-${data.id.slice(0, 8)}`,
-          tipo: 'Receita',
-          origem: 'Venda',
-          origem_id: data.id,
-          cliente_id: data.cliente_id,
-          data_emissao: data.data || new Date().toISOString().split('T')[0],
-          data_vencimento: data.data || new Date().toISOString().split('T')[0],
-          valor_bruto: Number(data.valor_total),
-          valor_liquido: Number(data.valor_total),
-          forma_pagamento: data.forma_pagamento || 'PIX',
-          status: 'Aberto',
-          observacoes: `Faturamento gerado automaticamente pela Venda #${data.id.slice(0, 8)}`
-        }]);
-      } catch (e) {}
-
       return created;
     },
     onSuccess: () => {
@@ -410,4 +388,3 @@ export function useConverterOrcamentoEmVenda() {
     },
   });
 }
-

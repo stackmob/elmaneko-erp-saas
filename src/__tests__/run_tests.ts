@@ -35,6 +35,12 @@ function runSuite() {
   assert(!SUPABASE_SQL_SCHEMA.includes('USING (true)'), 'db_schema_sql.ts NÃO contém nenhuma política permissiva USING (true)');
   assert(migrationContent.includes('is_empresa_member'), 'supabase_migration.sql utiliza a função is_empresa_member');
   assert(!migrationContent.includes('00000000-0000-0000-0000-000000000001'), 'supabase_migration.sql NÃO contém o UUID demo hardcoded');
+  assert(!migrationContent.includes('CREATE POLICY usuario_empresa_insert_self'), 'Associação de usuário à empresa não pode ser inserida diretamente pelo cliente');
+  assert(migrationContent.includes('bootstrap_empresa_do_usuario'), 'Provisionamento inicial de empresa utiliza RPC segura');
+  assert(migrationContent.includes('p_valor_pago IS NULL OR p_valor_pago <= 0'), 'Liquidação financeira rejeita valor não positivo');
+  assert(migrationContent.includes("v_lanc.status IN ('Liquidado', 'Cancelado')"), 'Liquidação financeira bloqueia lançamento já encerrado');
+  assert(migrationContent.includes('idx_vendas_orcamento_origem_unique'), 'Conversão de orçamento possui unicidade de venda de origem');
+  assert(migrationContent.includes('concluir_producao'), 'Conclusão de produção é executada por RPC atômica');
 
   // 4. Teste de Resolução de Tenant
   console.log('\n[4] Teste de Resolução de Tenant (getActiveTenantId)');

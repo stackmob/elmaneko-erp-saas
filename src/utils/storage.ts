@@ -21,6 +21,16 @@ export const getActiveTenantId = (): string => {
 
 export const getActiveEmpresaId = getActiveTenantId;
 
+/** Safe for render-time cache keys; mutations and requests must use getActiveTenantId. */
+export const getTenantQueryKey = (resource: string): [string, string] => {
+  try {
+    const id = typeof localStorage !== 'undefined' ? localStorage.getItem('elmaneko_empresa_id') : null;
+    return [resource, id || 'no-active-tenant'];
+  } catch {
+    return [resource, 'no-active-tenant'];
+  }
+};
+
 export const getEmpresaPrefix = (empresaId?: string): string => {
   let empId = empresaId;
   if (!empId) {
