@@ -1134,6 +1134,7 @@ RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
   SELECT EXISTS (SELECT 1 FROM usuario_empresa WHERE empresa_id = target_empresa_id AND user_id = auth.uid() AND role = 'admin');
 $$;
 
+DROP POLICY IF EXISTS convites_empresa_admin_access ON convites_empresa;
 CREATE POLICY convites_empresa_admin_access ON convites_empresa FOR ALL TO authenticated
 USING (public.is_empresa_admin(empresa_id)) WITH CHECK (public.is_empresa_admin(empresa_id));
 
@@ -1174,6 +1175,7 @@ GRANT EXECUTE ON FUNCTION public.aceitar_convite_empresa(TEXT) TO authenticated;
 -- ============================================================
 -- SCRIPT DE VINCULAÇÃO E BACKFILL DE DADOS EXISTENTES À EMPRESA
 -- ============================================================
+/* Legacy automatic backfill intentionally disabled. Use a separately reviewed migration with explicit tenant mapping.
 DO $$
 DECLARE
   v_target_empresa_id UUID;
@@ -1211,3 +1213,4 @@ BEGIN
     ', v_table, v_target_empresa_id);
   END LOOP;
 END $$;
+*/
