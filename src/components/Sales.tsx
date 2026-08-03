@@ -8,6 +8,7 @@ import {
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 // Helper to format ISO YYYY-MM-DD date to DD/MM/YYYY
 const formatDateBR = (dateStr?: string): string => {
@@ -30,6 +31,13 @@ export default function Sales() {
   const deleteVendaMutation = useDeleteVenda();
   const updateOrcamentoMutation = useUpdateOrcamento();
   const { toast, showToast, hideToast } = useToast();
+
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }>({ open: false, title: '', description: '', onConfirm: () => {} });
 
   // FILTERS & SORT STATES
   const [filterClient, setFilterClient] = useState('todos');
@@ -84,22 +92,60 @@ export default function Sales() {
   const averageTicket = paidSales.length > 0 ? totalFaturadoVal / paidSales.length : 0;
 
   const handleDeleteSale = (s: Sale) => {
-    if (confirm(`Deseja realmente excluir a venda ${s.numero}? O orçamento de origem voltará a ficar PENDENTE.`)) {
-      deleteVendaMutation.mutate(s.id);
-      if (s.orcamentoOrigemId) {
-        const origBudget = budgets.find(b => b.id === s.orcamentoOrigemId);
-        if (origBudget) {
-          updateOrcamentoMutation.mutate({ ...origBudget, status: 'Aberto' });
+    setConfirmState({
+      open: true,
+      title: 'Excluir Venda',
+      description: `Deseja realmente excluir a venda ${s.numero}? O orçamento de origem voltará a ficar PENDENTE.`,
+      onConfirm: () => {
+        deleteVendaMutation.mutate(s.id);
+        if (s.orcamentoOrigemId) {
+          const origBudget = budgets.find(b => b.id === s.orcamentoOrigemId);
+          if (origBudget) {
+            updateOrcamentoMutation.mutate({ ...origBudget, status: 'Aberto' });
+          }
         }
+        showToast(`Venda ${s.numero} excluída com sucesso! Orçamento de origem retornado para o status Pendente.`, 'success');
+        setConfirmState(prev => ({ ...prev, open: false }));
       }
-      showToast(`Venda ${s.numero} excluída com sucesso! Orçamento de origem retornado para o status Pendente.`, 'success');
-    }
+    });
+  };
+
+  const handlePaySale = (s: Sale) => {
+    setConfirmState({
+      open: true,
+      title: 'Confirmar Pagamento',
+      description: `Confirmar recebimento do pagamento do pedido ${s.numero}?`,
+      onConfirm: () => {
+        updateVendaMutation.mutate({ ...s, statusPagamento: 'Pago' });
+        showToast(`Pagamento da venda ${s.numero} confirmado!`, 'success');
+        setConfirmState(prev => ({ ...prev, open: false }));
+      }
+    });
+  };
+
+  const handleCancelSale = (s: Sale) => {
+    setConfirmState({
+      open: true,
+      title: 'Cancelar Venda',
+      description: `Tem certeza de que deseja cancelar a venda ${s.numero}?`,
+      onConfirm: () => {
+        updateVendaMutation.mutate({ ...s, statusPagamento: 'Cancelado' });
+        showToast(`Venda ${s.numero} cancelada.`, 'error');
+        setConfirmState(prev => ({ ...prev, open: false }));
+      }
+    });
   };
 
   return (
     <div className="space-y-6" id="sales-module-container">
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
-      
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        description={confirmState.description}
+        onConfirm={confirmState.onConfirm}
+        onCancel={() => setConfirmState(prev => ({ ...prev, open: false }))}
+      />
       
       {/* HEADER ROW */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="sales-header">

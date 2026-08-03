@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Database, History, Loader2, RotateCcw, Shield } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 type Backup = {
   id: string;
@@ -28,6 +29,7 @@ export default function BackupModule() {
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [success, setSuccess] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; backup: Backup | null }>({ open: false, backup: null });
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -68,7 +70,10 @@ export default function BackupModule() {
 
   const restoreBackup = async (backup: Backup) => {
     if (!empresaId || backup.status !== 'ready') return;
-    if (!window.confirm('A restauração substituirá todos os dados operacionais atuais por esta cópia. Deseja continuar?')) return;
+    setConfirmDialog({ open: true, backup });
+  };
+
+  const executeRestore = async (backup: Backup) => {
     setWorking(true); setError(''); setSuccess('');
     try {
       const { error: functionError } = await supabase.functions.invoke('restore-secure-backup', { body: { empresaId, backupId: backup.id } });
@@ -85,6 +90,17 @@ export default function BackupModule() {
 
   return (
     <div className="space-y-6" id="backup-module-container">
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title="Restaurar Backup"
+        description="A restauração substituirá todos os dados operacionais atuais por esta cópia. Deseja continuar?"
+        confirmLabel="Restaurar Dados"
+        onConfirm={() => {
+          if (confirmDialog.backup) executeRestore(confirmDialog.backup);
+          setConfirmDialog({ open: false, backup: null });
+        }}
+        onCancel={() => setConfirmDialog({ open: false, backup: null })}
+      />
       <div>
         <h2 className="text-xl font-bold text-white tracking-tight">Segurança, Backup e Restauração</h2>
         <p className="mt-1 text-sm text-neutral-400">Snapshots são gerados no servidor, criptografados com AES-GCM e armazenados em bucket privado. São mantidas até 30 cópias por empresa.</p>

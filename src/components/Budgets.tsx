@@ -8,6 +8,7 @@ import {
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
+import ConfirmDialog from './ui/ConfirmDialog';
 import { BudgetPreviewModal } from './commercial/BudgetPreviewModal';
 import { Modal } from './ui/Modal';
 import { budgetSubtotal, budgetTotal, suggestedProductPrice } from '../utils/businessCalculations';
@@ -37,6 +38,7 @@ export default function Budgets() {
   const addVendaMutation = useAddVenda();
   const { toast, showToast, hideToast } = useToast();
   
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; id: string; num: string; invoiced: boolean }>({ open: false, id: '', num: '', invoiced: false });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
 
@@ -312,6 +314,23 @@ export default function Budgets() {
   return (
     <div className="space-y-6" id="budgets-module-container">
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title="Excluir Orçamento"
+        description={
+          confirmDialog.invoiced
+            ? 'Este orçamento já está faturado com uma venda gerada. Deseja realmente excluí-lo?'
+            : `Deseja excluir o orçamento ${confirmDialog.num}?`
+        }
+        confirmLabel="Excluir Orçamento"
+        onConfirm={() => {
+          deleteMutation.mutate(confirmDialog.id);
+          showToast(`Orçamento ${confirmDialog.num} excluído.`, 'success');
+          setConfirmDialog({ open: false, id: '', num: '', invoiced: false });
+        }}
+        onCancel={() => setConfirmDialog({ open: false, id: '', num: '', invoiced: false })}
+      />
       
       {/* MODULE HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="budgets-header">
@@ -620,14 +639,7 @@ export default function Budgets() {
                             <Edit size={14} />
                           </button>
                           <button
-                            onClick={() => {
-                              if (invoiced) {
-                                if (!confirm(`Este orçamento já está faturado com uma venda gerada. Deseja realmente excluí-lo?`)) return;
-                              } else {
-                                if (!confirm(`Deseja excluir o orçamento ${b.numero}?`)) return;
-                              }
-                              deleteMutation.mutate(b.id);
-                            }}
+                            onClick={() => setConfirmDialog({ open: true, id: b.id, num: b.numero, invoiced })}
                             className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-red-500 rounded transition-colors cursor-pointer"
                             id={`delete-btn-${b.id}`}
                             title="Excluir Orçamento"

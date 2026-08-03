@@ -7,6 +7,7 @@ import {
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
+import ConfirmDialog from './ui/ConfirmDialog';
 import { ScrollableTabs } from './ui/ScrollableTabs';
 import { CompleteOrderModal } from './production/CompleteOrderModal';
 import { formatDateBR } from '../utils/formatters';
@@ -25,6 +26,7 @@ export default function Production() {
   const completeMutation = useConcluirProducao();
   const { toast, showToast, hideToast } = useToast();
   
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; id: string; num: string; po: ProductionOrder | null }>({ open: false, id: '', num: '', po: null });
   const [completingOrder, setCompletingOrder] = useState<ProductionOrder | null>(null);
   const [activeTab, setActiveTab] = useState<'nova' | 'historico' | 'relatorios'>('historico');
 
@@ -240,9 +242,7 @@ export default function Production() {
   };
 
   const handleCancelFromHistory = (po: ProductionOrder) => {
-    if (confirm(`Deseja cancelar a ordem de produção ${po.numero}?`)) {
-      updateMutation.mutate({ ...po, status: 'Cancelada' });
-    }
+    setConfirmDialog({ open: true, id: po.id, num: po.numero, po });
   };
 
   // HISTORY FILTERS LOGIC
@@ -290,6 +290,21 @@ export default function Production() {
   return (
     <div className="space-y-6" id="production-module-container">
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title="Cancelar Ordem de Produção"
+        description={`Deseja cancelar a ordem de produção ${confirmDialog.num}?`}
+        confirmLabel="Cancelar Ordem"
+        onConfirm={() => {
+          if (confirmDialog.po) {
+            updateMutation.mutate({ ...confirmDialog.po, status: 'Cancelada' });
+            showToast(`Ordem ${confirmDialog.num} cancelada.`, 'warning');
+          }
+          setConfirmDialog({ open: false, id: '', num: '', po: null });
+        }}
+        onCancel={() => setConfirmDialog({ open: false, id: '', num: '', po: null })}
+      />
       
       {/* 1. VIEW TOGGLE BAR */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-neutral-900 border border-neutral-800 rounded-2xl">
