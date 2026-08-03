@@ -4,6 +4,7 @@ import { Filament, Purchase, SupplyItem } from '../../types';
 import { 
   setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid, getActiveTenantId, getTenantQueryKey
 } from '../../utils/storage';
+import { enqueueOfflineOperation, isNetworkFailure } from '../../utils/offlineQueue';
 
 // 1. FILAMENTOS
 export function useFilamentos() {
@@ -284,7 +285,17 @@ export function useAddCompra() {
           insumoId: isValidUuid(nova.insumoId) ? nova.insumoId : '',
         },
       });
-      if (error) throw error;
+      if (error) {
+        if (!isNetworkFailure(error)) throw error;
+        const offlineItem: Purchase = { ...nova, id: `offline-${crypto.randomUUID()}` };
+        await enqueueOfflineOperation(empresaId, 'create_purchase', {
+          ...nova,
+          filamentoId: isValidUuid(nova.filamentoId) ? nova.filamentoId : '',
+          insumoId: isValidUuid(nova.insumoId) ? nova.insumoId : '',
+        });
+        addToLocalCache('compras', offlineItem);
+        return offlineItem;
+      }
 
       const created: Purchase = {
         id: data.id,

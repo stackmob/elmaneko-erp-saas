@@ -4,6 +4,7 @@ import { Product, ProductionOrder } from '../../types';
 import { 
   getLocalCache, setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid, getActiveTenantId, getTenantQueryKey
 } from '../../utils/storage';
+import { enqueueOfflineOperation, isNetworkFailure } from '../../utils/offlineQueue';
 
 // PRODUTOS & BOM
 export function useProdutos() {
@@ -64,7 +65,13 @@ export function useAddProduto() {
         p_produto: { ...novo, impressoraPadraoId: isValidUuid(novo.impressoraPadraoId) ? novo.impressoraPadraoId : '' },
         p_materiais: novo.materials || [],
       });
-      if (error) throw error;
+      if (error) {
+        if (!isNetworkFailure(error)) throw error;
+        const offlineItem: Product = { ...novo, id: `offline-${crypto.randomUUID()}` };
+        await enqueueOfflineOperation(empresaId, 'create_product', { product: { ...novo, impressoraPadraoId: isValidUuid(novo.impressoraPadraoId) ? novo.impressoraPadraoId : '' }, materials: novo.materials || [] });
+        addToLocalCache('produtos', offlineItem);
+        return offlineItem;
+      }
 
       const created: Product = {
         ...novo,

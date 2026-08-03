@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
+import { CompanyMembers } from './CompanyMembers';
 import { Company } from '../types';
 import { 
   Building2, Save, Building, Phone, MapPin, 
@@ -300,6 +301,8 @@ export default function CompanyModule() {
               </div>
             </div>
           </div>
+
+          <CompanyMembers />
 
         </form>
 

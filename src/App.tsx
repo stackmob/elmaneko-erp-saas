@@ -10,6 +10,8 @@ import InventoryModule from './components/InventoryModule';
 import EnergyTariffModule from './components/EnergyTariff';
 import CompanyModule from './components/Company';
 import BackupModule from './components/Backup';
+import AcceptInvite from './components/AcceptInvite';
+import OfflineSyncStatus from './components/OfflineSyncStatus';
 
 // Icons
 import { 
@@ -21,9 +23,11 @@ import {
 
 import { useAuth } from './context/AuthContext';
 import { useData } from './hooks/useData';
+import { useOfflineSync } from './hooks/useOfflineSync';
 
 export default function App() {
-  const { session, loading, signOut } = useAuth();
+  const { session, loading, signOut, empresaId } = useAuth();
+  useOfflineSync(empresaId);
   const { useFilamentos } = useData();
   const { data: filaments = [] } = useFilamentos();
 
@@ -68,6 +72,10 @@ export default function App() {
 
   if (!auth.isAuthenticated) {
     return <AuthPage />;
+  }
+
+  if (window.location.pathname === '/accept-invite') {
+    return <AcceptInvite />;
   }
 
   const navItems = [
@@ -258,8 +266,7 @@ export default function App() {
           {currentView === 'backup' && <BackupModule />}
         </div>
       </main>
+      <OfflineSyncStatus />
     </div>
   );
 }
-
-

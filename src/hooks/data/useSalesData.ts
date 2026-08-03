@@ -4,6 +4,7 @@ import { Client, Budget, Sale } from '../../types';
 import { 
   setLocalCache, addToLocalCache, removeFromLocalCache, isValidUuid, getActiveTenantId, getTenantQueryKey
 } from '../../utils/storage';
+import { enqueueOfflineOperation, isNetworkFailure } from '../../utils/offlineQueue';
 
 // 1. CLIENTES (CRM)
 export function useClientes() {
@@ -166,7 +167,16 @@ export function useAddOrcamento() {
         p_orcamento: novo,
         p_itens: novo.itens,
       });
-      if (error) throw error;
+      if (error) {
+        if (!isNetworkFailure(error)) throw error;
+        const offlineItem: Budget = { ...novo, id: `offline-${crypto.randomUUID()}` };
+        await enqueueOfflineOperation(empresaId, 'create_budget', {
+          budget: novo,
+          items: novo.itens,
+        });
+        addToLocalCache('orcamentos', offlineItem);
+        return offlineItem;
+      }
 
       const created: Budget = {
         ...novo,
