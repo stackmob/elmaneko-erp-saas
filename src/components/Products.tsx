@@ -270,7 +270,7 @@ export default function Products() {
       setIsModalOpen(false);
       showToast(editingProduct ? 'Produto atualizado com sucesso!' : 'Produto cadastrado com sucesso!', 'success');
     };
-    const onError = () => showToast('Erro ao salvar produto. Tente novamente.', 'error');
+    const onError = (err: any) => showToast(`Erro ao salvar produto: ${err?.message || 'Tente novamente.'}`, 'error');
 
     if (editingProduct) {
       editMutation.mutate(productData, { onSuccess, onError });

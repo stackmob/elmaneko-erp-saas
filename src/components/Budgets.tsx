@@ -167,7 +167,7 @@ export default function Budgets() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!clienteId || itens.some(it => !it.produtoId)) {
-      alert('Por favor, selecione o cliente e pelo menos um produto válido.');
+      showToast('Por favor, selecione o cliente e pelo menos um produto válido.', 'error');
       return;
     }
 
@@ -185,12 +185,26 @@ export default function Budgets() {
     };
 
     if (editingBudget) {
-      editMutation.mutate(budgetData);
+      editMutation.mutate(budgetData, {
+        onSuccess: () => {
+          showToast(`Orçamento ${budgetData.numero} atualizado com sucesso!`, 'success');
+          setIsModalOpen(false);
+        },
+        onError: (err: any) => {
+          showToast(`Erro ao atualizar orçamento: ${err.message || 'Falha na persistência'}`, 'error');
+        }
+      });
     } else {
-      addMutation.mutate(budgetData);
+      addMutation.mutate(budgetData, {
+        onSuccess: () => {
+          showToast(`Orçamento ${budgetData.numero} gravado com sucesso!`, 'success');
+          setIsModalOpen(false);
+        },
+        onError: (err: any) => {
+          showToast(`Erro ao salvar orçamento: ${err.message || 'Falha na persistência'}`, 'error');
+        }
+      });
     }
-
-    setIsModalOpen(false);
   };
 
   const handleConvertToSaleSubmit = (e: React.FormEvent) => {

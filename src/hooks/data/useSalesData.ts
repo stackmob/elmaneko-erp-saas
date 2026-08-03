@@ -36,22 +36,23 @@ export function useClientes() {
 export function useAddCliente() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (novo: Omit<Client, 'id'>) => {
+    mutationFn: async (novo: Omit<Client, 'id'> & { id?: string }) => {
       const empresaId = getActiveTenantId();
       const payload = {
         empresa_id: empresaId,
         nome: novo.nome,
-        cpf_cnpj: novo.cpfCnpj,
-        telefone: novo.telefone,
+        cpf_cnpj: novo.cpfCnpj || null,
+        telefone: novo.telefone || novo.whatsapp || null,
         whatsapp: novo.whatsapp,
-        email: novo.email,
-        endereco: novo.endereco,
-        observacoes: novo.observacoes
+        email: novo.email || null,
+        endereco: novo.endereco || null,
+        observacoes: novo.observacoes || null
       };
 
       const { data, error } = await supabase.from('clientes').insert([payload]).select().single();
       if (error) {
-        const offlineItem: Client = { ...novo, id: crypto.randomUUID() };
+        if (!isNetworkFailure(error)) throw error;
+        const offlineItem: Client = { ...novo, id: novo.id || crypto.randomUUID() };
         addToLocalCache('clientes', offlineItem);
         return offlineItem;
       }
@@ -59,12 +60,12 @@ export function useAddCliente() {
       const created: Client = {
         id: data.id,
         nome: data.nome,
-        cpfCnpj: data.cpf_cnpj,
-        telefone: data.telefone,
-        whatsapp: data.whatsapp,
-        email: data.email,
-        endereco: data.endereco,
-        observacoes: data.observacoes
+        cpfCnpj: data.cpf_cnpj || '',
+        telefone: data.telefone || '',
+        whatsapp: data.whatsapp || '',
+        email: data.email || '',
+        endereco: data.endereco || '',
+        observacoes: data.observacoes || ''
       };
 
       addToLocalCache('clientes', created);
@@ -81,16 +82,17 @@ export function useUpdateCliente() {
       const empresaId = getActiveTenantId();
       const payload = {
         nome: cliente.nome,
-        cpf_cnpj: cliente.cpfCnpj,
-        telefone: cliente.telefone,
+        cpf_cnpj: cliente.cpfCnpj || null,
+        telefone: cliente.telefone || cliente.whatsapp || null,
         whatsapp: cliente.whatsapp,
-        email: cliente.email,
-        endereco: cliente.endereco,
-        observacoes: cliente.observacoes
+        email: cliente.email || null,
+        endereco: cliente.endereco || null,
+        observacoes: cliente.observacoes || null
       };
 
       if (isValidUuid(cliente.id)) {
-        await supabase.from('clientes').update(payload).eq('id', cliente.id).eq('empresa_id', empresaId);
+        const { error } = await supabase.from('clientes').update(payload).eq('id', cliente.id).eq('empresa_id', empresaId);
+        if (error) throw error;
       }
 
       addToLocalCache('clientes', cliente);
@@ -160,7 +162,7 @@ export function useOrcamentos() {
 export function useAddOrcamento() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (novo: Omit<Budget, 'id'>) => {
+    mutationFn: async (novo: Omit<Budget, 'id'> & { id?: string }) => {
       const empresaId = getActiveTenantId();
       const operationId = crypto.randomUUID();
       const { data, error } = await supabase.rpc('salvar_orcamento_com_itens', {
@@ -171,7 +173,7 @@ export function useAddOrcamento() {
       });
       if (error) {
         if (!isNetworkFailure(error)) throw error;
-        const offlineItem: Budget = { ...novo, id: `offline-${crypto.randomUUID()}` };
+        const offlineItem: Budget = { ...novo, id: novo.id || `offline-${crypto.randomUUID()}` };
         await enqueueOfflineOperation(empresaId, 'create_budget', {
           budget: novo,
           items: novo.itens,
@@ -182,7 +184,7 @@ export function useAddOrcamento() {
 
       const created: Budget = {
         ...novo,
-        id: data.id
+        id: data?.id || novo.id || crypto.randomUUID()
       };
 
       addToLocalCache('orcamentos', created);
