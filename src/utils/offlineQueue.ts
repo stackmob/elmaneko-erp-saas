@@ -12,6 +12,7 @@ export interface OfflineOperation {
   retries: number;
   status: OfflineOperationStatus;
   error?: string;
+  serverPayload?: Record<string, unknown>;
 }
 
 const DB_NAME = 'elmaneko-offline';
@@ -94,6 +95,26 @@ export async function syncOfflineOperations(tenantId: string) {
 export async function discardOfflineOperation(id: string) {
   await remove(id);
   notifyQueueChanged();
+}
+
+/** Recoloca a operação na fila somente após uma decisão explícita do usuário. */
+export async function resolveOfflineConflict(id: string, payload: Record<string, unknown>) {
+  const operations = await listOfflineOperationsForAllTenants();
+  const operation = operations.find((item) => item.id === id);
+  if (!operation) throw new Error('Operação offline não encontrada.');
+  await write({ ...operation, payload, status: 'pending', error: undefined, serverPayload: undefined });
+  notifyQueueChanged();
+}
+
+async function listOfflineOperationsForAllTenants(): Promise<OfflineOperation[]> {
+  const db = await database();
+  const result = await new Promise<OfflineOperation[]>((resolve, reject) => {
+    const request = db.transaction(STORE).objectStore(STORE).getAll();
+    request.onsuccess = () => resolve(request.result as OfflineOperation[]);
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+  return result;
 }
 
 export const isNetworkFailure = (error: unknown) => !navigator.onLine || error instanceof TypeError || /network|fetch|offline/i.test(error instanceof Error ? error.message : '');

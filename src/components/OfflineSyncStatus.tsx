@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CloudOff, RefreshCw, Trash2 } from 'lucide-react';
+import OfflineConflictResolver from './OfflineConflictResolver';
 import { useAuth } from '../context/AuthContext';
 import {
   discardOfflineOperation,
@@ -13,6 +14,7 @@ export default function OfflineSyncStatus() {
   const { empresaId } = useAuth();
   const [operations, setOperations] = useState<OfflineOperation[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [selectedConflict, setSelectedConflict] = useState<OfflineOperation | null>(null);
 
   const refresh = useCallback(async () => {
     if (!empresaId) return;
@@ -51,6 +53,7 @@ export default function OfflineSyncStatus() {
   const pending = operations.length - conflicts;
 
   return (
+    <>
     <aside className="fixed bottom-4 right-4 z-50 max-w-sm rounded-xl border border-amber-500/40 bg-neutral-950/95 p-4 shadow-2xl backdrop-blur">
       <div className="flex gap-3">
         <CloudOff className="mt-0.5 shrink-0 text-amber-400" size={20} />
@@ -72,19 +75,13 @@ export default function OfflineSyncStatus() {
               Sincronizar
             </button>
             {operations.filter((operation) => operation.status === 'conflict').map((operation) => (
-              <button
-                key={operation.id}
-                type="button"
-                onClick={() => void discard(operation.id)}
-                className="inline-flex items-center gap-1 rounded-lg border border-red-500/50 px-2.5 py-1.5 text-xs text-red-300"
-                title={operation.error || 'Descartar operação em conflito'}
-              >
-                <Trash2 size={13} /> Descartar conflito
-              </button>
+              <div key={operation.id} className="flex gap-1"><button type="button" onClick={() => setSelectedConflict(operation)} className="rounded-lg border border-amber-500/50 px-2.5 py-1.5 text-xs text-amber-200">Resolver conflito</button><button type="button" onClick={() => void discard(operation.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-500/50 px-2.5 py-1.5 text-xs text-red-300" title={operation.error || 'Descartar operação em conflito'}><Trash2 size={13} />Descartar</button></div>
             ))}
           </div>
         </div>
       </div>
     </aside>
+    {selectedConflict && <OfflineConflictResolver operation={selectedConflict} onClose={() => setSelectedConflict(null)} onResolved={refresh} />}
+    </>
   );
 }
