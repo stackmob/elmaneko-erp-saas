@@ -162,7 +162,7 @@ export function useOrcamentos() {
 export function useAddOrcamento() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (novo: Omit<Budget, 'id'> & { id?: string }) => {
+    mutationFn: async (novo: Omit<Budget, 'id'>) => {
       const empresaId = getActiveTenantId();
       const operationId = crypto.randomUUID();
       const { data, error } = await supabase.rpc('salvar_orcamento_com_itens', {
@@ -173,7 +173,7 @@ export function useAddOrcamento() {
       });
       if (error) {
         if (!isNetworkFailure(error)) throw error;
-        const offlineItem: Budget = { ...novo, id: novo.id || `offline-${crypto.randomUUID()}` };
+        const offlineItem: Budget = { ...novo, id: `offline-${crypto.randomUUID()}` };
         await enqueueOfflineOperation(empresaId, 'create_budget', {
           budget: novo,
           items: novo.itens,
@@ -184,7 +184,7 @@ export function useAddOrcamento() {
 
       const created: Budget = {
         ...novo,
-        id: data?.id || novo.id || crypto.randomUUID()
+        id: data?.id || crypto.randomUUID()
       };
 
       addToLocalCache('orcamentos', created);

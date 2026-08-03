@@ -173,8 +173,7 @@ export default function Budgets() {
       return;
     }
 
-    const budgetData: Budget = {
-      id: editingBudget ? editingBudget.id : crypto.randomUUID(),
+    const budgetData: Omit<Budget, 'id'> = {
       numero: editingBudget ? editingBudget.numero : `ORÇ-2026-${String(budgets.length + 1).padStart(4, '0')}`,
       clienteId,
       dataEmissao,
@@ -187,7 +186,7 @@ export default function Budgets() {
     };
 
     if (editingBudget) {
-      editMutation.mutate(budgetData, {
+      editMutation.mutate({ ...budgetData, id: editingBudget.id }, {
         onSuccess: () => {
           showToast(`Orçamento ${budgetData.numero} atualizado com sucesso!`, 'success');
           setIsModalOpen(false);
