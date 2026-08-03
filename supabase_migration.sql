@@ -3,6 +3,11 @@
 -- Execute este script no SQL Editor do Supabase
 -- ============================================================
 
+-- 0. EXTENSIONS (necessárias antes de qualquer função)
+-- pgcrypto é instalado pelo Supabase no schema "extensions".
+-- As RPCs qualificam explicitamente como extensions.digest() por usar SET search_path = public.
+CREATE EXTENSION IF NOT EXISTS pgcrypto SCHEMA extensions;
+
 -- 1. EMPRESAS (Multi-Tenant & Perfil Emissor)
 CREATE TABLE IF NOT EXISTS empresas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1020,7 +1025,7 @@ BEGIN
   IF COALESCE(trim(p_compra->>'fornecedor'), '') = '' OR v_valor < 0 THEN
     RAISE EXCEPTION 'Fornecedor e valor da compra são obrigatórios.';
   END IF;
-  v_cached_result := public.iniciar_operacao_idempotente(p_empresa_id, p_idempotency_key, 'criar_compra', encode(digest(p_compra::text, 'sha256'), 'hex'));
+  v_cached_result := public.iniciar_operacao_idempotente(p_empresa_id, p_idempotency_key, 'criar_compra', encode(extensions.digest(p_compra::text, 'sha256'), 'hex'));
   IF v_cached_result IS NOT NULL THEN RETURN v_cached_result; END IF;
 
   IF NULLIF(p_compra->>'filamentoId', '') IS NOT NULL AND NOT EXISTS (
@@ -1082,7 +1087,7 @@ BEGIN
   IF jsonb_typeof(p_itens) <> 'array' OR jsonb_array_length(p_itens) = 0 THEN
     RAISE EXCEPTION 'Um orçamento deve conter ao menos um item.';
   END IF;
-  v_cached_result := public.iniciar_operacao_idempotente(p_empresa_id, p_idempotency_key, 'salvar_orcamento', encode(digest((p_orcamento || jsonb_build_object('__itens', p_itens))::text, 'sha256'), 'hex'));
+  v_cached_result := public.iniciar_operacao_idempotente(p_empresa_id, p_idempotency_key, 'salvar_orcamento', encode(extensions.digest((p_orcamento || jsonb_build_object('__itens', p_itens))::text, 'sha256'), 'hex'));
   IF v_cached_result IS NOT NULL THEN RETURN v_cached_result; END IF;
   IF NOT EXISTS (SELECT 1 FROM clientes WHERE id = (p_orcamento->>'clienteId')::UUID AND empresa_id = p_empresa_id) THEN
     RAISE EXCEPTION 'Cliente inválido para esta empresa.';
@@ -1152,7 +1157,7 @@ BEGIN
   IF COALESCE(trim(p_produto->>'nome'), '') = '' OR COALESCE(trim(p_produto->>'categoria'), '') = '' THEN
     RAISE EXCEPTION 'Nome e categoria do produto são obrigatórios.';
   END IF;
-  v_cached_result := public.iniciar_operacao_idempotente(p_empresa_id, p_idempotency_key, 'salvar_produto', encode(digest((p_produto || jsonb_build_object('__materiais', p_materiais))::text, 'sha256'), 'hex'));
+  v_cached_result := public.iniciar_operacao_idempotente(p_empresa_id, p_idempotency_key, 'salvar_produto', encode(extensions.digest((p_produto || jsonb_build_object('__materiais', p_materiais))::text, 'sha256'), 'hex'));
   IF v_cached_result IS NOT NULL THEN RETURN v_cached_result; END IF;
   IF NULLIF(p_produto->>'impressoraPadraoId', '') IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM impressoras WHERE id = (p_produto->>'impressoraPadraoId')::UUID AND empresa_id = p_empresa_id
@@ -1227,7 +1232,7 @@ BEGIN
   IF NOT public.is_empresa_admin(p_empresa_id) THEN RAISE EXCEPTION 'Apenas administradores podem convidar membros.'; END IF;
   IF p_role NOT IN ('admin', 'financeiro', 'operador', 'leitura') THEN RAISE EXCEPTION 'Papel inválido.'; END IF;
   INSERT INTO convites_empresa (empresa_id, email, role, token_hash, created_by)
-  VALUES (p_empresa_id, lower(trim(p_email)), p_role, encode(digest(v_token, 'sha256'), 'hex'), auth.uid());
+  VALUES (p_empresa_id, lower(trim(p_email)), p_role, encode(extensions.digest(v_token, 'sha256'), 'hex'), auth.uid());
   RETURN v_token;
 END;
 $$;
@@ -1238,7 +1243,7 @@ DECLARE v_convite convites_empresa%ROWTYPE;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Autenticação obrigatória.'; END IF;
   SELECT * INTO v_convite FROM convites_empresa
-  WHERE token_hash = encode(digest(p_token, 'sha256'), 'hex') AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > now()
+  WHERE token_hash = encode(extensions.digest(p_token, 'sha256'), 'hex') AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > now()
   FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Convite inválido ou expirado.'; END IF;
   IF lower(coalesce(auth.jwt() ->> 'email', '')) <> v_convite.email THEN RAISE EXCEPTION 'O convite pertence a outro e-mail.'; END IF;
