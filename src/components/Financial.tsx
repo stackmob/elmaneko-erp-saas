@@ -17,6 +17,7 @@ import Toast from './ui/Toast';
 import ConfirmDialog from './ui/ConfirmDialog';
 import { DataList } from './ui/DataList';
 import { formatDateBR } from '../utils/formatters';
+import { useFinancialSummary } from '../hooks/useFinancialSummary';
 
 export default function Financial() {
   const { 
@@ -153,48 +154,7 @@ export default function Financial() {
   // Confirm Dialog
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; title: string; desc: string; action: () => void }>({ open: false, title: '', desc: '', action: () => {} });
 
-  // Filtered Entries Calculation
-  const activeEntries = entries.filter(e => !e.isDeleted);
-  const filteredEntries = activeEntries.filter(e => {
-    if (entryStatusFilter !== 'all' && e.status !== entryStatusFilter) return false;
-    if (entryTypeFilter !== 'all' && e.tipo !== entryTypeFilter) return false;
-    if (!entrySearch) return true;
-    const q = entrySearch.toLowerCase();
-    const clientName = clients.find(c => c.id === e.clienteId)?.nome || '';
-    return (
-      e.numeroDocumento.toLowerCase().includes(q) ||
-      (e.fornecedor && e.fornecedor.toLowerCase().includes(q)) ||
-      clientName.toLowerCase().includes(q) ||
-      (e.observacoes && e.observacoes.toLowerCase().includes(q))
-    );
-  });
-
-  // KPI Computations
-  const totalReceitasMes = activeEntries
-    .filter(e => e.tipo === 'Receita' && (e.status === 'Liquidado' || e.status === 'Conciliado'))
-    .reduce((acc, e) => acc + (e.valorPago || e.valorLiquido), 0);
-
-  const totalDespesasMes = activeEntries
-    .filter(e => e.tipo === 'Despesa' && (e.status === 'Liquidado' || e.status === 'Conciliado'))
-    .reduce((acc, e) => acc + (e.valorPago || e.valorLiquido), 0);
-
-  const lucroLiquido = totalReceitasMes - totalDespesasMes;
-
-  const totalSaldoBancario = accounts
-    .filter(a => a.situacao === 'Ativa')
-    .reduce((acc, a) => acc + a.saldoAtual, 0);
-
-  const totalAReceber = activeEntries
-    .filter(e => e.tipo === 'Receita' && (e.status === 'Aberto' || e.status === 'Pendente'))
-    .reduce((acc, e) => acc + e.valorLiquido, 0);
-
-  const totalAPagar = activeEntries
-    .filter(e => e.tipo === 'Despesa' && (e.status === 'Aberto' || e.status === 'Pendente'))
-    .reduce((acc, e) => acc + e.valorLiquido, 0);
-
-  const totalVencidos = activeEntries
-    .filter(e => (e.status === 'Aberto' || e.status === 'Pendente') && new Date(e.dataVencimento) < new Date())
-    .reduce((acc, e) => acc + e.valorLiquido, 0);
+  const { activeEntries, filteredEntries, totalReceitasMes, totalDespesasMes, lucroLiquido, totalSaldoBancario, totalAReceber, totalAPagar, totalVencidos } = useFinancialSummary(entries, accounts, clients, { search: entrySearch, status: entryStatusFilter, type: entryTypeFilter });
 
   // Handlers for Accounts (Edit & Delete)
   const handleOpenAccountModal = (acc?: FinancialAccount) => {

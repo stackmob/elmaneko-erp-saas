@@ -7,6 +7,7 @@ import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
 import ConfirmDialog from './ui/ConfirmDialog';
 import { Modal } from './ui/Modal';
+import { activeEnergyRate, bomCost, highestFilamentRate } from '../utils/businessCalculations';
 
 export default function Products() {
   const { useProdutos, useImpressoras, useFilamentos, useTarifas, useAddProduto, useUpdateProduto, useDeleteProduto } = useData();
@@ -51,33 +52,13 @@ export default function Products() {
   ]);
 
   // Active energy tariff
-  const getActiveTariff = (): number => {
-    if (tariffs.length === 0) return 0.85;
-    const sorted = [...tariffs].sort((a, b) => new Date(b.dataInicio).getTime() - new Date(a.dataInicio).getTime());
-    return sorted[0].valorKwh;
-  };
-  const currentTariff = getActiveTariff();
+  const currentTariff = activeEnergyRate(tariffs);
 
   // CM-07: Corrige divisão por zero quando pesoTotal = 0
-  const getMaxCostPerGram = (type: FilamentType): number => {
-    const typeFilaments = filaments.filter(f => f.tipo === type);
-    if (typeFilaments.length === 0) return 0.12;
-    let maxRate = 0;
-    typeFilaments.forEach(f => {
-      const rate = f.pesoTotal > 0 ? f.valorCompra / f.pesoTotal : 0;
-      if (rate > maxRate) maxRate = rate;
-    });
-    return maxRate;
-  };
+  const getMaxCostPerGram = (type: FilamentType) => highestFilamentRate(filaments, type);
 
   // Helper to calculate BOM costs safely for UI
-  const calculateBOMCost = (materials?: BOMItem[]): number => {
-    if (!materials || !Array.isArray(materials)) return 0;
-    return materials.reduce((acc, item) => {
-      const maxRate = getMaxCostPerGram(item.tipoFilamento);
-      return acc + (item.quantidadeGrams * maxRate);
-    }, 0);
-  };
+  const calculateBOMCost = (materials?: BOMItem[]) => bomCost(materials, filaments);
 
   const calculateEnergyCost = (tempo: number, printerId: string): number => {
     const printer = printers.find(p => p.id === printerId);

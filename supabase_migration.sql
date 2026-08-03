@@ -940,9 +940,62 @@ $$;
 REVOKE ALL ON FUNCTION public.concluir_producao(UUID, UUID, NUMERIC) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.concluir_producao(UUID, UUID, NUMERIC) TO authenticated;
 
+-- Registro de idempotência compartilhado pelas RPCs transacionais. A mesma
+-- chave por empresa sempre retorna o primeiro resultado confirmado.
+CREATE TABLE IF NOT EXISTS operacoes_idempotentes (
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  chave UUID NOT NULL,
+  operacao TEXT NOT NULL CHECK (operacao IN ('criar_compra', 'salvar_orcamento', 'salvar_produto')),
+  payload_hash TEXT NOT NULL,
+  resultado JSONB,
+  created_by UUID NOT NULL REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at TIMESTAMPTZ,
+  PRIMARY KEY (empresa_id, chave)
+);
+ALTER TABLE operacoes_idempotentes ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE operacoes_idempotentes FROM authenticated;
+CREATE INDEX IF NOT EXISTS idx_operacoes_idempotentes_retencao ON operacoes_idempotentes(created_at);
+
+CREATE OR REPLACE FUNCTION public.iniciar_operacao_idempotente(
+  p_empresa_id UUID, p_chave UUID, p_operacao TEXT, p_payload_hash TEXT
+) RETURNS JSONB
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_operacao TEXT; v_resultado JSONB; v_created_by UUID; v_payload_hash TEXT;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) OR p_chave IS NULL THEN
+    RAISE EXCEPTION 'Chave de idempotência e autenticação são obrigatórias.';
+  END IF;
+  LOOP
+    SELECT operacao, resultado, created_by, payload_hash INTO v_operacao, v_resultado, v_created_by, v_payload_hash
+    FROM operacoes_idempotentes WHERE empresa_id = p_empresa_id AND chave = p_chave FOR UPDATE;
+    IF FOUND THEN
+      IF v_operacao <> p_operacao OR v_created_by <> auth.uid() OR v_payload_hash <> p_payload_hash THEN RAISE EXCEPTION 'Chave de idempotência inválida.'; END IF;
+      IF v_resultado IS NULL THEN RAISE EXCEPTION 'Operação idempotente ainda está em processamento.'; END IF;
+      RETURN v_resultado;
+    END IF;
+    INSERT INTO operacoes_idempotentes (empresa_id, chave, operacao, payload_hash, created_by)
+    VALUES (p_empresa_id, p_chave, p_operacao, p_payload_hash, auth.uid()) ON CONFLICT DO NOTHING;
+    IF FOUND THEN RETURN NULL; END IF;
+  END LOOP;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.concluir_operacao_idempotente(
+  p_empresa_id UUID, p_chave UUID, p_resultado JSONB
+) RETURNS VOID
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  UPDATE operacoes_idempotentes SET resultado = p_resultado, completed_at = now()
+  WHERE empresa_id = p_empresa_id AND chave = p_chave AND created_by = auth.uid();
+  IF NOT FOUND THEN RAISE EXCEPTION 'Operação idempotente não encontrada.'; END IF;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.criar_compra_com_despesa(
   p_empresa_id UUID,
-  p_compra JSONB
+  p_compra JSONB,
+  p_idempotency_key UUID
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -954,6 +1007,8 @@ DECLARE
   v_valor NUMERIC := COALESCE((p_compra->>'valorPago')::NUMERIC, 0);
   v_data DATE := COALESCE(NULLIF(p_compra->>'data', '')::DATE, CURRENT_DATE);
   v_numero_documento TEXT;
+  v_cached_result JSONB;
+  v_result JSONB;
 BEGIN
   IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) THEN
     RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
@@ -961,6 +1016,8 @@ BEGIN
   IF COALESCE(trim(p_compra->>'fornecedor'), '') = '' OR v_valor < 0 THEN
     RAISE EXCEPTION 'Fornecedor e valor da compra são obrigatórios.';
   END IF;
+  v_cached_result := public.iniciar_operacao_idempotente(p_empresa_id, p_idempotency_key, 'criar_compra', encode(digest(p_compra::text, 'sha256'), 'hex'));
+  IF v_cached_result IS NOT NULL THEN RETURN v_cached_result; END IF;
 
   IF NULLIF(p_compra->>'filamentoId', '') IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM filamentos WHERE id = (p_compra->>'filamentoId')::UUID AND empresa_id = p_empresa_id
@@ -993,14 +1050,17 @@ BEGIN
     v_data, v_data, v_valor, v_valor, 'PIX', 'Aberto'
   );
 
-  RETURN jsonb_build_object('id', v_compra_id, 'numero_documento', v_numero_documento);
+  v_result := jsonb_build_object('id', v_compra_id, 'numero_documento', v_numero_documento);
+  PERFORM public.concluir_operacao_idempotente(p_empresa_id, p_idempotency_key, v_result);
+  RETURN v_result;
 END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.salvar_orcamento_com_itens(
   p_empresa_id UUID,
   p_orcamento JSONB,
-  p_itens JSONB
+  p_itens JSONB,
+  p_idempotency_key UUID
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -1009,6 +1069,8 @@ SET search_path = public
 AS $$
 DECLARE
   v_orcamento_id UUID := NULLIF(p_orcamento->>'id', '')::UUID;
+  v_cached_result JSONB;
+  v_result JSONB;
 BEGIN
   IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) THEN
     RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
@@ -1016,6 +1078,8 @@ BEGIN
   IF jsonb_typeof(p_itens) <> 'array' OR jsonb_array_length(p_itens) = 0 THEN
     RAISE EXCEPTION 'Um orçamento deve conter ao menos um item.';
   END IF;
+  v_cached_result := public.iniciar_operacao_idempotente(p_empresa_id, p_idempotency_key, 'salvar_orcamento', encode(digest((p_orcamento || jsonb_build_object('__itens', p_itens))::text, 'sha256'), 'hex'));
+  IF v_cached_result IS NOT NULL THEN RETURN v_cached_result; END IF;
   IF NOT EXISTS (SELECT 1 FROM clientes WHERE id = (p_orcamento->>'clienteId')::UUID AND empresa_id = p_empresa_id) THEN
     RAISE EXCEPTION 'Cliente inválido para esta empresa.';
   END IF;
@@ -1056,14 +1120,17 @@ BEGIN
     (item->>'valorUnitario')::NUMERIC, COALESCE((item->>'desconto')::NUMERIC, 0)
   FROM jsonb_array_elements(p_itens) AS item;
 
-  RETURN jsonb_build_object('id', v_orcamento_id);
+  v_result := jsonb_build_object('id', v_orcamento_id);
+  PERFORM public.concluir_operacao_idempotente(p_empresa_id, p_idempotency_key, v_result);
+  RETURN v_result;
 END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.salvar_produto_com_bom(
   p_empresa_id UUID,
   p_produto JSONB,
-  p_materiais JSONB
+  p_materiais JSONB,
+  p_idempotency_key UUID
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -1072,6 +1139,8 @@ SET search_path = public
 AS $$
 DECLARE
   v_produto_id UUID := NULLIF(p_produto->>'id', '')::UUID;
+  v_cached_result JSONB;
+  v_result JSONB;
 BEGIN
   IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) THEN
     RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
@@ -1079,6 +1148,8 @@ BEGIN
   IF COALESCE(trim(p_produto->>'nome'), '') = '' OR COALESCE(trim(p_produto->>'categoria'), '') = '' THEN
     RAISE EXCEPTION 'Nome e categoria do produto são obrigatórios.';
   END IF;
+  v_cached_result := public.iniciar_operacao_idempotente(p_empresa_id, p_idempotency_key, 'salvar_produto', encode(digest((p_produto || jsonb_build_object('__materiais', p_materiais))::text, 'sha256'), 'hex'));
+  IF v_cached_result IS NOT NULL THEN RETURN v_cached_result; END IF;
   IF NULLIF(p_produto->>'impressoraPadraoId', '') IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM impressoras WHERE id = (p_produto->>'impressoraPadraoId')::UUID AND empresa_id = p_empresa_id
   ) THEN
@@ -1104,16 +1175,23 @@ BEGIN
   FROM jsonb_array_elements(COALESCE(p_materiais, '[]'::jsonb)) AS item
   WHERE COALESCE((item->>'quantidadeGrams')::NUMERIC, 0) > 0;
 
-  RETURN jsonb_build_object('id', v_produto_id);
+  v_result := jsonb_build_object('id', v_produto_id);
+  PERFORM public.concluir_operacao_idempotente(p_empresa_id, p_idempotency_key, v_result);
+  RETURN v_result;
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.criar_compra_com_despesa(UUID, JSONB) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.salvar_orcamento_com_itens(UUID, JSONB, JSONB) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.salvar_produto_com_bom(UUID, JSONB, JSONB) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.criar_compra_com_despesa(UUID, JSONB) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.salvar_orcamento_com_itens(UUID, JSONB, JSONB) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.salvar_produto_com_bom(UUID, JSONB, JSONB) TO authenticated;
+DROP FUNCTION IF EXISTS public.criar_compra_com_despesa(UUID, JSONB);
+DROP FUNCTION IF EXISTS public.salvar_orcamento_com_itens(UUID, JSONB, JSONB);
+DROP FUNCTION IF EXISTS public.salvar_produto_com_bom(UUID, JSONB, JSONB);
+REVOKE ALL ON FUNCTION public.iniciar_operacao_idempotente(UUID, UUID, TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.concluir_operacao_idempotente(UUID, UUID, JSONB) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.criar_compra_com_despesa(UUID, JSONB, UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.salvar_orcamento_com_itens(UUID, JSONB, JSONB, UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.salvar_produto_com_bom(UUID, JSONB, JSONB, UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.criar_compra_com_despesa(UUID, JSONB, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.salvar_orcamento_com_itens(UUID, JSONB, JSONB, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.salvar_produto_com_bom(UUID, JSONB, JSONB, UUID) TO authenticated;
 
 CREATE TABLE IF NOT EXISTS convites_empresa (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1262,6 +1340,225 @@ REVOKE ALL ON FUNCTION public.revogar_convite_empresa(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.remover_membro_empresa(UUID, UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.revogar_convite_empresa(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.remover_membro_empresa(UUID, UUID) TO authenticated;
+
+-- ============================================================
+-- BACKUP SERVER-SIDE CRIPTOGRAFADO E RESTAURAÇÃO AUDITÁVEL
+-- O conteúdo do snapshot fica exclusivamente no bucket privado. Estas
+-- tabelas guardam metadados e trilha de auditoria, nunca o payload em claro.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS backups_empresa (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  storage_path TEXT NOT NULL UNIQUE,
+  checksum TEXT NOT NULL,
+  size_bytes BIGINT NOT NULL CHECK (size_bytes > 0),
+  snapshot_version TEXT NOT NULL DEFAULT '1',
+  status TEXT NOT NULL DEFAULT 'ready' CHECK (status IN ('ready', 'expired', 'corrupted')),
+  created_by UUID NOT NULL REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expired_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS restauracoes_backup (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  backup_id UUID REFERENCES backups_empresa(id) ON DELETE SET NULL,
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  requested_by UUID NOT NULL REFERENCES auth.users(id),
+  status TEXT NOT NULL CHECK (status IN ('running', 'success', 'failed')),
+  details TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at TIMESTAMPTZ
+);
+
+ALTER TABLE backups_empresa ENABLE ROW LEVEL SECURITY;
+ALTER TABLE restauracoes_backup ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE backups_empresa, restauracoes_backup FROM authenticated;
+
+DROP POLICY IF EXISTS backups_empresa_admin_select ON backups_empresa;
+CREATE POLICY backups_empresa_admin_select ON backups_empresa FOR SELECT TO authenticated
+USING (public.is_empresa_admin(empresa_id));
+DROP POLICY IF EXISTS restauracoes_backup_admin_select ON restauracoes_backup;
+CREATE POLICY restauracoes_backup_admin_select ON restauracoes_backup FOR SELECT TO authenticated
+USING (public.is_empresa_admin(empresa_id));
+
+CREATE INDEX IF NOT EXISTS idx_backups_empresa_created_at ON backups_empresa(empresa_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_restauracoes_empresa_created_at ON restauracoes_backup(empresa_id, created_at DESC);
+
+-- Relações internas podem apontar para registros que aparecem depois no
+-- snapshot. Torná-las deferred preserva a atomicidade da restauração.
+ALTER TABLE categorias_financeiras DROP CONSTRAINT IF EXISTS categorias_financeiras_categoria_pai_id_fkey;
+ALTER TABLE categorias_financeiras ADD CONSTRAINT categorias_financeiras_categoria_pai_id_fkey
+  FOREIGN KEY (categoria_pai_id) REFERENCES categorias_financeiras(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE lancamentos_financeiros DROP CONSTRAINT IF EXISTS lancamentos_financeiros_parcela_pai_id_fkey;
+ALTER TABLE lancamentos_financeiros ADD CONSTRAINT lancamentos_financeiros_parcela_pai_id_fkey
+  FOREIGN KEY (parcela_pai_id) REFERENCES lancamentos_financeiros(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED;
+
+-- Bucket privado: nenhum cliente recebe URL pública; Edge Functions usam a
+-- service role após validar o administrador autenticado.
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('secure-backups', 'secure-backups', false, 52428800, ARRAY['application/octet-stream'])
+ON CONFLICT (id) DO UPDATE SET public = false, file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+CREATE OR REPLACE FUNCTION public.registrar_backup_empresa(
+  p_empresa_id UUID,
+  p_storage_path TEXT,
+  p_checksum TEXT,
+  p_size_bytes BIGINT,
+  p_snapshot_version TEXT DEFAULT '1'
+) RETURNS JSONB
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, storage AS $$
+DECLARE v_backup_id UUID; v_expired_paths JSONB;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_empresa_admin(p_empresa_id) THEN
+    RAISE EXCEPTION 'Apenas administradores podem criar backups.';
+  END IF;
+  IF p_storage_path !~ ('^' || p_empresa_id::text || '/[0-9a-f-]+\\.enc$') OR length(p_checksum) <> 64 OR p_size_bytes <= 0 THEN
+    RAISE EXCEPTION 'Metadados de backup inválidos.';
+  END IF;
+  INSERT INTO backups_empresa (empresa_id, storage_path, checksum, size_bytes, snapshot_version, created_by)
+  VALUES (p_empresa_id, p_storage_path, p_checksum, p_size_bytes, p_snapshot_version, auth.uid())
+  RETURNING id INTO v_backup_id;
+
+  WITH ranked AS (
+    SELECT id, storage_path, row_number() OVER (ORDER BY created_at DESC) AS position
+    FROM backups_empresa WHERE empresa_id = p_empresa_id AND status = 'ready'
+  ), expired AS (
+    UPDATE backups_empresa b SET status = 'expired', expired_at = now()
+    FROM ranked r WHERE b.id = r.id AND r.position > 30
+    RETURNING b.storage_path
+  ) SELECT COALESCE(jsonb_agg(storage_path), '[]'::jsonb) INTO v_expired_paths FROM expired;
+
+  RETURN jsonb_build_object('id', v_backup_id, 'expiredPaths', v_expired_paths);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.gerar_snapshot_backup_empresa(p_empresa_id UUID)
+RETURNS JSONB
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_table TEXT;
+  v_rows JSONB;
+  v_tables JSONB := '{}'::jsonb;
+  v_empresa JSONB;
+  v_tables_to_backup TEXT[] := ARRAY[
+    'filamentos', 'clientes', 'impressoras', 'tarifas_energia', 'produtos',
+    'produto_materiais', 'producoes', 'orcamentos', 'orcamento_itens', 'vendas',
+    'compras', 'insumos', 'contas_financeiras', 'categorias_financeiras',
+    'centros_custo', 'lancamentos_financeiros', 'movimentacoes_financeiras',
+    'transferencias_financeiras', 'auditoria_financeira', 'movimentacoes_estoque'
+  ];
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_empresa_admin(p_empresa_id) THEN
+    RAISE EXCEPTION 'Apenas administradores podem criar backups.';
+  END IF;
+  SELECT to_jsonb(e) INTO v_empresa FROM empresas e WHERE e.id = p_empresa_id;
+  IF v_empresa IS NULL THEN RAISE EXCEPTION 'Empresa não encontrada.'; END IF;
+  FOREACH v_table IN ARRAY v_tables_to_backup LOOP
+    EXECUTE format('SELECT COALESCE(jsonb_agg(to_jsonb(t)), ''[]''::jsonb) FROM public.%I t WHERE t.empresa_id = $1', v_table)
+      INTO v_rows USING p_empresa_id;
+    v_tables := v_tables || jsonb_build_object(v_table, v_rows);
+  END LOOP;
+  RETURN jsonb_build_object('version', '1', 'empresaId', p_empresa_id, 'createdAt', now(), 'empresa', v_empresa, 'tables', v_tables);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.restaurar_backup_empresa(
+  p_backup_id UUID,
+  p_empresa_id UUID,
+  p_snapshot JSONB
+) RETURNS UUID
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_restore_id UUID;
+  v_table TEXT;
+  v_rows JSONB;
+  v_snapshot_empresa JSONB;
+  v_delete_order TEXT[] := ARRAY[
+    'auditoria_financeira', 'movimentacoes_financeiras', 'transferencias_financeiras',
+    'lancamentos_financeiros', 'movimentacoes_estoque', 'compras', 'vendas',
+    'orcamento_itens', 'orcamentos', 'producoes', 'produto_materiais', 'produtos',
+    'insumos', 'tarifas_energia', 'centros_custo', 'categorias_financeiras',
+    'contas_financeiras', 'impressoras', 'clientes', 'filamentos'
+  ];
+  v_insert_order TEXT[] := ARRAY[
+    'filamentos', 'clientes', 'impressoras', 'tarifas_energia', 'contas_financeiras',
+    'categorias_financeiras', 'centros_custo', 'insumos', 'produtos',
+    'produto_materiais', 'orcamentos', 'vendas', 'compras', 'producoes',
+    'orcamento_itens', 'lancamentos_financeiros', 'movimentacoes_estoque',
+    'movimentacoes_financeiras', 'transferencias_financeiras', 'auditoria_financeira'
+  ];
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_empresa_admin(p_empresa_id) THEN
+    RAISE EXCEPTION 'Apenas administradores podem restaurar backups.';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM backups_empresa WHERE id = p_backup_id AND empresa_id = p_empresa_id AND status = 'ready') THEN
+    RAISE EXCEPTION 'Backup não encontrado ou indisponível.';
+  END IF;
+  IF p_snapshot->>'version' <> '1' OR p_snapshot->>'empresaId' <> p_empresa_id::text OR jsonb_typeof(p_snapshot->'tables') <> 'object' THEN
+    RAISE EXCEPTION 'Snapshot de backup inválido.';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtext(p_empresa_id::text));
+  SET CONSTRAINTS ALL DEFERRED;
+  INSERT INTO restauracoes_backup (backup_id, empresa_id, requested_by, status)
+  VALUES (p_backup_id, p_empresa_id, auth.uid(), 'running') RETURNING id INTO v_restore_id;
+
+  FOREACH v_table IN ARRAY v_delete_order LOOP
+    EXECUTE format('DELETE FROM public.%I WHERE empresa_id = $1', v_table) USING p_empresa_id;
+  END LOOP;
+
+  v_snapshot_empresa := p_snapshot->'empresa';
+  IF jsonb_typeof(v_snapshot_empresa) = 'object' THEN
+    UPDATE empresas SET nome = COALESCE(v_snapshot_empresa->>'nome', nome),
+      cnpj = v_snapshot_empresa->>'cnpj', razao_social = v_snapshot_empresa->>'razao_social',
+      inscricao_estadual = v_snapshot_empresa->>'inscricao_estadual', telefone = v_snapshot_empresa->>'telefone',
+      whatsapp = v_snapshot_empresa->>'whatsapp', email = v_snapshot_empresa->>'email', endereco = v_snapshot_empresa->>'endereco',
+      responsavel = v_snapshot_empresa->>'responsavel', cargo_responsavel = v_snapshot_empresa->>'cargo_responsavel',
+      pix_chave = v_snapshot_empresa->>'pix_chave', pix_tipo = v_snapshot_empresa->>'pix_tipo', slogan = v_snapshot_empresa->>'slogan',
+      logotipo_url = v_snapshot_empresa->>'logotipo_url', observacoes = v_snapshot_empresa->>'observacoes'
+    WHERE id = p_empresa_id;
+  END IF;
+
+  FOREACH v_table IN ARRAY v_insert_order LOOP
+    v_rows := COALESCE(p_snapshot->'tables'->v_table, '[]'::jsonb);
+    IF jsonb_typeof(v_rows) <> 'array' THEN RAISE EXCEPTION 'Tabela % inválida no snapshot.', v_table; END IF;
+    IF jsonb_array_length(v_rows) > 0 THEN
+      IF EXISTS (SELECT 1 FROM jsonb_array_elements(v_rows) row WHERE row->>'empresa_id' IS DISTINCT FROM p_empresa_id::text) THEN
+        RAISE EXCEPTION 'Snapshot contém dados de outra empresa.';
+      END IF;
+      EXECUTE format('INSERT INTO public.%I SELECT * FROM jsonb_populate_recordset(NULL::public.%I, $1)', v_table, v_table) USING v_rows;
+    END IF;
+  END LOOP;
+
+  UPDATE restauracoes_backup SET status = 'success', completed_at = now(), details = 'Restauração concluída em transação única.' WHERE id = v_restore_id;
+  RETURN v_restore_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.registrar_falha_restauracao_backup(
+  p_backup_id UUID, p_empresa_id UUID, p_details TEXT
+) RETURNS UUID
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_restore_id UUID;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_empresa_admin(p_empresa_id) THEN RAISE EXCEPTION 'Acesso negado.'; END IF;
+  INSERT INTO restauracoes_backup (backup_id, empresa_id, requested_by, status, details, completed_at)
+  VALUES (p_backup_id, p_empresa_id, auth.uid(), 'failed', left(coalesce(p_details, 'Falha desconhecida.'), 500), now())
+  RETURNING id INTO v_restore_id;
+  RETURN v_restore_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.registrar_backup_empresa(UUID, TEXT, TEXT, BIGINT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.gerar_snapshot_backup_empresa(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.restaurar_backup_empresa(UUID, UUID, JSONB) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.registrar_falha_restauracao_backup(UUID, UUID, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_empresa_admin(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.registrar_backup_empresa(UUID, TEXT, TEXT, BIGINT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.gerar_snapshot_backup_empresa(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.restaurar_backup_empresa(UUID, UUID, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.registrar_falha_restauracao_backup(UUID, UUID, TEXT) TO authenticated;
 
 -- ============================================================
 -- SCRIPT DE VINCULAÇÃO E BACKFILL DE DADOS EXISTENTES À EMPRESA

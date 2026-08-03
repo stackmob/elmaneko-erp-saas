@@ -60,15 +60,17 @@ export function useAddProduto() {
   return useMutation({
     mutationFn: async (novo: Omit<Product, 'id'>) => {
       const empresaId = getActiveTenantId();
+      const operationId = crypto.randomUUID();
       const { data, error } = await supabase.rpc('salvar_produto_com_bom', {
         p_empresa_id: empresaId,
         p_produto: { ...novo, impressoraPadraoId: isValidUuid(novo.impressoraPadraoId) ? novo.impressoraPadraoId : '' },
         p_materiais: novo.materials || [],
+        p_idempotency_key: operationId,
       });
       if (error) {
         if (!isNetworkFailure(error)) throw error;
         const offlineItem: Product = { ...novo, id: `offline-${crypto.randomUUID()}` };
-        await enqueueOfflineOperation(empresaId, 'create_product', { product: { ...novo, impressoraPadraoId: isValidUuid(novo.impressoraPadraoId) ? novo.impressoraPadraoId : '' }, materials: novo.materials || [] });
+        await enqueueOfflineOperation(empresaId, 'create_product', { product: { ...novo, impressoraPadraoId: isValidUuid(novo.impressoraPadraoId) ? novo.impressoraPadraoId : '' }, materials: novo.materials || [] }, operationId);
         addToLocalCache('produtos', offlineItem);
         return offlineItem;
       }
@@ -94,6 +96,7 @@ export function useUpdateProduto() {
         p_empresa_id: empresaId,
         p_produto: { ...produto, impressoraPadraoId: isValidUuid(produto.impressoraPadraoId) ? produto.impressoraPadraoId : '' },
         p_materiais: produto.materials || [],
+        p_idempotency_key: crypto.randomUUID(),
       });
       if (error) throw error;
 

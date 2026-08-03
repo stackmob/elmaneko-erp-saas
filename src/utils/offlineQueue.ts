@@ -44,8 +44,8 @@ async function write(operation: OfflineOperation) {
   db.close();
 }
 
-export async function enqueueOfflineOperation(tenantId: string, type: OfflineOperationType, payload: Record<string, unknown>) {
-  const operation: OfflineOperation = { id: crypto.randomUUID(), tenantId, type, payload, createdAt: new Date().toISOString(), retries: 0, status: 'pending' };
+export async function enqueueOfflineOperation(tenantId: string, type: OfflineOperationType, payload: Record<string, unknown>, operationId = crypto.randomUUID()) {
+  const operation: OfflineOperation = { id: operationId, tenantId, type, payload, createdAt: new Date().toISOString(), retries: 0, status: 'pending' };
   await write(operation);
   notifyQueueChanged();
   return operation;
@@ -70,9 +70,9 @@ async function remove(id: string) {
 
 async function dispatch(operation: OfflineOperation) {
   const empresaId = operation.tenantId;
-  if (operation.type === 'create_purchase') return supabase.rpc('criar_compra_com_despesa', { p_empresa_id: empresaId, p_compra: operation.payload });
-  if (operation.type === 'create_budget') return supabase.rpc('salvar_orcamento_com_itens', { p_empresa_id: empresaId, p_orcamento: operation.payload.budget, p_itens: operation.payload.items });
-  return supabase.rpc('salvar_produto_com_bom', { p_empresa_id: empresaId, p_produto: operation.payload.product, p_materiais: operation.payload.materials });
+  if (operation.type === 'create_purchase') return supabase.rpc('criar_compra_com_despesa', { p_empresa_id: empresaId, p_compra: operation.payload, p_idempotency_key: operation.id });
+  if (operation.type === 'create_budget') return supabase.rpc('salvar_orcamento_com_itens', { p_empresa_id: empresaId, p_orcamento: operation.payload.budget, p_itens: operation.payload.items, p_idempotency_key: operation.id });
+  return supabase.rpc('salvar_produto_com_bom', { p_empresa_id: empresaId, p_produto: operation.payload.product, p_materiais: operation.payload.materials, p_idempotency_key: operation.id });
 }
 
 export async function syncOfflineOperations(tenantId: string) {

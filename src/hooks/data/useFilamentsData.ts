@@ -277,6 +277,7 @@ export function useAddCompra() {
   return useMutation({
     mutationFn: async (nova: Omit<Purchase, 'id'>) => {
       const empresaId = getActiveTenantId();
+      const operationId = crypto.randomUUID();
       const { data, error } = await supabase.rpc('criar_compra_com_despesa', {
         p_empresa_id: empresaId,
         p_compra: {
@@ -284,6 +285,7 @@ export function useAddCompra() {
           filamentoId: isValidUuid(nova.filamentoId) ? nova.filamentoId : '',
           insumoId: isValidUuid(nova.insumoId) ? nova.insumoId : '',
         },
+        p_idempotency_key: operationId,
       });
       if (error) {
         if (!isNetworkFailure(error)) throw error;
@@ -292,7 +294,7 @@ export function useAddCompra() {
           ...nova,
           filamentoId: isValidUuid(nova.filamentoId) ? nova.filamentoId : '',
           insumoId: isValidUuid(nova.insumoId) ? nova.insumoId : '',
-        });
+        }, operationId);
         addToLocalCache('compras', offlineItem);
         return offlineItem;
       }

@@ -11,6 +11,7 @@ import { ScrollableTabs } from './ui/ScrollableTabs';
 import { CompleteOrderModal } from './production/CompleteOrderModal';
 import { formatDateBR } from '../utils/formatters';
 import { TooltipHint } from './ui/TooltipHint';
+import { activeEnergyRate, highestFilamentRate } from '../utils/businessCalculations';
 
 export default function Production() {
   const { useProducoes, useProdutos, useImpressoras, useFilamentos, useTarifas, useAddProducao, useUpdateProducao, useConcluirProducao } = useData();
@@ -50,24 +51,10 @@ export default function Production() {
   const [formSuccess, setFormSuccess] = useState('');
 
   // Active electricity tariff rate
-  const getActiveTariff = (): number => {
-    if (tariffs.length === 0) return 0.85;
-    const sorted = [...tariffs].sort((a, b) => new Date(b.dataInicio).getTime() - new Date(a.dataInicio).getTime());
-    return sorted[0].valorKwh;
-  };
-  const currentTariff = getActiveTariff();
+  const currentTariff = activeEnergyRate(tariffs);
 
   // Polimer rate helper (Max rate in active inventory)
-  const getMaxCostPerGram = (type: FilamentType): number => {
-    const typeFilaments = filaments.filter(f => f.tipo === type);
-    if (typeFilaments.length === 0) return 0.12; // average fallback
-    let max = 0;
-    typeFilaments.forEach(f => {
-      const r = f.valorCompra / f.pesoTotal;
-      if (r > max) max = r;
-    });
-    return max;
-  };
+  const getMaxCostPerGram = (type: FilamentType) => highestFilamentRate(filaments, type);
 
   // When changing product, load defaults automatically
   const handleProductChange = (pId: string) => {

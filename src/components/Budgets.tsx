@@ -10,6 +10,7 @@ import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
 import { BudgetPreviewModal } from './commercial/BudgetPreviewModal';
 import { Modal } from './ui/Modal';
+import { budgetSubtotal, budgetTotal, suggestedProductPrice } from '../utils/businessCalculations';
 
 // Helper to format ISO YYYY-MM-DD date to DD/MM/YYYY
 const formatDateBR = (dateStr?: string): string => {
@@ -95,23 +96,7 @@ export default function Budgets() {
   };
 
   // Suggested product price helper (Cost + saved margin/price)
-  const getProductSuggestedPrice = (p: Product): number => {
-    if (p.precoVenda && p.precoVenda > 0) {
-      return p.precoVenda;
-    }
-    const mats = Array.isArray(p.materials) ? p.materials : [];
-    const filamentCost = mats.reduce((acc, mat) => {
-      const maxRate = getMaxCostPerGram(mat.tipoFilamento);
-      return acc + (mat.quantidadeGrams * maxRate);
-    }, 0);
-    // rough power estimate (350W average)
-    const kwhCost = (350 * p.tempoImpressao) / 1000 * 0.85;
-    const prodCost = filamentCost + kwhCost + p.valorMaoDeObra + (p.outrasDespesas || 0);
-    const marginPct = p.margemLucro !== undefined ? p.margemLucro : 100;
-    const overPct = p.overPercent !== undefined ? p.overPercent : 0;
-    const marginMultiplier = 1 + ((marginPct + overPct) / 100);
-    return Number((prodCost * marginMultiplier).toFixed(2));
-  };
+  const getProductSuggestedPrice = (product: Product) => suggestedProductPrice(product, filaments);
 
   const handleProductSelectionChange = (index: number, pId: string) => {
     const prodObj = products.find(p => p.id === pId);
@@ -146,15 +131,8 @@ export default function Budgets() {
   };
 
   // Calculations
-  const calculateSubtotal = (itemsList: BudgetItem[]): number => {
-    return itemsList.reduce((acc, item) => {
-      return acc + (item.quantidade * (item.valorUnitario - item.desconto));
-    }, 0);
-  };
-
-  const calculateTotal = (itemsList: BudgetItem[], discGeral: number): number => {
-    return Math.max(0, calculateSubtotal(itemsList) - discGeral);
-  };
+  const calculateSubtotal = budgetSubtotal;
+  const calculateTotal = budgetTotal;
 
   const handleOpenAddModal = () => {
     setEditingBudget(null);
