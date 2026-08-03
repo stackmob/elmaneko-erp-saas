@@ -499,6 +499,7 @@ CREATE INDEX IF NOT EXISTS idx_impressoras_empresa ON impressoras(empresa_id);
 CREATE INDEX IF NOT EXISTS idx_produtos_empresa ON produtos(empresa_id);
 CREATE INDEX IF NOT EXISTS idx_produtos_empresa_created_at ON produtos(empresa_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_produto_materiais_produto ON produto_materiais(produto_id);
+CREATE INDEX IF NOT EXISTS idx_produto_materiais_empresa_produto ON produto_materiais(empresa_id, produto_id);
 CREATE INDEX IF NOT EXISTS idx_producoes_empresa ON producoes(empresa_id);
 CREATE INDEX IF NOT EXISTS idx_producoes_empresa_created_at ON producoes(empresa_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_orcamentos_empresa ON orcamentos(empresa_id);

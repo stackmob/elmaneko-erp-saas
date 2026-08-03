@@ -6,25 +6,43 @@ import {
 } from '../../utils/storage';
 import { enqueueOfflineOperation, isNetworkFailure } from '../../utils/offlineQueue';
 
+const productColumns = 'id,nome,categoria,descricao,imagem,tempo_impressao,impressora_padrao_id,tempo_acabamento,valor_mao_de_obra,margem_lucro,over_percent,preco_venda,pdf_projeto,pdf_projeto_nome,link_projeto,outras_despesas,observacoes,created_at';
+
+function normalizeMaterials(materials: Product['materials'] = []) {
+  const grouped = new Map<string, Product['materials'][number]>();
+  for (const material of materials) {
+    const quantity = Number(material.quantidadeGrams);
+    if (!Number.isFinite(quantity) || quantity <= 0) continue;
+    const key = `${material.tipoFilamento}:${material.filamentoId || 'any'}`;
+    const current = grouped.get(key);
+    grouped.set(key, { ...material, filamentoId: material.filamentoId || 'any', quantidadeGrams: (current?.quantidadeGrams || 0) + quantity });
+  }
+  return [...grouped.values()];
+}
+
 // PRODUTOS & BOM
 export function useProdutos() {
   return useQuery({
     queryKey: getTenantQueryKey('produtos'),
     queryFn: async () => {
       const empresaId = getActiveTenantId();
-      const { data: prods, error: pErr } = await supabase.from('produtos').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false });
+      const [{ data: prods, error: pErr }, { data: matRows, error: matErr }] = await Promise.all([
+        supabase.from('produtos').select(productColumns).eq('empresa_id', empresaId).order('created_at', { ascending: false }),
+        supabase.from('produto_materiais').select('produto_id,tipo_filamento,quantidade_grams,filamento_id').eq('empresa_id', empresaId),
+      ]);
       if (pErr) throw pErr;
+      if (matErr) throw matErr;
       if (!prods) return [];
 
-      const { data: matRows } = await supabase.from('produto_materiais').select('*').eq('empresa_id', empresaId);
+      const materialsByProduct = new Map<string, Product['materials']>();
+      for (const material of matRows || []) {
+        const materials = materialsByProduct.get(material.produto_id) || [];
+        materials.push({ tipoFilamento: material.tipo_filamento, quantidadeGrams: Number(material.quantidade_grams), filamentoId: material.filamento_id || 'any' });
+        materialsByProduct.set(material.produto_id, materials);
+      }
 
       const mapped: Product[] = prods.map(item => {
-        const itemMats = (matRows || []).filter(m => m.produto_id === item.id);
-        const materials = itemMats.map(m => ({
-          tipoFilamento: m.tipo_filamento,
-          quantidadeGrams: Number(m.quantidade_grams),
-          filamentoId: m.filamento_id || 'any'
-        }));
+        const materials = materialsByProduct.get(item.id) || [];
 
         return {
           id: item.id,
@@ -64,13 +82,13 @@ export function useAddProduto() {
       const { data, error } = await supabase.rpc('salvar_produto_com_bom', {
         p_empresa_id: empresaId,
         p_produto: { ...novo, impressoraPadraoId: isValidUuid(novo.impressoraPadraoId) ? novo.impressoraPadraoId : '' },
-        p_materiais: novo.materials || [],
+        p_materiais: normalizeMaterials(novo.materials),
         p_idempotency_key: operationId,
       });
       if (error) {
         if (!isNetworkFailure(error)) throw error;
         const offlineItem: Product = { ...novo, id: `offline-${crypto.randomUUID()}` };
-        await enqueueOfflineOperation(empresaId, 'create_product', { product: { ...novo, impressoraPadraoId: isValidUuid(novo.impressoraPadraoId) ? novo.impressoraPadraoId : '' }, materials: novo.materials || [] }, operationId);
+        await enqueueOfflineOperation(empresaId, 'create_product', { product: { ...novo, impressoraPadraoId: isValidUuid(novo.impressoraPadraoId) ? novo.impressoraPadraoId : '' }, materials: normalizeMaterials(novo.materials) }, operationId);
         addToLocalCache('produtos', offlineItem);
         return offlineItem;
       }
@@ -95,7 +113,7 @@ export function useUpdateProduto() {
       const { error } = await supabase.rpc('salvar_produto_com_bom', {
         p_empresa_id: empresaId,
         p_produto: { ...produto, impressoraPadraoId: isValidUuid(produto.impressoraPadraoId) ? produto.impressoraPadraoId : '' },
-        p_materiais: produto.materials || [],
+        p_materiais: normalizeMaterials(produto.materials),
         p_idempotency_key: crypto.randomUUID(),
       });
       if (error) throw error;
