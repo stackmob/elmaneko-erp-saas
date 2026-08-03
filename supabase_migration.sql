@@ -1172,6 +1172,97 @@ REVOKE ALL ON FUNCTION public.aceitar_convite_empresa(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.criar_convite_empresa(UUID, TEXT, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.aceitar_convite_empresa(TEXT) TO authenticated;
 
+CREATE OR REPLACE FUNCTION public.atualizar_compra_com_despesa(
+  p_empresa_id UUID,
+  p_compra_id UUID,
+  p_compra JSONB
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE v_lancamento lancamentos_financeiros%ROWTYPE;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
+  END IF;
+  PERFORM 1 FROM compras WHERE id = p_compra_id AND empresa_id = p_empresa_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Compra não encontrada.'; END IF;
+  SELECT * INTO v_lancamento FROM lancamentos_financeiros
+  WHERE empresa_id = p_empresa_id AND origem = 'Compra' AND origem_id = p_compra_id FOR UPDATE;
+  IF FOUND AND v_lancamento.status IN ('Liquidado', 'Cancelado') THEN
+    RAISE EXCEPTION 'Não é possível alterar uma compra com lançamento financeiro encerrado.';
+  END IF;
+  UPDATE compras SET
+    data = COALESCE(NULLIF(p_compra->>'data', '')::DATE, data), fornecedor = p_compra->>'fornecedor',
+    categoria_item = COALESCE(p_compra->>'categoriaItem', categoria_item), descricao_item = p_compra->>'descricaoItem',
+    quantidade = COALESCE((p_compra->>'quantidade')::NUMERIC, quantidade), unidade_medida = COALESCE(p_compra->>'unidadeMedida', unidade_medida),
+    filamento_id = NULLIF(p_compra->>'filamentoId', '')::UUID, insumo_id = NULLIF(p_compra->>'insumoId', '')::UUID,
+    quantidade_adquirida = COALESCE((p_compra->>'quantidadeAdquirida')::NUMERIC, quantidade_adquirida),
+    valor_pago = COALESCE((p_compra->>'valorPago')::NUMERIC, valor_pago), nota_fiscal = p_compra->>'notaFiscal', observacoes = p_compra->>'observacoes'
+  WHERE id = p_compra_id;
+  IF FOUND THEN
+    UPDATE lancamentos_financeiros SET fornecedor = p_compra->>'fornecedor', data_emissao = COALESCE(NULLIF(p_compra->>'data', '')::DATE, CURRENT_DATE),
+      data_vencimento = COALESCE(NULLIF(p_compra->>'data', '')::DATE, CURRENT_DATE), valor_bruto = COALESCE((p_compra->>'valorPago')::NUMERIC, 0),
+      valor_liquido = COALESCE((p_compra->>'valorPago')::NUMERIC, 0), numero_documento = COALESCE(NULLIF(p_compra->>'notaFiscal', ''), 'COMP-' || substring(p_compra_id::text from 1 for 8))
+    WHERE id = v_lancamento.id;
+  END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.excluir_compra_com_despesa(p_empresa_id UUID, p_compra_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE v_lancamento lancamentos_financeiros%ROWTYPE;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) THEN RAISE EXCEPTION 'Acesso negado para a empresa correspondente.'; END IF;
+  PERFORM 1 FROM compras WHERE id = p_compra_id AND empresa_id = p_empresa_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Compra não encontrada.'; END IF;
+  SELECT * INTO v_lancamento FROM lancamentos_financeiros WHERE empresa_id = p_empresa_id AND origem = 'Compra' AND origem_id = p_compra_id FOR UPDATE;
+  IF FOUND AND v_lancamento.status = 'Liquidado' THEN RAISE EXCEPTION 'Não é possível excluir compra com lançamento liquidado.'; END IF;
+  DELETE FROM lancamentos_financeiros WHERE id = v_lancamento.id;
+  DELETE FROM compras WHERE id = p_compra_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.atualizar_compra_com_despesa(UUID, UUID, JSONB) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.excluir_compra_com_despesa(UUID, UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.atualizar_compra_com_despesa(UUID, UUID, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.excluir_compra_com_despesa(UUID, UUID) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.revogar_convite_empresa(p_convite_id UUID)
+RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_empresa_id UUID;
+BEGIN
+  SELECT empresa_id INTO v_empresa_id FROM convites_empresa WHERE id = p_convite_id FOR UPDATE;
+  IF NOT FOUND OR NOT public.is_empresa_admin(v_empresa_id) THEN RAISE EXCEPTION 'Convite não encontrado ou acesso negado.'; END IF;
+  UPDATE convites_empresa SET revoked_at = now() WHERE id = p_convite_id AND accepted_at IS NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.remover_membro_empresa(p_empresa_id UUID, p_user_id UUID)
+RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_role TEXT;
+BEGIN
+  IF NOT public.is_empresa_admin(p_empresa_id) THEN RAISE EXCEPTION 'Apenas administradores podem remover membros.'; END IF;
+  SELECT role INTO v_role FROM usuario_empresa WHERE empresa_id = p_empresa_id AND user_id = p_user_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Membro não encontrado.'; END IF;
+  IF v_role = 'admin' AND (SELECT count(*) FROM usuario_empresa WHERE empresa_id = p_empresa_id AND role = 'admin') <= 1 THEN
+    RAISE EXCEPTION 'Não é permitido remover o último administrador.';
+  END IF;
+  DELETE FROM usuario_empresa WHERE empresa_id = p_empresa_id AND user_id = p_user_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.revogar_convite_empresa(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.remover_membro_empresa(UUID, UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.revogar_convite_empresa(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.remover_membro_empresa(UUID, UUID) TO authenticated;
+
 -- ============================================================
 -- SCRIPT DE VINCULAÇÃO E BACKFILL DE DADOS EXISTENTES À EMPRESA
 -- ============================================================

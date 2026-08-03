@@ -308,38 +308,13 @@ export function useUpdateCompra() {
   return useMutation({
     mutationFn: async (compra: Purchase) => {
       const empresaId = getActiveTenantId();
-      const payload = {
-        data: compra.data,
-        fornecedor: compra.fornecedor,
-        categoria_item: compra.categoriaItem,
-        descricao_item: compra.descricaoItem,
-        quantidade: compra.quantidade,
-        unidade_medida: compra.unidadeMedida,
-        filamento_id: isValidUuid(compra.filamentoId) ? compra.filamentoId : null,
-        insumo_id: isValidUuid(compra.insumoId) ? compra.insumoId : null,
-        quantidade_adquirida: compra.quantidadeAdquirida,
-        valor_pago: compra.valorPago,
-        nota_fiscal: compra.notaFiscal,
-        observacoes: compra.observacoes
-      };
-
       if (isValidUuid(compra.id)) {
-        await supabase.from('compras').update(payload).eq('id', compra.id).eq('empresa_id', empresaId);
-        
-        try {
-          await supabase
-            .from('lancamentos_financeiros')
-            .update({
-              fornecedor: compra.fornecedor,
-              data_emissao: compra.data || new Date().toISOString().split('T')[0],
-              data_vencimento: compra.data || new Date().toISOString().split('T')[0],
-              valor_bruto: Number(compra.valorPago),
-              valor_liquido: Number(compra.valorPago),
-              numero_documento: compra.notaFiscal ? `NF-${compra.notaFiscal}` : `COMP-${compra.id.slice(0, 8)}`,
-            })
-            .eq('origem_id', compra.id)
-            .eq('empresa_id', empresaId);
-        } catch (e) {}
+        const { error } = await supabase.rpc('atualizar_compra_com_despesa', {
+          p_empresa_id: empresaId,
+          p_compra_id: compra.id,
+          p_compra: { ...compra, filamentoId: isValidUuid(compra.filamentoId) ? compra.filamentoId : '', insumoId: isValidUuid(compra.insumoId) ? compra.insumoId : '' },
+        });
+        if (error) throw error;
       }
 
       addToLocalCache('compras', compra);
@@ -360,10 +335,8 @@ export function useDeleteCompra() {
     mutationFn: async (id: string) => {
       const empresaId = getActiveTenantId();
       if (isValidUuid(id)) {
-        await supabase.from('compras').delete().eq('id', id).eq('empresa_id', empresaId);
-        try {
-          await supabase.from('lancamentos_financeiros').delete().eq('origem_id', id).eq('empresa_id', empresaId);
-        } catch (e) {}
+        const { error } = await supabase.rpc('excluir_compra_com_despesa', { p_empresa_id: empresaId, p_compra_id: id });
+        if (error) throw error;
       }
       removeFromLocalCache('compras', id);
       return id;
