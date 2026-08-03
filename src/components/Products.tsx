@@ -245,8 +245,7 @@ export default function Products() {
       return;
     }
 
-    const productData: Product = {
-      id: editingProduct ? editingProduct.id : crypto.randomUUID(),
+    const productData: Omit<Product, 'id'> = {
       nome,
       categoria,
       descricao,
@@ -273,7 +272,7 @@ export default function Products() {
     const onError = (err: any) => showToast(`Erro ao salvar produto: ${err?.message || 'Tente novamente.'}`, 'error');
 
     if (editingProduct) {
-      editMutation.mutate(productData, { onSuccess, onError });
+      editMutation.mutate({ ...productData, id: editingProduct.id }, { onSuccess, onError });
     } else {
       addMutation.mutate(productData, { onSuccess, onError });
     }
