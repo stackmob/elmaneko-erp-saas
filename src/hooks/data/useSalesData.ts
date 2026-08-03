@@ -240,7 +240,9 @@ export function useVendas() {
 
       const mapped: Sale[] = data.map(item => ({
         id: item.id,
-        numero: `VENDA-${String(item.id).slice(0, 8).toUpperCase()}`,
+        // Read numero from DB (populated by criar_venda_com_lancamento RPC).
+        // Fall back to a derived label only for legacy rows that predate the column.
+        numero: item.numero || `VND-${String(item.id).slice(0, 8).toUpperCase()}`,
         clienteId: item.cliente_id,
         dataVenda: item.data,
         itens: [],

@@ -220,28 +220,32 @@ export default function Budgets() {
     }
 
     setIsSubmittingSale(true);
-    try {
-      const novaVenda: Sale = {
-        id: crypto.randomUUID(),
-        numero: `VEN-2026-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
-        dataVenda: new Date().toISOString().split('T')[0],
-        clienteId: conversionBudget.clienteId,
-        itens: conversionBudget.itens,
-        formaPagamento: paymentMethod,
-        valorTotal: calculateTotal(conversionBudget.itens, conversionBudget.descontoGeral),
-        statusPagamento: 'Pago',
-        orcamentoOrigemId: conversionBudget.id
-      };
+    const budgetSnapshot = conversionBudget;
 
-      addVendaMutation.mutate(novaVenda);
-      editMutation.mutate({ ...conversionBudget, status: 'Faturado' });
-      setConversionBudget(null);
-      showToast(`Orçamento ${conversionBudget.numero} faturado com sucesso! Venda gerada.`, 'success');
-    } catch (err) {
-      showToast('Erro ao processar faturamento.', 'error');
-    } finally {
-      setIsSubmittingSale(false);
-    }
+    const novaVenda: Sale = {
+      id: crypto.randomUUID(),
+      numero: `VEN-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
+      dataVenda: new Date().toISOString().split('T')[0],
+      clienteId: budgetSnapshot.clienteId,
+      itens: budgetSnapshot.itens,
+      formaPagamento: paymentMethod,
+      valorTotal: calculateTotal(budgetSnapshot.itens, budgetSnapshot.descontoGeral),
+      statusPagamento: 'Pendente',
+      orcamentoOrigemId: budgetSnapshot.id
+    };
+
+    addVendaMutation.mutate(novaVenda, {
+      onSuccess: () => {
+        editMutation.mutate({ ...budgetSnapshot, status: 'Faturado' });
+        setConversionBudget(null);
+        showToast(`Orçamento ${budgetSnapshot.numero} faturado com sucesso! Venda gerada.`, 'success');
+        setIsSubmittingSale(false);
+      },
+      onError: (err) => {
+        showToast(`Erro ao processar faturamento: ${err.message || 'Falha na operação'}`, 'error');
+        setIsSubmittingSale(false);
+      }
+    });
   };
 
   const handleApproveBudget = (b: Budget) => {

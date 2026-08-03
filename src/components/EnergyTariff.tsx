@@ -4,11 +4,14 @@ import { Plus, Zap, Calendar, History, DollarSign } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { formatDateBR } from '../utils/formatters';
 import { TooltipHint } from './ui/TooltipHint';
+import { useToast } from '../hooks/useToast';
+import Toast from './ui/Toast';
 
 export default function EnergyTariffModule() {
   const { useTarifas, useAddTarifa } = useData();
   const { data: tariffs = [] } = useTarifas();
   const addMutation = useAddTarifa();
+  const { toast, showToast, hideToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [dataInicio, setDataInicio] = useState(new Date().toISOString().split('T')[0]);
   const [valorKwh, setValorKwh] = useState(0.85);
@@ -16,7 +19,7 @@ export default function EnergyTariffModule() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (valorKwh <= 0 || !dataInicio) {
-      alert('Por favor, informe valores válidos.');
+      showToast('Por favor, informe uma data e um valor de kWh válido (maior que zero).', 'error');
       return;
     }
 
@@ -26,8 +29,15 @@ export default function EnergyTariffModule() {
       valorKwh: Number(valorKwh)
     };
 
-    addMutation.mutate(newTariff);
-    setIsModalOpen(false);
+    addMutation.mutate(newTariff, {
+      onSuccess: () => {
+        showToast(`Tarifa de R$ ${Number(valorKwh).toFixed(4)}/kWh cadastrada com sucesso!`, 'success');
+        setIsModalOpen(false);
+      },
+      onError: () => {
+        showToast('Erro ao salvar a tarifa. Tente novamente.', 'error');
+      }
+    });
   };
 
   // Sort tariffs descending by start date
@@ -36,6 +46,7 @@ export default function EnergyTariffModule() {
 
   return (
     <div className="space-y-6" id="energy-tariff-container">
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
       
       {/* HEADER ACTIONS */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4" id="energy-header">
