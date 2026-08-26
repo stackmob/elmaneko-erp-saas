@@ -396,32 +396,45 @@ export default function Products() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nome || !categoria || !impressoraPadraoId || formMaterials.length === 0) {
-      showToast('Preencha todos os campos obrigatórios.', 'error');
+    if (!nome || !categoria || formMaterials.length === 0) {
+      showToast('Preencha os campos obrigatórios (Nome, Categoria e Materiais).', 'error');
+      return;
+    }
+
+    const sanitizedMaterials = formMaterials
+      .filter(m => Number(m.quantidadeGrams) > 0)
+      .map(m => ({
+        tipoFilamento: m.tipoFilamento,
+        filamentoId: m.filamentoId || 'any',
+        quantidadeGrams: Math.max(0.1, Number(m.quantidadeGrams) || 0.1)
+      }));
+
+    if (sanitizedMaterials.length === 0) {
+      showToast('Adicione pelo menos um filamento com quantidade válida na ficha técnica (BOM).', 'error');
       return;
     }
 
     const productData: Omit<Product, 'id'> = {
-      nome,
-      categoria,
-      descricao,
-      imagem,
-      pdfProjeto,
-      pdfProjetoNome,
-      linkProjeto,
-      tempoImpressao: Number(tempoImpressao),
+      nome: nome.trim(),
+      categoria: categoria.trim(),
+      descricao: descricao?.trim() || '',
+      imagem: imagem || '',
+      pdfProjeto: pdfProjeto || '',
+      pdfProjetoNome: pdfProjetoNome || '',
+      linkProjeto: linkProjeto?.trim() || '',
+      tempoImpressao: Math.max(0.01, Number(tempoImpressao) || 0.01),
       impressoraPadraoId,
-      materials: formMaterials,
-      tempoAcabamento: Number(tempoAcabamento),
-      valorMaoDeObra: Number(valorMaoDeObra),
-      outrasDespesas: Number(outrasDespesas),
-      margemLucro: Number(marginPercentage),
-      overPercent: Number(overPercent),
-      precoVenda: Number(precoVenda),
+      materials: sanitizedMaterials,
+      tempoAcabamento: Math.max(0, Number(tempoAcabamento) || 0),
+      valorMaoDeObra: Math.max(0, Number(valorMaoDeObra) || 0),
+      outrasDespesas: Math.max(0, Number(outrasDespesas) || 0),
+      margemLucro: Math.max(0, Number(marginPercentage) || 0),
+      overPercent: Math.max(0, Number(overPercent) || 0),
+      precoVenda: Math.max(0, Number(precoVenda) || 0),
       hasCustomMargemLucro,
       hasCustomMaoDeObra,
       hasCustomOutrasDespesas,
-      observacoes
+      observacoes: observacoes?.trim() || ''
     };
 
     const onSuccess = () => {
@@ -480,9 +493,8 @@ export default function Products() {
         </div>
         <button
           onClick={handleOpenAddModal}
-          disabled={printers.length === 0 || filaments.length === 0}
           id="add-new-product-btn"
-          className="py-2.5 px-4 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-md shadow-orange-600/10 flex items-center justify-center gap-2 hover:translate-y-[-1px] transition-all cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+          className="py-2.5 px-4 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-md shadow-orange-600/10 flex items-center justify-center gap-2 hover:translate-y-[-1px] transition-all cursor-pointer"
         >
           <Plus size={18} />
           Cadastrar Peça (Ficha Técnica)
@@ -490,8 +502,8 @@ export default function Products() {
       </div>
 
       {(printers.length === 0 || filaments.length === 0) && (
-        <div className="p-4 bg-amber-950/40 border border-amber-800 text-amber-200 text-sm rounded-xl" id="product-warnings-box">
-          ⚠️ <strong>Atenção:</strong> Você precisa ter pelo menos uma impressora cadastrada em <strong>Impressoras</strong> e filamentos em <strong>Filamentos</strong> para conseguir montar fichas técnicas (BOM).
+        <div className="p-3 bg-neutral-900 border border-neutral-800 text-neutral-300 text-xs rounded-xl flex items-center gap-2" id="product-warnings-box">
+          <span className="text-orange-400 font-bold">💡 Dica:</span> Cadastrar impressoras e filamentos no sistema aprimora o cálculo automático exato de eletricidade e custos por grama na sua ficha técnica (BOM).
         </div>
       )}
 
@@ -887,7 +899,7 @@ export default function Products() {
               </div>
 
               <div>
-                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px] min-h-[28px] flex items-end">Impressora Padrão *</label>
+                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px] min-h-[28px] flex items-end">Impressora Padrão</label>
                 <select
                   value={impressoraPadraoId}
                   onChange={(e) => {
@@ -914,6 +926,7 @@ export default function Products() {
                   }}
                   className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
                 >
+                  <option value="">Nenhuma / Definir na Produção</option>
                   {printers.map(pr => (
                     <option key={pr.id} value={pr.id}>
                       {pr.nome} ({pr.potenciaWatts}W)

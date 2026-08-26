@@ -127,15 +127,16 @@ export function useOrcamentos() {
       if (oErr) throw oErr;
       if (!orcs) return [];
 
-      const { data: itemRows } = await supabase.from('orcamento_itens').select('*').eq('empresa_id', empresaId);
+      const { data: itemRows, error: iErr } = await supabase.from('orcamento_itens').select('*').eq('empresa_id', empresaId);
+      if (iErr) throw iErr;
 
       const mapped: Budget[] = orcs.map(item => {
         const budgetItens = (itemRows || []).filter(i => i.orcamento_id === item.id);
         const itens = budgetItens.map(i => ({
           produtoId: i.produto_id,
-          quantidade: i.quantidade,
-          valorUnitario: Number(i.valor_unitario),
-          desconto: Number(i.desconto || 0)
+          quantidade: Math.max(1, Number(i.quantidade) || 1),
+          valorUnitario: Math.max(0, Number(i.valor_unitario) || 0),
+          desconto: Math.max(0, Number(i.desconto || 0))
         }));
 
         return {
@@ -145,7 +146,7 @@ export function useOrcamentos() {
           dataEmissao: item.data_emissao,
           validade: item.validade,
           previsaoEntrega: item.previsao_entrega || '',
-          descontoGeral: Number(item.desconto_geral),
+          descontoGeral: Math.max(0, Number(item.desconto_geral) || 0),
           observacoes: item.observacoes,
           status: item.status as Budget['status'],
           itens
@@ -165,32 +166,44 @@ export function useAddOrcamento() {
     mutationFn: async (novo: Omit<Budget, 'id'>) => {
       const empresaId = getActiveTenantId();
       const operationId = crypto.randomUUID();
+      const sanitizedItens = (novo.itens || []).map(it => ({
+        produtoId: it.produtoId,
+        quantidade: Math.max(1, Number(it.quantidade) || 1),
+        valorUnitario: Math.max(0, Number(it.valorUnitario) || 0),
+        desconto: Math.max(0, Number(it.desconto) || 0)
+      }));
+      const payloadOrcamento = {
+        ...novo,
+        descontoGeral: Math.max(0, Number(novo.descontoGeral) || 0)
+      };
+
       const { data, error } = await supabase.rpc('salvar_orcamento_com_itens', {
         p_empresa_id: empresaId,
-        p_orcamento: novo,
-        p_itens: novo.itens,
+        p_orcamento: payloadOrcamento,
+        p_itens: sanitizedItens,
         p_idempotency_key: operationId,
       });
       if (error) {
         if (!isNetworkFailure(error)) throw error;
-        const offlineItem: Budget = { ...novo, id: `offline-${crypto.randomUUID()}` };
+        const offlineItem: Budget = { ...payloadOrcamento, itens: sanitizedItens, id: `offline-${crypto.randomUUID()}` };
         await enqueueOfflineOperation(empresaId, 'create_budget', {
-          budget: novo,
-          items: novo.itens,
+          budget: payloadOrcamento,
+          items: sanitizedItens,
         }, operationId);
         addToLocalCache('orcamentos', offlineItem);
         return offlineItem;
       }
 
       const created: Budget = {
-        ...novo,
+        ...payloadOrcamento,
+        itens: sanitizedItens,
         id: data?.id || crypto.randomUUID()
       };
 
       addToLocalCache('orcamentos', created);
       return created;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['orcamentos'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: getTenantQueryKey('orcamentos') }),
   });
 }
 
@@ -199,18 +212,29 @@ export function useUpdateOrcamento() {
   return useMutation({
     mutationFn: async (budget: Budget) => {
       const empresaId = getActiveTenantId();
+      const sanitizedItens = (budget.itens || []).map(it => ({
+        produtoId: it.produtoId,
+        quantidade: Math.max(1, Number(it.quantidade) || 1),
+        valorUnitario: Math.max(0, Number(it.valorUnitario) || 0),
+        desconto: Math.max(0, Number(it.desconto) || 0)
+      }));
+      const payloadOrcamento = {
+        ...budget,
+        descontoGeral: Math.max(0, Number(budget.descontoGeral) || 0)
+      };
+
       const { error } = await supabase.rpc('salvar_orcamento_com_itens', {
         p_empresa_id: empresaId,
-        p_orcamento: budget,
-        p_itens: budget.itens,
+        p_orcamento: payloadOrcamento,
+        p_itens: sanitizedItens,
         p_idempotency_key: crypto.randomUUID(),
       });
       if (error) throw error;
 
-      addToLocalCache('orcamentos', budget);
-      return budget;
+      addToLocalCache('orcamentos', { ...payloadOrcamento, itens: sanitizedItens });
+      return { ...payloadOrcamento, itens: sanitizedItens };
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['orcamentos'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: getTenantQueryKey('orcamentos') }),
   });
 }
 
@@ -225,7 +249,7 @@ export function useDeleteOrcamento() {
       removeFromLocalCache('orcamentos', id);
       return id;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['orcamentos'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: getTenantQueryKey('orcamentos') }),
   });
 }
 

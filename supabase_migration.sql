@@ -1507,8 +1507,8 @@ BEGIN
     p_orcamento_id
   ) RETURNING id INTO v_venda_id;
 
-  -- 5. Atualiza o orçamento para Aprovado
-  UPDATE orcamentos SET status = 'Aprovado' WHERE id = p_orcamento_id;
+  -- 5. Atualiza o orçamento para Faturado
+  UPDATE orcamentos SET status = 'Faturado' WHERE id = p_orcamento_id;
 
   -- 6. Cria o lançamento financeiro a receber (Aberto)
   INSERT INTO lancamentos_financeiros (
@@ -1814,7 +1814,7 @@ BEGIN
   IF v_orcamento_id IS NULL THEN
     INSERT INTO orcamentos (empresa_id, numero, cliente_id, data_emissao, validade, previsao_entrega, desconto_geral, observacoes, status)
     VALUES (
-      p_empresa_id, p_orcamento->>'numero', (p_orcamento->>'clienteId')::UUID,
+      p_empresa_id, COALESCE(NULLIF(trim(p_orcamento->>'numero'), ''), 'ORC-' || substring(gen_random_uuid()::text from 1 for 8)), (p_orcamento->>'clienteId')::UUID,
       COALESCE(NULLIF(p_orcamento->>'dataEmissao', '')::DATE, CURRENT_DATE), NULLIF(p_orcamento->>'validade', '')::DATE,
       NULLIF(p_orcamento->>'previsaoEntrega', '')::DATE, COALESCE((p_orcamento->>'descontoGeral')::NUMERIC, 0),
       p_orcamento->>'observacoes', COALESCE(p_orcamento->>'status', 'Aberto')

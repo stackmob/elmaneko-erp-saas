@@ -1,7 +1,8 @@
 import React from 'react';
-import { Budget, Company, Client } from '../../types';
+import { Budget, Company, Client, Product } from '../../types';
 import { Modal } from '../ui/Modal';
-import { Printer, Download, MessageSquare, Building2, User, CheckCircle, Calendar, Hash, ShieldCheck, FileText } from 'lucide-react';
+import { Printer, MessageSquare, FileText } from 'lucide-react';
+import { budgetSubtotal, budgetTotal } from '../../utils/businessCalculations';
 
 interface BudgetPreviewModalProps {
   isOpen: boolean;
@@ -9,8 +10,19 @@ interface BudgetPreviewModalProps {
   budget: Budget | null;
   company: Company | null;
   client: Client | null;
+  products?: Product[];
   onSendWhatsApp?: (budget: Budget) => void;
 }
+
+const formatDateBR = (dateStr?: string): string => {
+  if (!dateStr) return '';
+  const cleanDate = dateStr.split('T')[0];
+  const parts = cleanDate.split('-');
+  if (parts.length === 3 && parts[0].length === 4) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+};
 
 export const BudgetPreviewModal: React.FC<BudgetPreviewModalProps> = ({
   isOpen,
@@ -18,6 +30,7 @@ export const BudgetPreviewModal: React.FC<BudgetPreviewModalProps> = ({
   budget,
   company,
   client,
+  products = [],
   onSendWhatsApp,
 }) => {
   if (!budget) return null;
@@ -25,6 +38,9 @@ export const BudgetPreviewModal: React.FC<BudgetPreviewModalProps> = ({
   const handlePrint = () => {
     window.print();
   };
+
+  const subtotal = budgetSubtotal(budget.itens || []);
+  const total = budgetTotal(budget.itens || [], budget.descontoGeral || 0);
 
   return (
     <Modal
@@ -69,26 +85,31 @@ export const BudgetPreviewModal: React.FC<BudgetPreviewModalProps> = ({
                 {company?.nome || 'ELMANEKO 3D'}
               </h2>
               <p className="text-xs text-neutral-400 print:text-neutral-600">{company?.slogan || 'Impressão 3D & Prototipagem'}</p>
-              <p className="text-xs text-neutral-500 mt-1 print:text-neutral-600">CNPJ: {company?.cnpj || '12.345.678/0001-99'}</p>
+              <p className="text-xs text-neutral-500 mt-1 print:text-neutral-600">CNPJ: {company?.cnpj || 'Não informado'}</p>
               <p className="text-xs text-neutral-500 print:text-neutral-600">Contato: {company?.telefone || company?.whatsapp || '(11) 99999-9999'}</p>
             </div>
             <div className="text-left sm:text-right">
               <span className="inline-block px-3 py-1 bg-orange-500/10 border border-orange-500/30 text-orange-400 font-bold text-xs rounded-lg uppercase print:border-black print:text-black">
-                Orçamento #{budget.numero || budget.id.slice(0, 8)}
+                Orçamento #{budget.numero || String(budget.id).slice(0, 8)}
               </span>
               <p className="text-xs text-neutral-400 mt-2 print:text-neutral-600">
-                Data: {new Date(budget.createdAt).toLocaleDateString('pt-BR')}
+                Emissão: {formatDateBR(budget.dataEmissao)}
               </p>
               <p className="text-xs text-neutral-400 print:text-neutral-600">
-                Validade: 15 dias
+                Validade: {formatDateBR(budget.validade)}
               </p>
+              {budget.previsaoEntrega && (
+                <p className="text-xs text-neutral-400 print:text-neutral-600">
+                  Previsão Entrega: {formatDateBR(budget.previsaoEntrega)}
+                </p>
+              )}
             </div>
           </div>
 
           {/* CLIENT INFO */}
           <div className="bg-neutral-900/60 border border-neutral-800/80 p-4 rounded-xl space-y-1 print:bg-neutral-100 print:border-neutral-300">
             <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold block mb-1">Cliente / Destinatário</span>
-            <p className="text-sm font-bold text-white print:text-black">{client?.nome || budget.clienteNome || 'Cliente Não Especificado'}</p>
+            <p className="text-sm font-bold text-white print:text-black">{client?.nome || 'Cliente Não Especificado'}</p>
             {client?.whatsapp && <p className="text-xs text-neutral-400 print:text-neutral-700">WhatsApp: {client.whatsapp}</p>}
             {client?.email && <p className="text-xs text-neutral-400 print:text-neutral-700">Email: {client.email}</p>}
           </div>
@@ -103,27 +124,30 @@ export const BudgetPreviewModal: React.FC<BudgetPreviewModalProps> = ({
                     <th className="p-3">Descrição do Item</th>
                     <th className="p-3 text-center">Qtd</th>
                     <th className="p-3 text-right">Valor Unit.</th>
+                    <th className="p-3 text-right">Desc. Unit.</th>
                     <th className="p-3 text-right">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-800/60 print:divide-neutral-300">
                   {budget.itens && budget.itens.length > 0 ? (
-                    budget.itens.map((item, idx) => (
-                      <tr key={idx}>
-                        <td className="p-3 text-white font-medium print:text-black">{item.descricao || item.nome}</td>
-                        <td className="p-3 text-center text-neutral-300 print:text-black">{item.quantidade}</td>
-                        <td className="p-3 text-right text-neutral-400 print:text-black">R$ {Number(item.valorUnitario || 0).toFixed(2)}</td>
-                        <td className="p-3 text-right text-white font-bold print:text-black">
-                          R$ {(Number(item.quantidade) * Number(item.valorUnitario || 0)).toFixed(2)}
-                        </td>
-                      </tr>
-                    ))
+                    budget.itens.map((item, idx) => {
+                      const prodName = products.find(p => p.id === item.produtoId)?.nome || 'Produto / Peça 3D';
+                      const itemTotal = Number(item.quantidade) * Math.max(0, Number(item.valorUnitario || 0) - Number(item.desconto || 0));
+                      return (
+                        <tr key={idx}>
+                          <td className="p-3 text-white font-medium print:text-black">{prodName}</td>
+                          <td className="p-3 text-center text-neutral-300 print:text-black">{item.quantidade}</td>
+                          <td className="p-3 text-right text-neutral-400 print:text-black">R$ {Number(item.valorUnitario || 0).toFixed(2)}</td>
+                          <td className="p-3 text-right text-neutral-400 print:text-black">R$ {Number(item.desconto || 0).toFixed(2)}</td>
+                          <td className="p-3 text-right text-white font-bold print:text-black">
+                            R$ {itemTotal.toFixed(2)}
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
-                      <td className="p-3 text-white font-medium print:text-black">{budget.descricao || 'Serviço de Impressão 3D Personalizado'}</td>
-                      <td className="p-3 text-center text-neutral-300 print:text-black">1</td>
-                      <td className="p-3 text-right text-neutral-400 print:text-black">R$ {Number(budget.valorTotal || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right text-white font-bold print:text-black">R$ {Number(budget.valorTotal || 0).toFixed(2)}</td>
+                      <td colSpan={5} className="p-3 text-neutral-500 text-center">Nenhum item adicionado ao orçamento.</td>
                     </tr>
                   )}
                 </tbody>
@@ -136,12 +160,21 @@ export const BudgetPreviewModal: React.FC<BudgetPreviewModalProps> = ({
             <div className="text-xs text-neutral-400 space-y-1 max-w-sm print:text-neutral-700">
               <p className="font-bold text-white print:text-black">Condições de Pagamento:</p>
               <p>• PIX (50% de entrada + 50% na retirada/envio)</p>
-              <p>• Chave PIX: {company?.pixChave || company?.cnpj || 'contato@elmaneko3d.com'}</p>
+              <p>• Chave PIX: {company?.pixChave || company?.cnpj || 'contato@empresa.com'}</p>
+              {budget.observacoes && (
+                <p className="mt-2 text-neutral-400 italic">Obs: {budget.observacoes}</p>
+              )}
             </div>
             <div className="text-right w-full sm:w-auto bg-orange-950/30 border border-orange-500/20 p-4 rounded-xl print:bg-neutral-100 print:border-neutral-300">
+              {Number(budget.descontoGeral || 0) > 0 && (
+                <div className="text-xs text-neutral-400 mb-1">
+                  <span>Subtotal: R$ {subtotal.toFixed(2)}</span>
+                  <span className="text-red-400 ml-2 block sm:inline">Desc. Geral: -R$ {Number(budget.descontoGeral).toFixed(2)}</span>
+                </div>
+              )}
               <span className="text-xs text-orange-400 uppercase font-bold block print:text-black">Valor Total da Proposta</span>
               <span className="text-2xl font-bold text-white print:text-black">
-                R$ {Number(budget.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
           </div>

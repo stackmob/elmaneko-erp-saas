@@ -25,7 +25,7 @@ const formatDateBR = (dateStr?: string): string => {
 };
 
 export default function Budgets() {
-  const { useOrcamentos, useClientes, useProdutos, useFilamentos, useEmpresa, useAddOrcamento, useUpdateOrcamento, useDeleteOrcamento, useAddVenda, useVendas } = useData();
+  const { useOrcamentos, useClientes, useProdutos, useFilamentos, useEmpresa, useAddOrcamento, useUpdateOrcamento, useDeleteOrcamento, useConverterOrcamentoEmVenda, useVendas } = useData();
   const { data: budgets = [] } = useOrcamentos();
   const { data: clients = [] } = useClientes();
   const { data: products = [] } = useProdutos();
@@ -35,7 +35,7 @@ export default function Budgets() {
   const addMutation = useAddOrcamento();
   const editMutation = useUpdateOrcamento();
   const deleteMutation = useDeleteOrcamento();
-  const addVendaMutation = useAddVenda();
+  const convertMutation = useConverterOrcamentoEmVenda();
   const { toast, showToast, hideToast } = useToast();
   
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; id: string; num: string; invoiced: boolean }>({ open: false, id: '', num: '', invoiced: false });
@@ -173,6 +173,13 @@ export default function Budgets() {
       return;
     }
 
+    const sanitizedItens = itens.map(it => ({
+      produtoId: it.produtoId,
+      quantidade: Math.max(1, Number(it.quantidade) || 1),
+      valorUnitario: Math.max(0, Number(it.valorUnitario) || 0),
+      desconto: Math.max(0, Number(it.desconto) || 0)
+    }));
+
     const budgetData: Omit<Budget, 'id'> = {
       numero: editingBudget ? editingBudget.numero : (() => {
         const currentYear = new Date().getFullYear();
@@ -190,8 +197,8 @@ export default function Budgets() {
       dataEmissao,
       validade,
       previsaoEntrega,
-      itens,
-      descontoGeral: Number(descontoGeral),
+      itens: sanitizedItens,
+      descontoGeral: Math.max(0, Number(descontoGeral) || 0),
       observacoes,
       status
     };
@@ -232,30 +239,23 @@ export default function Budgets() {
     setIsSubmittingSale(true);
     const budgetSnapshot = conversionBudget;
 
-    const novaVenda: Sale = {
-      id: crypto.randomUUID(),
-      numero: `VEN-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
-      dataVenda: new Date().toISOString().split('T')[0],
-      clienteId: budgetSnapshot.clienteId,
-      itens: budgetSnapshot.itens,
-      formaPagamento: paymentMethod,
-      valorTotal: calculateTotal(budgetSnapshot.itens, budgetSnapshot.descontoGeral),
-      statusPagamento: 'Pendente',
-      orcamentoOrigemId: budgetSnapshot.id
-    };
-
-    addVendaMutation.mutate(novaVenda, {
-      onSuccess: () => {
-        editMutation.mutate({ ...budgetSnapshot, status: 'Faturado' });
-        setConversionBudget(null);
-        showToast(`Orçamento ${budgetSnapshot.numero} faturado com sucesso! Venda gerada.`, 'success');
-        setIsSubmittingSale(false);
+    convertMutation.mutate(
+      {
+        orcamentoId: budgetSnapshot.id,
+        formaPagamento: paymentMethod
       },
-      onError: (err) => {
-        showToast(`Erro ao processar faturamento: ${err.message || 'Falha na operação'}`, 'error');
-        setIsSubmittingSale(false);
+      {
+        onSuccess: () => {
+          setConversionBudget(null);
+          showToast(`Orçamento ${budgetSnapshot.numero} faturado com sucesso! Venda gerada no Financeiro.`, 'success');
+          setIsSubmittingSale(false);
+        },
+        onError: (err: any) => {
+          showToast(`Erro ao processar faturamento: ${err.message || 'Falha na operação'}`, 'error');
+          setIsSubmittingSale(false);
+        }
       }
-    });
+    );
   };
 
   const handleApproveBudget = (b: Budget) => {
@@ -945,6 +945,7 @@ export default function Budgets() {
         budget={pdfPreviewBudget}
         company={company || null}
         client={clients.find(c => c.id === pdfPreviewBudget?.clienteId || c.nome === pdfPreviewBudget?.clienteNome) || null}
+        products={products}
         onSendWhatsApp={(b) => handleShareWhatsApp(b)}
       />
     </div>

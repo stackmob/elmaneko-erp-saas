@@ -225,6 +225,35 @@ function runSuite() {
   assert(resultFullLabor.valorMaoDeObra === 30.00, 'Mantém o valor padrão cheio de mão de obra (R$ 30.00)');
   assert(resultFullLabor.costTotal === 161.40, 'Calcula o custo total exato com mão de obra cheia (R$ 161.40)');
 
+  // 6. Testes de Integridade dos Módulos de Produtos e Orçamentos
+  console.log('\n[6] Testes de Integridade nos Módulos de Produtos e Orçamentos');
+  const budgetsComponentPath = path.join(process.cwd(), 'src', 'components', 'Budgets.tsx');
+  const budgetsComponentContent = fs.readFileSync(budgetsComponentPath, 'utf-8');
+
+  assert(budgetsComponentContent.includes('useConverterOrcamentoEmVenda'), 'Budgets.tsx utiliza a RPC transacional de conversão useConverterOrcamentoEmVenda');
+  assert(budgetsComponentContent.includes('products={products}'), 'Budgets.tsx passa a lista de produtos para o BudgetPreviewModal');
+  assert(budgetsComponentContent.includes('sanitizedItens'), 'Budgets.tsx sanitiza e valida os itens antes da mutação');
+
+  const previewModalPath = path.join(process.cwd(), 'src', 'components', 'commercial', 'BudgetPreviewModal.tsx');
+  const previewModalContent = fs.readFileSync(previewModalPath, 'utf-8');
+  assert(previewModalContent.includes('formatDateBR(budget.dataEmissao)'), 'BudgetPreviewModal.tsx formata a data de emissão com segurança');
+  assert(previewModalContent.includes('products.find'), 'BudgetPreviewModal.tsx busca os nomes reais dos produtos cadastrados');
+  assert(previewModalContent.includes('budgetTotal'), 'BudgetPreviewModal.tsx calcula o total da proposta via budgetTotal');
+
+  const salesHookPath = path.join(process.cwd(), 'src', 'hooks', 'data', 'useSalesData.ts');
+  const salesHookContent = fs.readFileSync(salesHookPath, 'utf-8');
+  assert(salesHookContent.includes('if (iErr) throw iErr;'), 'useSalesData.ts valida erros ao consultar orcamento_itens');
+  assert(salesHookContent.includes('Math.max(1, Number(it.quantidade) || 1)'), 'useSalesData.ts assegura quantidade mínima de 1 para itens de orçamento');
+
+  const productsComponentPath = path.join(process.cwd(), 'src', 'components', 'Products.tsx');
+  const productsComponentContent = fs.readFileSync(productsComponentPath, 'utf-8');
+  assert(productsComponentContent.includes('sanitizedMaterials'), 'Products.tsx sanitiza os materiais da ficha técnica (BOM)');
+  assert(productsComponentContent.includes('Math.max(0.01, Number(tempoImpressao) || 0.01)'), 'Products.tsx valida tempo de impressão positivo');
+
+  assert(migrationContent.includes('salvar_produto_com_bom'), 'supabase_migration.sql implementa a RPC transacional salvar_produto_com_bom');
+  assert(migrationContent.includes('salvar_orcamento_com_itens'), 'supabase_migration.sql implementa a RPC transacional salvar_orcamento_com_itens');
+  assert(migrationContent.includes("UPDATE orcamentos SET status = 'Faturado'"), 'converter_orcamento_em_venda atualiza status do orçamento para Faturado');
+
   console.log(`\n========================================`);
   console.log(`Resultado Final: ${passed} passaram, ${failed} falharam.`);
   console.log(`========================================\n`);
