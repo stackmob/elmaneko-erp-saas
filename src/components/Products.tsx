@@ -463,15 +463,15 @@ export default function Products() {
   };
 
   // Filtered Products Search Computation
-  const filteredProducts = products.filter(p => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
+  const filteredProducts = React.useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter(p => (
       (p.nome && p.nome.toLowerCase().includes(q)) ||
       (p.categoria && p.categoria.toLowerCase().includes(q)) ||
       (p.descricao && p.descricao.toLowerCase().includes(q))
-    );
-  });
+    ));
+  }, [products, searchQuery]);
 
   return (
     <div className="space-y-6" id="products-module-container">

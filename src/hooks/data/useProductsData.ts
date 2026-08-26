@@ -134,8 +134,9 @@ export function useDeleteProduto() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const empresaId = getActiveTenantId();
       if (isValidUuid(id)) {
-        await supabase.from('produtos').delete().eq('id', id);
+        await supabase.from('produtos').delete().eq('id', id).eq('empresa_id', empresaId);
       }
       removeFromLocalCache('produtos', id);
       return id;
