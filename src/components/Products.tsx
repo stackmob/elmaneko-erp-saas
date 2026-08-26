@@ -1073,46 +1073,71 @@ export default function Products() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono text-xs">
-              <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
-                <span className="text-neutral-500 uppercase text-[9px] block">Insumos (BOM)</span>
-                <strong className="text-white text-xs">R$ {costBOM.toFixed(2)}</strong>
-              </div>
+            {(() => {
+              const calcSummary = calculateProductPricing({
+                materials: formMaterials,
+                filaments,
+                tempoImpressao,
+                impressoraPadraoId,
+                printers,
+                tariffs,
+                margemLucro: marginPercentage,
+                outrasDespesas,
+                valorMaoDeObra,
+                overPercent,
+                hasCustomMargemLucro,
+                hasCustomMaoDeObra,
+                hasCustomOutrasDespesas
+              });
 
-              <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
-                <span className="text-neutral-500 uppercase text-[9px] block">Energia</span>
-                <strong className="text-white text-xs">R$ {costEnergy.toFixed(2)}</strong>
-              </div>
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono text-xs">
+                  <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
+                    <span className="text-neutral-500 uppercase text-[9px] block">Insumos (BOM)</span>
+                    <strong className="text-white text-xs">R$ {calcSummary.costBOM.toFixed(2)}</strong>
+                  </div>
 
-              <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
-                <div className="flex items-center justify-between">
-                  <span className="text-neutral-500 uppercase text-[9px]">Mão de Obra</span>
-                  {hasCustomMaoDeObra ? (
-                    <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded">Exceção</span>
-                  ) : (
-                    <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded">Global</span>
-                  )}
+                  <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
+                    <span className="text-neutral-500 uppercase text-[9px] block">Energia</span>
+                    <strong className="text-white text-xs">R$ {calcSummary.costEnergy.toFixed(2)}</strong>
+                  </div>
+
+                  <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
+                    <div className="flex items-center justify-between">
+                      <span className="text-neutral-500 uppercase text-[9px]">Mão de Obra</span>
+                      {hasCustomMaoDeObra ? (
+                        <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded">Exceção</span>
+                      ) : (
+                        <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded">Global</span>
+                      )}
+                    </div>
+                    <strong className="text-white text-xs">R$ {calcSummary.valorMaoDeObra.toFixed(2)}</strong>
+                    {calcSummary.isMaoDeObraCapped && (
+                      <span className="text-[8px] text-amber-400 block mt-0.5" title="Limitado a no máximo 50% do custo do produto sem mão de obra">
+                        ⚠️ Máx 50% Custo Base
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
+                    <div className="flex items-center justify-between">
+                      <span className="text-neutral-500 uppercase text-[9px]">Outras Despesas</span>
+                      {hasCustomOutrasDespesas ? (
+                        <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded">Exceção</span>
+                      ) : (
+                        <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded">Global</span>
+                      )}
+                    </div>
+                    <strong className="text-white text-xs">R$ {calcSummary.outrasDespesas.toFixed(2)}</strong>
+                  </div>
+
+                  <div className="bg-neutral-900 p-2 rounded border border-neutral-850 col-span-2 sm:col-span-1">
+                    <span className="text-orange-400 uppercase text-[9px] font-bold block">Custo Total</span>
+                    <strong className="text-orange-400 text-sm font-bold">R$ {calcSummary.costTotal.toFixed(2)}</strong>
+                  </div>
                 </div>
-                <strong className="text-white text-xs">R$ {Number(valorMaoDeObra).toFixed(2)}</strong>
-              </div>
-
-              <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
-                <div className="flex items-center justify-between">
-                  <span className="text-neutral-500 uppercase text-[9px]">Outras Despesas</span>
-                  {hasCustomOutrasDespesas ? (
-                    <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded">Exceção</span>
-                  ) : (
-                    <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded">Global</span>
-                  )}
-                </div>
-                <strong className="text-white text-xs">R$ {Number(outrasDespesas).toFixed(2)}</strong>
-              </div>
-
-              <div className="bg-neutral-900 p-2 rounded border border-neutral-850 col-span-2 sm:col-span-1">
-                <span className="text-orange-400 uppercase text-[9px] font-bold block">Custo Total</span>
-                <strong className="text-orange-400 text-sm font-bold">R$ {costTotal.toFixed(2)}</strong>
-              </div>
-            </div>
+              );
+            })()}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
               <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800">

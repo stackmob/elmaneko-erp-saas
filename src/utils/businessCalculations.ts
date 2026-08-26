@@ -108,9 +108,17 @@ export function calculateProductPricing(input: PricingCalculationInput): Pricing
   const isUsingGlobalOutrasDespesas = !input.hasCustomOutrasDespesas && (input.outrasDespesas === undefined || input.outrasDespesas === null);
 
   const margemLucro = Math.max(0, isUsingGlobalMargin ? global.margemLucroPadrao : Number(input.margemLucro ?? global.margemLucroPadrao));
-  const valorMaoDeObra = Math.max(0, isUsingGlobalMaoDeObra ? global.valorMaoDeObraPadrao : Number(input.valorMaoDeObra ?? global.valorMaoDeObraPadrao));
+  const rawValorMaoDeObra = Math.max(0, isUsingGlobalMaoDeObra ? global.valorMaoDeObraPadrao : Number(input.valorMaoDeObra ?? global.valorMaoDeObraPadrao));
   const outrasDespesas = Math.max(0, isUsingGlobalOutrasDespesas ? global.outrasDespesasPadrao : Number(input.outrasDespesas ?? global.outrasDespesasPadrao));
   const overPercent = Math.max(0, Number(input.overPercent ?? 0));
+
+  // Custo do produto sem a mão de obra aplicada (BOM + Energia + Outras Despesas)
+  const baseCostWithoutLabor = Number((costBOM + costEnergy + outrasDespesas).toFixed(2));
+
+  // A mão de obra aplicada não pode passar de 50% do custo do produto sem a mão de obra
+  const maxLaborAllowed = Number((baseCostWithoutLabor * 0.50).toFixed(2));
+  const valorMaoDeObra = Math.min(rawValorMaoDeObra, maxLaborAllowed);
+  const isMaoDeObraCapped = valorMaoDeObra < rawValorMaoDeObra;
 
   // 4. Total Manufacturing Cost (BOM + Energy + Labor + Other Expenses)
   const costTotal = Number((costBOM + costEnergy + valorMaoDeObra + outrasDespesas).toFixed(2));
@@ -132,7 +140,7 @@ export function calculateProductPricing(input: PricingCalculationInput): Pricing
     isUsingGlobalMargin,
     isUsingGlobalOutrasDespesas,
     isUsingGlobalMaoDeObra,
-    isMaoDeObraCapped: false,
+    isMaoDeObraCapped,
     isOutrasDespesasCapped: false,
   };
 }
