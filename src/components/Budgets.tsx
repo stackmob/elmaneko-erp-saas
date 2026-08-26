@@ -174,7 +174,18 @@ export default function Budgets() {
     }
 
     const budgetData: Omit<Budget, 'id'> = {
-      numero: editingBudget ? editingBudget.numero : `ORÇ-2026-${String(budgets.length + 1).padStart(4, '0')}`,
+      numero: editingBudget ? editingBudget.numero : (() => {
+        const currentYear = new Date().getFullYear();
+        const prefix = `ORÇ-${currentYear}-`;
+        const maxSeq = budgets.reduce((max, b) => {
+          if (b.numero.startsWith(prefix)) {
+            const seq = parseInt(b.numero.slice(prefix.length), 10);
+            return isNaN(seq) ? max : Math.max(max, seq);
+          }
+          return max;
+        }, 0);
+        return `${prefix}${String(maxSeq + 1).padStart(4, '0')}`;
+      })(),
       clienteId,
       dataEmissao,
       validade,
