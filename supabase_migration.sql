@@ -835,6 +835,403 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.transferir_saldo_financeiro(UUID, UUID, NUMERIC, DATE, TEXT) TO authenticated;
 
+-- ============================================================
+-- PROCEDURES / RPCs TRANSACIONAIS DE INTEGRIDADE FINANCEIRA
+-- ============================================================
+
+-- 1. SALVAR CONTA FINANCEIRA
+CREATE OR REPLACE FUNCTION public.salvar_conta_financeira(
+  p_empresa_id UUID,
+  p_conta JSONB
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_conta_id UUID := NULLIF(p_conta->>'id', '')::UUID;
+  v_nome TEXT := trim(COALESCE(p_conta->>'nome', ''));
+  v_saldo_inicial NUMERIC := COALESCE((p_conta->>'saldoInicial')::NUMERIC, (p_conta->>'saldo_inicial')::NUMERIC, 0);
+  v_result JSONB;
+  v_current RECORD;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.can_manage_finance(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Apenas administradores e financeiros podem gerenciar contas bancárias.';
+  END IF;
+
+  IF v_nome = '' THEN
+    RAISE EXCEPTION 'O nome da conta financeira é obrigatório.';
+  END IF;
+
+  IF v_conta_id IS NULL THEN
+    INSERT INTO contas_financeiras (
+      empresa_id, nome, tipo, banco, agencia, conta, digito, bandeira,
+      limite, limite_disponivel, dia_fechamento, dia_vencimento,
+      saldo_inicial, saldo_atual, situacao, observacoes
+    ) VALUES (
+      p_empresa_id,
+      v_nome,
+      COALESCE(p_conta->>'tipo', 'Conta Bancaria'),
+      p_conta->>'banco',
+      p_conta->>'agencia',
+      p_conta->>'conta',
+      p_conta->>'digito',
+      p_conta->>'bandeira',
+      COALESCE((p_conta->>'limite')::NUMERIC, 0),
+      COALESCE((p_conta->>'limiteDisponivel')::NUMERIC, (p_conta->>'limite_disponivel')::NUMERIC, 0),
+      (p_conta->>'diaFechamento')::INT,
+      (p_conta->>'diaVencimento')::INT,
+      v_saldo_inicial,
+      v_saldo_inicial,
+      COALESCE(p_conta->>'situacao', 'Ativa'),
+      p_conta->>'observacoes'
+    ) RETURNING to_jsonb(contas_financeiras.*) INTO v_result;
+
+    INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_novo)
+    VALUES (p_empresa_id, COALESCE(auth.jwt()->>'email', auth.uid()::text), 'Criacao', 'Conta', (v_result->>'id')::UUID, v_result::text);
+  ELSE
+    SELECT * INTO v_current FROM contas_financeiras WHERE id = v_conta_id AND empresa_id = p_empresa_id FOR UPDATE;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Conta financeira não encontrada.';
+    END IF;
+
+    UPDATE contas_financeiras SET
+      nome = v_nome,
+      tipo = COALESCE(p_conta->>'tipo', tipo),
+      banco = p_conta->>'banco',
+      agencia = p_conta->>'agencia',
+      conta = p_conta->>'conta',
+      digito = p_conta->>'digito',
+      bandeira = p_conta->>'bandeira',
+      limite = COALESCE((p_conta->>'limite')::NUMERIC, limite),
+      limite_disponivel = COALESCE((p_conta->>'limiteDisponivel')::NUMERIC, (p_conta->>'limite_disponivel')::NUMERIC, limite_disponivel),
+      dia_fechamento = (p_conta->>'diaFechamento')::INT,
+      dia_vencimento = (p_conta->>'diaVencimento')::INT,
+      situacao = COALESCE(p_conta->>'situacao', situacao),
+      observacoes = p_conta->>'observacoes'
+    WHERE id = v_conta_id
+    RETURNING to_jsonb(contas_financeiras.*) INTO v_result;
+
+    INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_anterior, valor_novo)
+    VALUES (p_empresa_id, COALESCE(auth.jwt()->>'email', auth.uid()::text), 'Alteracao', 'Conta', v_conta_id, to_jsonb(v_current)::text, v_result::text);
+  END IF;
+
+  RETURN v_result;
+END;
+$$;
+
+-- 2. EXCLUIR CONTA FINANCEIRA
+CREATE OR REPLACE FUNCTION public.excluir_conta_financeira(
+  p_empresa_id UUID,
+  p_conta_id UUID
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_current RECORD;
+  v_tem_movimentacoes BOOLEAN;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.can_manage_finance(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Apenas administradores e financeiros podem excluir contas bancárias.';
+  END IF;
+
+  SELECT * INTO v_current FROM contas_financeiras WHERE id = p_conta_id AND empresa_id = p_empresa_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Conta financeira não encontrada.';
+  END IF;
+
+  IF COALESCE(v_current.saldo_atual, 0) <> 0 THEN
+    RAISE EXCEPTION 'Não é permitido excluir conta com saldo diferente de zero. Inative a conta ou zere o saldo antes.';
+  END IF;
+
+  SELECT EXISTS(
+    SELECT 1 FROM movimentacoes_financeiras WHERE conta_financeira_id = p_conta_id
+  ) INTO v_tem_movimentacoes;
+
+  IF v_tem_movimentacoes THEN
+    RAISE EXCEPTION 'Não é permitido excluir conta que possui histórico de movimentações financeiras. Inative a conta alterando sua situação.';
+  END IF;
+
+  DELETE FROM contas_financeiras WHERE id = p_conta_id;
+
+  INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_anterior)
+  VALUES (p_empresa_id, COALESCE(auth.jwt()->>'email', auth.uid()::text), 'Exclusao', 'Conta', p_conta_id, to_jsonb(v_current)::text);
+END;
+$$;
+
+-- 3. SALVAR LANÇAMENTO FINANCEIRO
+CREATE OR REPLACE FUNCTION public.salvar_lancamento_financeiro(
+  p_empresa_id UUID,
+  p_lancamento JSONB
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_id UUID := NULLIF(p_lancamento->>'id', '')::UUID;
+  v_tipo TEXT := COALESCE(p_lancamento->>'tipo', 'Despesa');
+  v_valor_bruto NUMERIC := COALESCE((p_lancamento->>'valorBruto')::NUMERIC, (p_lancamento->>'valor_bruto')::NUMERIC, 0);
+  v_desconto NUMERIC := COALESCE((p_lancamento->>'desconto')::NUMERIC, 0);
+  v_acrescimo NUMERIC := COALESCE((p_lancamento->>'acrescimo')::NUMERIC, 0);
+  v_valor_liquido NUMERIC := v_valor_bruto - v_desconto + v_acrescimo;
+  v_data_vencimento DATE := COALESCE(NULLIF(p_lancamento->>'dataVencimento', '')::DATE, NULLIF(p_lancamento->>'data_vencimento', '')::DATE, CURRENT_DATE);
+  v_numero_doc TEXT := COALESCE(NULLIF(trim(p_lancamento->>'numeroDocumento'), ''), NULLIF(trim(p_lancamento->>'numero_documento'), ''));
+  v_result JSONB;
+  v_current RECORD;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.can_manage_finance(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Apenas administradores e financeiros podem cadastrar lançamentos.';
+  END IF;
+
+  IF v_tipo NOT IN ('Receita', 'Despesa') THEN
+    RAISE EXCEPTION 'Tipo de lançamento inválido. Deve ser Receita ou Despesa.';
+  END IF;
+
+  IF v_valor_bruto < 0 THEN
+    RAISE EXCEPTION 'O valor do lançamento financeiro não pode ser negativo.';
+  END IF;
+
+  IF v_id IS NULL THEN
+    v_numero_doc := COALESCE(v_numero_doc, 'LAN-' || substring(gen_random_uuid()::text from 1 for 8));
+
+    INSERT INTO lancamentos_financeiros (
+      empresa_id, numero_documento, tipo, origem, origem_id,
+      cliente_id, fornecedor, data_emissao, data_vencimento,
+      valor_bruto, desconto, acrescimo, valor_liquido, forma_pagamento,
+      conta_financeira_id, categoria_id, centro_custo_id,
+      parcela_atual, total_parcelas, parcela_pai_id, status, observacoes
+    ) VALUES (
+      p_empresa_id,
+      v_numero_doc,
+      v_tipo,
+      COALESCE(p_lancamento->>'origem', 'Avulso'),
+      NULLIF(p_lancamento->>'origemId', '')::UUID,
+      NULLIF(p_lancamento->>'clienteId', '')::UUID,
+      p_lancamento->>'fornecedor',
+      COALESCE(NULLIF(p_lancamento->>'dataEmissao', '')::DATE, NULLIF(p_lancamento->>'data_emissao', '')::DATE, CURRENT_DATE),
+      v_data_vencimento,
+      v_valor_bruto,
+      v_desconto,
+      v_acrescimo,
+      v_valor_liquido,
+      COALESCE(p_lancamento->>'formaPagamento', p_lancamento->>'forma_pagamento', 'PIX'),
+      NULLIF(p_lancamento->>'contaFinanceiraId', '')::UUID,
+      NULLIF(p_lancamento->>'categoriaId', '')::UUID,
+      NULLIF(p_lancamento->>'centroCustoId', '')::UUID,
+      COALESCE((p_lancamento->>'parcelaAtual')::INT, (p_lancamento->>'parcela_atual')::INT, 1),
+      COALESCE((p_lancamento->>'totalParcelas')::INT, (p_lancamento->>'total_parcelas')::INT, 1),
+      NULLIF(p_lancamento->>'parcelaPaiId', '')::UUID,
+      COALESCE(p_lancamento->>'status', 'Aberto'),
+      p_lancamento->>'observacoes'
+    ) RETURNING to_jsonb(lancamentos_financeiros.*) INTO v_result;
+
+    INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_novo)
+    VALUES (p_empresa_id, COALESCE(auth.jwt()->>'email', auth.uid()::text), 'Criacao', 'Lancamento', (v_result->>'id')::UUID, v_result::text);
+  ELSE
+    SELECT * INTO v_current FROM lancamentos_financeiros WHERE id = v_id AND empresa_id = p_empresa_id FOR UPDATE;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Lançamento financeiro não encontrado.';
+    END IF;
+
+    IF v_current.status = 'Liquidado' THEN
+      RAISE EXCEPTION 'Lançamento financeiro já liquidado. Realize o cancelamento/estorno antes de alterar valores.';
+    END IF;
+
+    UPDATE lancamentos_financeiros SET
+      numero_documento = COALESCE(v_numero_doc, numero_documento),
+      tipo = v_tipo,
+      cliente_id = NULLIF(p_lancamento->>'clienteId', '')::UUID,
+      fornecedor = p_lancamento->>'fornecedor',
+      data_emissao = COALESCE(NULLIF(p_lancamento->>'dataEmissao', '')::DATE, NULLIF(p_lancamento->>'data_emissao', '')::DATE, data_emissao),
+      data_vencimento = v_data_vencimento,
+      valor_bruto = v_valor_bruto,
+      desconto = v_desconto,
+      acrescimo = v_acrescimo,
+      valor_liquido = v_valor_liquido,
+      forma_pagamento = COALESCE(p_lancamento->>'formaPagamento', p_lancamento->>'forma_pagamento', forma_pagamento),
+      conta_financeira_id = NULLIF(p_lancamento->>'contaFinanceiraId', '')::UUID,
+      categoria_id = NULLIF(p_lancamento->>'categoriaId', '')::UUID,
+      centro_custo_id = NULLIF(p_lancamento->>'centroCustoId', '')::UUID,
+      observacoes = p_lancamento->>'observacoes'
+    WHERE id = v_id
+    RETURNING to_jsonb(lancamentos_financeiros.*) INTO v_result;
+
+    INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_anterior, valor_novo)
+    VALUES (p_empresa_id, COALESCE(auth.jwt()->>'email', auth.uid()::text), 'Alteracao', 'Lancamento', v_id, to_jsonb(v_current)::text, v_result::text);
+  END IF;
+
+  RETURN v_result;
+END;
+$$;
+
+-- 4. CANCELAR LANÇAMENTO FINANCEIRO
+CREATE OR REPLACE FUNCTION public.cancelar_lancamento_financeiro(
+  p_empresa_id UUID,
+  p_lancamento_id UUID,
+  p_motivo TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_current RECORD;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.can_manage_finance(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Apenas administradores e financeiros podem cancelar lançamentos.';
+  END IF;
+
+  SELECT * INTO v_current FROM lancamentos_financeiros WHERE id = p_lancamento_id AND empresa_id = p_empresa_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Lançamento financeiro não encontrado.';
+  END IF;
+
+  IF v_current.status = 'Liquidado' THEN
+    RAISE EXCEPTION 'Não é permitido cancelar lançamento já liquidado. É necessário estornar a baixa correspondente.';
+  END IF;
+
+  IF v_current.status = 'Cancelado' THEN
+    RETURN jsonb_build_object('success', true, 'id', p_lancamento_id, 'already_canceled', true);
+  END IF;
+
+  UPDATE lancamentos_financeiros SET
+    status = 'Cancelado',
+    observacoes = CASE
+      WHEN p_motivo IS NOT NULL AND p_motivo <> '' THEN
+        COALESCE(observacoes || E'\n', '') || 'Cancelamento: ' || p_motivo
+      ELSE observacoes
+    END
+  WHERE id = p_lancamento_id;
+
+  INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_anterior, valor_novo)
+  VALUES (
+    p_empresa_id,
+    COALESCE(auth.jwt()->>'email', auth.uid()::text),
+    'Cancelamento',
+    'Lancamento',
+    p_lancamento_id,
+    v_current.status,
+    'Cancelado' || COALESCE(' - ' || p_motivo, '')
+  );
+
+  RETURN jsonb_build_object('success', true, 'id', p_lancamento_id);
+END;
+$$;
+
+-- 5. CONCILIAR LANÇAMENTO FINANCEIRO
+CREATE OR REPLACE FUNCTION public.conciliar_lancamento_financeiro(
+  p_empresa_id UUID,
+  p_lancamento_id UUID,
+  p_tipo_conciliacao TEXT DEFAULT 'Extrato'
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_current RECORD;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.can_manage_finance(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Apenas administradores e financeiros podem conciliar lançamentos.';
+  END IF;
+
+  SELECT * INTO v_current FROM lancamentos_financeiros WHERE id = p_lancamento_id AND empresa_id = p_empresa_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Lançamento financeiro não encontrado.';
+  END IF;
+
+  UPDATE lancamentos_financeiros SET
+    status = 'Conciliado',
+    conciliado = true,
+    tipo_conciliacao = p_tipo_conciliacao
+  WHERE id = p_lancamento_id;
+
+  INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_anterior, valor_novo)
+  VALUES (
+    p_empresa_id,
+    COALESCE(auth.jwt()->>'email', auth.uid()::text),
+    'Conciliacao',
+    'Lancamento',
+    p_lancamento_id,
+    v_current.status,
+    'Conciliado (' || COALESCE(p_tipo_conciliacao, 'Extrato') || ')'
+  );
+
+  RETURN jsonb_build_object('success', true, 'id', p_lancamento_id);
+END;
+$$;
+
+-- 6. EXCLUIR (SOFT-DELETE) LANÇAMENTO FINANCEIRO
+CREATE OR REPLACE FUNCTION public.excluir_lancamento_financeiro(
+  p_empresa_id UUID,
+  p_lancamento_id UUID
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_current RECORD;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.can_manage_finance(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Apenas administradores e financeiros podem excluir lançamentos.';
+  END IF;
+
+  SELECT * INTO v_current FROM lancamentos_financeiros WHERE id = p_lancamento_id AND empresa_id = p_empresa_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Lançamento financeiro não encontrado.';
+  END IF;
+
+  IF v_current.status = 'Liquidado' THEN
+    RAISE EXCEPTION 'Não é permitido excluir lançamento com status Liquidado.';
+  END IF;
+
+  UPDATE lancamentos_financeiros SET is_deleted = true WHERE id = p_lancamento_id;
+
+  INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_anterior, valor_novo)
+  VALUES (
+    p_empresa_id,
+    COALESCE(auth.jwt()->>'email', auth.uid()::text),
+    'Exclusao_Logica',
+    'Lancamento',
+    p_lancamento_id,
+    'is_deleted=false',
+    'is_deleted=true'
+  );
+
+  RETURN jsonb_build_object('success', true, 'id', p_lancamento_id);
+END;
+$$;
+
+-- Permissões de Execução nas RPCs Financeiras
+REVOKE ALL ON FUNCTION public.salvar_conta_financeira(UUID, JSONB) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.excluir_conta_financeira(UUID, UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.salvar_lancamento_financeiro(UUID, JSONB) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.cancelar_lancamento_financeiro(UUID, UUID, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.conciliar_lancamento_financeiro(UUID, UUID, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.excluir_lancamento_financeiro(UUID, UUID) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION public.salvar_conta_financeira(UUID, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.excluir_conta_financeira(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.salvar_lancamento_financeiro(UUID, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.cancelar_lancamento_financeiro(UUID, UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.conciliar_lancamento_financeiro(UUID, UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.excluir_lancamento_financeiro(UUID, UUID) TO authenticated;
+
+-- Revogar mutações diretas em tabelas financeiras críticas por integridade
+REVOKE INSERT, UPDATE, DELETE ON public.movimentacoes_financeiras FROM authenticated;
+REVOKE INSERT, UPDATE, DELETE ON public.transferencias_financeiras FROM authenticated;
+REVOKE INSERT, UPDATE, DELETE ON public.auditoria_financeira FROM authenticated;
+
 CREATE OR REPLACE FUNCTION public.converter_orcamento_em_venda(
   p_orcamento_id UUID,
   p_forma_pagamento TEXT DEFAULT 'Pix'

@@ -47,6 +47,28 @@ function runSuite() {
   assert(migrationContent.includes("v_lanc.status IN ('Liquidado', 'Cancelado')"), 'Liquidação financeira bloqueia lançamento já encerrado');
   assert(migrationContent.includes('idx_vendas_orcamento_origem_unique'), 'Conversão de orçamento possui unicidade de venda de origem');
   assert(migrationContent.includes('concluir_producao'), 'Conclusão de produção é executada por RPC atômica');
+  assert(migrationContent.includes('salvar_conta_financeira'), 'supabase_migration.sql implementa RPC salvar_conta_financeira');
+  assert(migrationContent.includes('excluir_conta_financeira'), 'supabase_migration.sql implementa RPC excluir_conta_financeira com validação de saldo');
+  assert(migrationContent.includes('salvar_lancamento_financeiro'), 'supabase_migration.sql implementa RPC salvar_lancamento_financeiro');
+  assert(migrationContent.includes('cancelar_lancamento_financeiro'), 'supabase_migration.sql implementa RPC cancelar_lancamento_financeiro');
+  assert(migrationContent.includes('conciliar_lancamento_financeiro'), 'supabase_migration.sql implementa RPC conciliar_lancamento_financeiro');
+  assert(migrationContent.includes('excluir_lancamento_financeiro'), 'supabase_migration.sql implementa RPC excluir_lancamento_financeiro');
+  assert(migrationContent.includes('REVOKE INSERT, UPDATE, DELETE ON public.movimentacoes_financeiras FROM authenticated'), 'Mutações diretas em movimentacoes_financeiras são revogadas');
+  assert(migrationContent.includes('REVOKE INSERT, UPDATE, DELETE ON public.auditoria_financeira FROM authenticated'), 'Mutações diretas em auditoria_financeira são revogadas');
+
+  // 3. Testes de Integridade no Hook Frontend useFinancialData.ts
+  console.log('\n[3] Testes de Integridade em useFinancialData.ts');
+  const financialHookPath = path.join(process.cwd(), 'src', 'hooks', 'data', 'useFinancialData.ts');
+  const financialHookContent = fs.readFileSync(financialHookPath, 'utf-8');
+
+  assert(financialHookContent.includes("rpc('salvar_conta_financeira'"), 'useFinancialData.ts utiliza RPC salvar_conta_financeira');
+  assert(financialHookContent.includes("rpc('excluir_conta_financeira'"), 'useFinancialData.ts utiliza RPC excluir_conta_financeira');
+  assert(financialHookContent.includes("rpc('salvar_lancamento_financeiro'"), 'useFinancialData.ts utiliza RPC salvar_lancamento_financeiro');
+  assert(financialHookContent.includes("rpc('cancelar_lancamento_financeiro'"), 'useFinancialData.ts utiliza RPC cancelar_lancamento_financeiro');
+  assert(financialHookContent.includes("rpc('conciliar_lancamento_financeiro'"), 'useFinancialData.ts utiliza RPC conciliar_lancamento_financeiro');
+  assert(financialHookContent.includes("rpc('excluir_lancamento_financeiro'"), 'useFinancialData.ts utiliza RPC excluir_lancamento_financeiro');
+  assert(!financialHookContent.includes(".update({ status: 'Cancelado' })"), 'useFinancialData.ts NÃO faz update direto de status Cancelado');
+  assert(!financialHookContent.includes(".update({ is_deleted: true })"), 'useFinancialData.ts NÃO faz update direto de is_deleted');
 
   // 4. Teste de Resolução de Tenant
   console.log('\n[4] Teste de Resolução de Tenant (getActiveTenantId)');

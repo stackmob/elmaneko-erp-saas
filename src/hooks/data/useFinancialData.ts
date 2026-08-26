@@ -49,7 +49,6 @@ export function useAddContaFinanceira() {
     mutationFn: async (nova: Omit<FinancialAccount, 'id'>) => {
       const empresaId = getActiveTenantId();
       const payload = {
-        empresa_id: empresaId,
         nome: nova.nome,
         tipo: nova.tipo,
         banco: nova.banco,
@@ -58,20 +57,22 @@ export function useAddContaFinanceira() {
         digito: nova.digito,
         bandeira: nova.bandeira,
         limite: nova.limite,
-        limite_disponivel: nova.limiteDisponivel,
-        dia_fechamento: nova.diaFechamento,
-        dia_vencimento: nova.diaVencimento,
-        saldo_inicial: nova.saldoInicial,
-        saldo_atual: nova.saldoAtual,
+        limiteDisponivel: nova.limiteDisponivel,
+        diaFechamento: nova.diaFechamento,
+        diaVencimento: nova.diaVencimento,
+        saldoInicial: nova.saldoInicial,
         situacao: nova.situacao,
         observacoes: nova.observacoes
       };
 
-      const { data, error } = await supabase.from('contas_financeiras').insert([payload]).select().single();
+      const { data, error } = await supabase.rpc('salvar_conta_financeira', {
+        p_empresa_id: empresaId,
+        p_conta: payload
+      });
+
       if (error) {
-        const offlineItem: FinancialAccount = { ...nova, id: crypto.randomUUID() };
-        addToLocalCache('contas_financeiras', offlineItem);
-        return offlineItem;
+        console.error("RPC salvar_conta_financeira falhou:", error.message);
+        throw error;
       }
 
       const created: FinancialAccount = {
@@ -104,7 +105,9 @@ export function useUpdateContaFinanceira() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (conta: FinancialAccount) => {
+      const empresaId = getActiveTenantId();
       const payload = {
+        id: conta.id,
         nome: conta.nome,
         tipo: conta.tipo,
         banco: conta.banco,
@@ -113,17 +116,44 @@ export function useUpdateContaFinanceira() {
         digito: conta.digito,
         bandeira: conta.bandeira,
         limite: conta.limite,
-        limite_disponivel: conta.limiteDisponivel,
-        dia_fechamento: conta.diaFechamento,
-        dia_vencimento: conta.diaVencimento,
-        saldo_inicial: conta.saldoInicial,
-        saldo_atual: conta.saldoAtual,
+        limiteDisponivel: conta.limiteDisponivel,
+        diaFechamento: conta.diaFechamento,
+        diaVencimento: conta.diaVencimento,
         situacao: conta.situacao,
         observacoes: conta.observacoes
       };
 
       if (isValidUuid(conta.id)) {
-        await supabase.from('contas_financeiras').update(payload).eq('id', conta.id);
+        const { data, error } = await supabase.rpc('salvar_conta_financeira', {
+          p_empresa_id: empresaId,
+          p_conta: payload
+        });
+
+        if (error) {
+          console.error("RPC salvar_conta_financeira falhou:", error.message);
+          throw error;
+        }
+
+        const updated: FinancialAccount = {
+          id: data.id,
+          nome: data.nome,
+          tipo: data.tipo,
+          banco: data.banco,
+          agencia: data.agencia,
+          conta: data.conta,
+          digito: data.digito,
+          bandeira: data.bandeira,
+          limite: Number(data.limite),
+          limiteDisponivel: Number(data.limite_disponivel),
+          diaFechamento: data.dia_fechamento,
+          diaVencimento: data.dia_vencimento,
+          saldoInicial: Number(data.saldo_inicial),
+          saldoAtual: Number(data.saldo_atual),
+          situacao: data.situacao,
+          observacoes: data.observacoes
+        };
+        addToLocalCache('contas_financeiras', updated);
+        return updated;
       }
 
       addToLocalCache('contas_financeiras', conta);
@@ -137,8 +167,16 @@ export function useDeleteContaFinanceira() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const empresaId = getActiveTenantId();
       if (isValidUuid(id)) {
-        await supabase.from('contas_financeiras').delete().eq('id', id);
+        const { error } = await supabase.rpc('excluir_conta_financeira', {
+          p_empresa_id: empresaId,
+          p_conta_id: id
+        });
+        if (error) {
+          console.error("RPC excluir_conta_financeira falhou:", error.message);
+          throw error;
+        }
       }
       removeFromLocalCache('contas_financeiras', id);
       return id;
@@ -392,34 +430,36 @@ export function useAddLancamentoFinanceiro() {
     mutationFn: async (novo: Omit<FinancialEntry, 'id'>) => {
       const empresaId = getActiveTenantId();
       const payload = {
-        empresa_id: empresaId,
-        numero_documento: novo.numeroDocumento,
+        numeroDocumento: novo.numeroDocumento,
         tipo: novo.tipo,
         origem: novo.origem,
-        origem_id: isValidUuid(novo.origemId) ? novo.origemId : null,
-        cliente_id: isValidUuid(novo.clienteId) ? novo.clienteId : null,
+        origemId: isValidUuid(novo.origemId) ? novo.origemId : null,
+        clienteId: isValidUuid(novo.clienteId) ? novo.clienteId : null,
         fornecedor: novo.fornecedor,
-        data_emissao: novo.dataEmissao,
-        data_vencimento: novo.dataVencimento,
-        valor_bruto: novo.valorBruto,
+        dataEmissao: novo.dataEmissao,
+        dataVencimento: novo.dataVencimento,
+        valorBruto: novo.valorBruto,
         desconto: novo.desconto,
         acrescimo: novo.acrescimo,
-        valor_liquido: novo.valorLiquido,
-        forma_pagamento: novo.formaPagamento,
-        conta_financeira_id: isValidUuid(novo.contaFinanceiraId) ? novo.contaFinanceiraId : null,
-        categoria_id: isValidUuid(novo.categoriaId) ? novo.categoriaId : null,
-        centro_custo_id: isValidUuid(novo.centroCustoId) ? novo.centroCustoId : null,
-        parcela_atual: novo.parcelaAtual,
-        total_parcelas: novo.totalParcelas,
+        valorLiquido: novo.valorLiquido,
+        formaPagamento: novo.formaPagamento,
+        contaFinanceiraId: isValidUuid(novo.contaFinanceiraId) ? novo.contaFinanceiraId : null,
+        categoriaId: isValidUuid(novo.categoriaId) ? novo.categoriaId : null,
+        centroCustoId: isValidUuid(novo.centroCustoId) ? novo.centroCustoId : null,
+        parcelaAtual: novo.parcelaAtual,
+        totalParcelas: novo.totalParcelas,
         status: novo.status,
         observacoes: novo.observacoes
       };
 
-      const { data, error } = await supabase.from('lancamentos_financeiros').insert([payload]).select().single();
+      const { data, error } = await supabase.rpc('salvar_lancamento_financeiro', {
+        p_empresa_id: empresaId,
+        p_lancamento: payload
+      });
+
       if (error) {
-        const offlineItem: FinancialEntry = { ...novo, id: crypto.randomUUID() };
-        addToLocalCache('lancamentos_financeiros', offlineItem);
-        return offlineItem;
+        console.error("RPC salvar_lancamento_financeiro falhou:", error.message);
+        throw error;
       }
 
       const created: FinancialEntry = {
@@ -471,12 +511,23 @@ export function useLiquidarLancamento() {
 export function useCancelLancamento() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (param: string | { id: string; motivo?: string }) => {
       const empresaId = getActiveTenantId();
-      if (isValidUuid(id)) {
-        await supabase.from('lancamentos_financeiros').update({ status: 'Cancelado' }).eq('id', id).eq('empresa_id', empresaId);
+      const lancamentoId = typeof param === 'string' ? param : param.id;
+      const motivoCancel = typeof param === 'object' ? param.motivo : undefined;
+
+      if (isValidUuid(lancamentoId)) {
+        const { error } = await supabase.rpc('cancelar_lancamento_financeiro', {
+          p_empresa_id: empresaId,
+          p_lancamento_id: lancamentoId,
+          p_motivo: motivoCancel || null
+        });
+        if (error) {
+          console.error("RPC cancelar_lancamento_financeiro falhou:", error.message);
+          throw error;
+        }
       }
-      return id;
+      return lancamentoId;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros'] }),
   });
@@ -486,11 +537,17 @@ export function useConciliateLancamento() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, tipoConciliacao }: { id: string; tipoConciliacao: string }) => {
+      const empresaId = getActiveTenantId();
       if (isValidUuid(id)) {
-        const { error } = await supabase.from('lancamentos_financeiros').update({
-          status: 'Conciliado', conciliado: true, tipo_conciliacao: tipoConciliacao,
-        }).eq('id', id);
-        if (error) throw error;
+        const { error } = await supabase.rpc('conciliar_lancamento_financeiro', {
+          p_empresa_id: empresaId,
+          p_lancamento_id: id,
+          p_tipo_conciliacao: tipoConciliacao
+        });
+        if (error) {
+          console.error("RPC conciliar_lancamento_financeiro falhou:", error.message);
+          throw error;
+        }
       }
       return id;
     },
@@ -502,8 +559,16 @@ export function useDeleteLancamento() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const empresaId = getActiveTenantId();
       if (isValidUuid(id)) {
-        await supabase.from('lancamentos_financeiros').update({ is_deleted: true }).eq('id', id);
+        const { error } = await supabase.rpc('excluir_lancamento_financeiro', {
+          p_empresa_id: empresaId,
+          p_lancamento_id: id
+        });
+        if (error) {
+          console.error("RPC excluir_lancamento_financeiro falhou:", error.message);
+          throw error;
+        }
       }
       removeFromLocalCache('lancamentos_financeiros', id);
       return id;
@@ -726,8 +791,25 @@ export function useSyncFinancialEntries() {
           });
         }
 
-        if (newEntries.length > 0) {
-          await supabase.from('lancamentos_financeiros').insert(newEntries);
+        for (const entry of newEntries) {
+          await supabase.rpc('salvar_lancamento_financeiro', {
+            p_empresa_id: empresaId,
+            p_lancamento: {
+              numeroDocumento: entry.numero_documento,
+              tipo: entry.tipo,
+              origem: entry.origem,
+              origemId: entry.origem_id,
+              clienteId: entry.cliente_id,
+              fornecedor: entry.fornecedor,
+              dataEmissao: entry.data_emissao,
+              dataVencimento: entry.data_vencimento,
+              valorBruto: entry.valor_bruto,
+              valorLiquido: entry.valor_liquido,
+              formaPagamento: entry.forma_pagamento,
+              status: entry.status,
+              observacoes: entry.observacoes
+            }
+          });
         }
 
         return { total: newEntries.length, syncedSales: newEntries.filter(entry => entry.origem === 'Venda').length, syncedPurchases: newEntries.filter(entry => entry.origem === 'Compra').length };
