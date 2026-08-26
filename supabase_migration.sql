@@ -139,6 +139,13 @@ CREATE TABLE IF NOT EXISTS produto_materiais (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Índices de Alta Performance para Produtos & Fichas Técnicas (BOM)
+CREATE INDEX IF NOT EXISTS idx_produtos_empresa_created ON public.produtos (empresa_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_produto_materiais_empresa_produto ON public.produto_materiais (empresa_id, produto_id);
+CREATE INDEX IF NOT EXISTS idx_impressoras_empresa_created ON public.impressoras (empresa_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_filamentos_empresa_created ON public.filamentos (empresa_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tarifas_energia_empresa ON public.tarifas_energia (empresa_id);
+
 -- 9. PRODUÇÕES (Ordens de Produção)
 CREATE TABLE IF NOT EXISTS producoes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

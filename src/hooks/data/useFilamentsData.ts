@@ -10,6 +10,8 @@ import { enqueueOfflineOperation, isNetworkFailure } from '../../utils/offlineQu
 export function useFilamentos() {
   return useQuery({
     queryKey: getTenantQueryKey('filamentos'),
+    initialData: () => getLocalCache<Filament>('filamentos'),
+    placeholderData: (prev) => prev,
     queryFn: async () => {
       const { data, error } = await supabase.from('filamentos').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
       if (error) throw error;

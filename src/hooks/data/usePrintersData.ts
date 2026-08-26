@@ -9,6 +9,8 @@ import {
 export function useImpressoras() {
   return useQuery({
     queryKey: getTenantQueryKey('impressoras'),
+    initialData: () => getLocalCache<Printer>('impressoras'),
+    placeholderData: (prev) => prev,
     queryFn: async () => {
       const { data, error } = await supabase.from('impressoras').select('*').eq('empresa_id', getActiveTenantId()).order('created_at', { ascending: false });
       if (error) throw error;
@@ -110,6 +112,8 @@ export function useDeleteImpressora() {
 export function useTarifasEnergia() {
   return useQuery({
     queryKey: getTenantQueryKey('tarifas_energia'),
+    initialData: () => getLocalCache<EnergyTariff>('tarifas_energia'),
+    placeholderData: (prev) => prev,
     queryFn: async () => {
       const { data, error } = await supabase.from('tarifas_energia').select('*').eq('empresa_id', getActiveTenantId()).order('data_inicio_vigencia', { ascending: false });
       if (error) throw error;

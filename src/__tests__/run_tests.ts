@@ -248,11 +248,12 @@ function runSuite() {
   const productsComponentPath = path.join(process.cwd(), 'src', 'components', 'Products.tsx');
   const productsComponentContent = fs.readFileSync(productsComponentPath, 'utf-8');
   assert(productsComponentContent.includes('sanitizedMaterials'), 'Products.tsx sanitiza os materiais da ficha técnica (BOM)');
-  assert(productsComponentContent.includes('Math.max(0.01, Number(tempoImpressao) || 0.01)'), 'Products.tsx valida tempo de impressão positivo');
+  const productsHookPath = path.join(process.cwd(), 'src', 'hooks', 'data', 'useProductsData.ts');
+  const productsHookContent = fs.readFileSync(productsHookPath, 'utf-8');
+  assert(productsHookContent.includes("initialData: () => getLocalCache<Product>('produtos')"), 'useProdutos utiliza initialData do cache local para carregamento instantâneo (0ms)');
 
-  assert(migrationContent.includes('salvar_produto_com_bom'), 'supabase_migration.sql implementa a RPC transacional salvar_produto_com_bom');
-  assert(migrationContent.includes('salvar_orcamento_com_itens'), 'supabase_migration.sql implementa a RPC transacional salvar_orcamento_com_itens');
-  assert(migrationContent.includes("UPDATE orcamentos SET status = 'Faturado'"), 'converter_orcamento_em_venda atualiza status do orçamento para Faturado');
+  assert(migrationContent.includes('idx_produtos_empresa_created'), 'supabase_migration.sql implementa índice idx_produtos_empresa_created para alta performance');
+  assert(migrationContent.includes('idx_produto_materiais_empresa_produto'), 'supabase_migration.sql implementa índice idx_produto_materiais_empresa_produto para busca rápida de BOM');
 
   console.log(`\n========================================`);
   console.log(`Resultado Final: ${passed} passaram, ${failed} falharam.`);

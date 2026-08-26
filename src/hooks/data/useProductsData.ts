@@ -24,6 +24,8 @@ function normalizeMaterials(materials: Product['materials'] = []) {
 export function useProdutos() {
   return useQuery({
     queryKey: getTenantQueryKey('produtos'),
+    initialData: () => getLocalCache<Product>('produtos'),
+    placeholderData: (prev) => prev,
     queryFn: async () => {
       const empresaId = getActiveTenantId();
       const [{ data: prods, error: pErr }, { data: matRows, error: matErr }] = await Promise.all([
