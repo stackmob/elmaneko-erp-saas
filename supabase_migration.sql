@@ -2028,8 +2028,10 @@ DECLARE
   v_table TEXT;
   v_rows JSONB;
   v_snapshot_empresa JSONB;
+  v_backup_checksum TEXT;
+  -- Auditoria Financeira é ESTRITAMENTE IMUTÁVEL e nunca é deletada durante restauração de dados operacionais
   v_delete_order TEXT[] := ARRAY[
-    'auditoria_financeira', 'movimentacoes_financeiras', 'transferencias_financeiras',
+    'movimentacoes_financeiras', 'transferencias_financeiras',
     'lancamentos_financeiros', 'movimentacoes_estoque', 'compras', 'vendas',
     'orcamento_itens', 'orcamentos', 'producoes', 'produto_materiais', 'produtos',
     'insumos', 'tarifas_energia', 'centros_custo', 'categorias_financeiras',
@@ -2040,15 +2042,20 @@ DECLARE
     'categorias_financeiras', 'centros_custo', 'insumos', 'produtos',
     'produto_materiais', 'orcamentos', 'vendas', 'compras', 'producoes',
     'orcamento_itens', 'lancamentos_financeiros', 'movimentacoes_estoque',
-    'movimentacoes_financeiras', 'transferencias_financeiras', 'auditoria_financeira'
+    'movimentacoes_financeiras', 'transferencias_financeiras'
   ];
 BEGIN
   IF auth.uid() IS NULL OR NOT public.is_empresa_admin(p_empresa_id) THEN
     RAISE EXCEPTION 'Apenas administradores podem restaurar backups.';
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM backups_empresa WHERE id = p_backup_id AND empresa_id = p_empresa_id AND status = 'ready') THEN
+  
+  SELECT checksum INTO v_backup_checksum FROM backups_empresa 
+  WHERE id = p_backup_id AND empresa_id = p_empresa_id AND status = 'ready';
+  
+  IF NOT FOUND THEN
     RAISE EXCEPTION 'Backup não encontrado ou indisponível.';
   END IF;
+  
   IF p_snapshot->>'version' <> '1' OR p_snapshot->>'empresaId' <> p_empresa_id::text OR jsonb_typeof(p_snapshot->'tables') <> 'object' THEN
     RAISE EXCEPTION 'Snapshot de backup inválido.';
   END IF;
@@ -2086,6 +2093,23 @@ BEGIN
   END LOOP;
 
   UPDATE restauracoes_backup SET status = 'success', completed_at = now(), details = 'Restauração concluída em transação única.' WHERE id = v_restore_id;
+
+  -- Registrar evento imutável de auditoria na trilha permanente
+  PERFORM public.registrar_auditoria_financeira_interna(
+    p_empresa_id,
+    'Restauracao_Backup',
+    'Backup',
+    p_backup_id,
+    'Restauração de snapshot operacional solicitada por ' || auth.uid()::text,
+    jsonb_build_object(
+      'backup_id', p_backup_id,
+      'restore_id', v_restore_id,
+      'checksum', v_backup_checksum,
+      'tabelas_restauradas', v_insert_order,
+      'timestamp', now()
+    )::text
+  );
+
   RETURN v_restore_id;
 END;
 $$;

@@ -57,6 +57,7 @@ function runSuite() {
   assert(migrationContent.includes('REVOKE INSERT, UPDATE, DELETE ON public.auditoria_financeira FROM PUBLIC, authenticated, anon'), 'Mutações diretas em auditoria_financeira são revogadas');
   assert(migrationContent.includes('registrar_auditoria_financeira_interna'), 'supabase_migration.sql implementa registrar_auditoria_financeira_interna');
   assert(migrationContent.includes('user_id UUID REFERENCES auth.users(id)'), 'auditoria_financeira armazena o user_id autenticado no banco');
+  assert(migrationContent.includes("'Restauracao_Backup'"), 'restaurar_backup_empresa registra evento imutável de restauração na auditoria');
 
   // 3. Testes de Integridade no Hook Frontend useFinancialData.ts
   console.log('\n[3] Testes de Integridade em useFinancialData.ts');
