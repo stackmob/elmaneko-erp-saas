@@ -84,6 +84,12 @@ export interface BOMItem {
   quantidadeGrams: number;
 }
 
+export interface GlobalPricingConfig {
+  margemLucroPadrao: number; // % profit margin default (e.g. 100)
+  outrasDespesasPadrao: number; // R$ default (e.g. 0.00)
+  valorMaoDeObraPadrao: number; // R$ default (e.g. 30.00)
+}
+
 export interface Product {
   id: string;
   nome: string;
@@ -102,6 +108,9 @@ export interface Product {
   margemLucro?: number; // % profit margin
   overPercent?: number; // % overhead / extra markup
   precoVenda?: number; // Final selling price in R$
+  hasCustomMargemLucro?: boolean; // Flag identifying specific product override
+  hasCustomMaoDeObra?: boolean; // Flag identifying specific product override
+  hasCustomOutrasDespesas?: boolean; // Flag identifying specific product override
   observacoes?: string;
 }
 

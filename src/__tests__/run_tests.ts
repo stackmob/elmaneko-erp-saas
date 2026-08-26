@@ -1,5 +1,7 @@
 import { formatDateBR } from '../utils/formatters.js';
 import { getActiveTenantId } from '../utils/storage.js';
+import { calculateProductPricing, DEFAULT_GLOBAL_PRICING_CONFIG } from '../utils/businessCalculations.js';
+import { Filament, Printer, EnergyTariff } from '../types.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -50,6 +52,118 @@ function runSuite() {
   }
   assert(throwsWithoutTenant, 'getActiveTenantId lança exceção explícita se nenhuma empresa estiver selecionada');
 
+  // 5. Testes da Rotina Centralizada de Cálculo de Precificação
+  console.log('\n[5] Testes da Rotina Centralizada de Cálculo de Precificação');
+  const mockFilaments: Filament[] = [
+    {
+      id: 'f1',
+      nome: 'PLA Premium Preto',
+      tipo: 'PLA',
+      marca: 'Esun',
+      cor: 'Preto',
+      pesoTotal: 1000,
+      quantidadeDisponivel: 1000,
+      valorCompra: 120, // R$ 0.12 / g
+      dataCompra: '2026-01-01',
+      fornecedor: 'Filamentos BR'
+    }
+  ];
+
+  const mockPrinters: Printer[] = [
+    {
+      id: 'p1',
+      nome: 'Bambu Lab X1C',
+      marca: 'Bambu Lab',
+      modelo: 'X1C',
+      potenciaWatts: 350,
+      status: 'Ativa'
+    }
+  ];
+
+  const mockTariffs: EnergyTariff[] = [
+    {
+      id: 't1',
+      dataInicio: '2026-01-01',
+      valorKwh: 1.00 // R$ 1.00 / kWh
+    }
+  ];
+
+  const customGlobalConfig = {
+    margemLucroPadrao: 100, // 100%
+    outrasDespesasPadrao: 5.00,
+    valorMaoDeObraPadrao: 20.00
+  };
+
+  // Teste 5.1: Cálculo com Herança Global (Sem Exceção do Produto)
+  // BOM: 100g * R$ 0.12/g = R$ 12.00
+  // Energia: (350W * 4h / 1000) * R$ 1.00 = R$ 1.40
+  // Mão de Obra (Global): R$ 20.00
+  // Outras Despesas (Global): R$ 5.00
+  // Custo Total = 12 + 1.40 + 20 + 5 = R$ 38.40
+  // Preço (Margem 100%): 38.40 * 2.0 = R$ 76.80
+  const resultGlobal = calculateProductPricing({
+    materials: [{ tipoFilamento: 'PLA', filamentoId: 'f1', quantidadeGrams: 100 }],
+    filaments: mockFilaments,
+    tempoImpressao: 4,
+    impressoraPadraoId: 'p1',
+    printers: mockPrinters,
+    tariffs: mockTariffs,
+    globalConfig: customGlobalConfig
+  });
+
+  assert(resultGlobal.costBOM === 12.00, 'Calcula custo dos materiais (BOM) corretamente');
+  assert(resultGlobal.costEnergy === 1.40, 'Calcula custo de energia elétrica corretamente');
+  assert(resultGlobal.costTotal === 38.40, 'Soma o custo total de manufatura corretamente com herança global');
+  assert(resultGlobal.suggestedPrice === 76.80, 'Calcula preço final sugerido com margem padrão global de 100%');
+  assert(resultGlobal.isUsingGlobalMargin === true, 'Identifica herança da margem global');
+  assert(resultGlobal.isUsingGlobalMaoDeObra === true, 'Identifica herança da mão de obra global');
+  assert(resultGlobal.isUsingGlobalOutrasDespesas === true, 'Identifica herança de outras despesas globais');
+
+  // Teste 5.2: Cálculo com Exceções Específicas no Produto
+  // Mão de obra customizada: R$ 40.00
+  // Margem customizada: 150%
+  // Custo Total = 12 + 1.40 + 40 + 5 = R$ 58.40
+  // Preço (Margem 150%): 58.40 * 2.5 = R$ 146.00
+  const resultCustom = calculateProductPricing({
+    materials: [{ tipoFilamento: 'PLA', filamentoId: 'f1', quantidadeGrams: 100 }],
+    filaments: mockFilaments,
+    tempoImpressao: 4,
+    impressoraPadraoId: 'p1',
+    printers: mockPrinters,
+    tariffs: mockTariffs,
+    hasCustomMargemLucro: true,
+    margemLucro: 150,
+    hasCustomMaoDeObra: true,
+    valorMaoDeObra: 40.00,
+    globalConfig: customGlobalConfig
+  });
+
+  assert(resultCustom.costTotal === 58.40, 'Aplica exceção de mão de obra do produto no custo total');
+  assert(resultCustom.suggestedPrice === 146.00, 'Aplica exceção de margem de lucro do produto no preço final');
+  assert(resultCustom.isUsingGlobalMargin === false, 'Reconhece exceção de margem de lucro');
+  assert(resultCustom.isUsingGlobalMaoDeObra === false, 'Reconhece exceção de mão de obra');
+  assert(resultCustom.isUsingGlobalOutrasDespesas === true, 'Mantém herança global para campo não sobrescrito');
+
+  // Teste 5.3: Arredondamento Monetário e Não-Negatividade
+  const resultNegative = calculateProductPricing({
+    materials: [{ tipoFilamento: 'PLA', filamentoId: 'f1', quantidadeGrams: 33.33 }],
+    filaments: mockFilaments,
+    tempoImpressao: -5, // Inválido
+    impressoraPadraoId: 'p1',
+    printers: mockPrinters,
+    tariffs: mockTariffs,
+    margemLucro: -50, // Inválido
+    valorMaoDeObra: -10, // Inválido
+    hasCustomMargemLucro: true,
+    hasCustomMaoDeObra: true,
+    globalConfig: customGlobalConfig
+  });
+
+  assert(resultNegative.costEnergy >= 0, 'Rejeita tempo de impressão negativo');
+  assert(resultNegative.margemLucro >= 0, 'Rejeita margem de lucro negativa');
+  assert(resultNegative.valorMaoDeObra >= 0, 'Rejeita mão de obra negativa');
+  assert(Number.isInteger(Math.round(resultNegative.suggestedPrice * 100)), 'Garante arredondamento exato em 2 casas decimais');
+
   console.log(`\n========================================`);
   console.log(`Resultado Final: ${passed} passaram, ${failed} falharam.`);
   console.log(`========================================\n`);
@@ -60,3 +174,4 @@ function runSuite() {
 }
 
 runSuite();
+

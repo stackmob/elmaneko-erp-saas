@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Product, BOMItem, Printer, Filament, EnergyTariff, FilamentType } from '../types';
-import { Plus, Search, ClipboardList, DollarSign, Sliders, Trash2, X, Image as ImageIcon, FileText, ExternalLink, Paperclip, Upload, PackageCheck } from 'lucide-react';
+import { Plus, Search, ClipboardList, DollarSign, Sliders, Trash2, X, Image as ImageIcon, FileText, ExternalLink, Paperclip, Upload, PackageCheck, RotateCcw, Sparkles } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { DataList, ColumnDef } from './ui/DataList';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
 import ConfirmDialog from './ui/ConfirmDialog';
 import { Modal } from './ui/Modal';
-import { activeEnergyRate, bomCost, highestFilamentRate } from '../utils/businessCalculations';
+import { activeEnergyRate, bomCost, highestFilamentRate, calculateProductPricing, getGlobalPricingConfig } from '../utils/businessCalculations';
 
 export default function Products() {
   const { useProdutos, useImpressoras, useFilamentos, useTarifas, useAddProduto, useUpdateProduto, useDeleteProduto } = useData();
@@ -45,6 +45,11 @@ export default function Products() {
   const [overPercent, setOverPercent] = useState(0); // % Overhead / Extra
   const [precoVenda, setPrecoVenda] = useState(0); // Selling price in R$
   const [isCustomPriceManual, setIsCustomPriceManual] = useState(false);
+
+  // Custom product overrides flags
+  const [hasCustomMargemLucro, setHasCustomMargemLucro] = useState(false);
+  const [hasCustomMaoDeObra, setHasCustomMaoDeObra] = useState(false);
+  const [hasCustomOutrasDespesas, setHasCustomOutrasDespesas] = useState(false);
 
   // BOM items list in the form
   const [formMaterials, setFormMaterials] = useState<BOMItem[]>([
@@ -129,6 +134,7 @@ export default function Products() {
   };
 
   const handleOpenAddModal = () => {
+    const globalCfg = getGlobalPricingConfig();
     setEditingProduct(null);
     setNome('');
     setCategoria('Decoração');
@@ -141,25 +147,42 @@ export default function Products() {
     const defaultPrinter = printers.length > 0 ? printers[0].id : '';
     setImpressoraPadraoId(defaultPrinter);
     setTempoAcabamento(0.5);
-    setValorMaoDeObra(30.00);
-    setOutrasDespesas(0.00);
+    setValorMaoDeObra(globalCfg.valorMaoDeObraPadrao);
+    setOutrasDespesas(globalCfg.outrasDespesasPadrao);
+    setMarginPercentage(globalCfg.margemLucroPadrao);
+    setHasCustomMargemLucro(false);
+    setHasCustomMaoDeObra(false);
+    setHasCustomOutrasDespesas(false);
     setObservacoes('');
+    
     const defaultMaterials = [{ tipoFilamento: 'PLA' as FilamentType, filamentoId: 'any', quantidadeGrams: 100 }];
     setFormMaterials(defaultMaterials);
-    
-    const initBOM = defaultMaterials.reduce((acc, item) => acc + (item.quantidadeGrams * getMaxCostPerGram(item.tipoFilamento)), 0);
-    const prObj = printers.find(p => p.id === defaultPrinter);
-    const initEnergy = prObj ? ((prObj.potenciaWatts * 4) / 1000) * currentTariff : 0;
-    const initTotal = initBOM + initEnergy + 30.00 + 0.00;
-    
-    setMarginPercentage(100);
     setOverPercent(0);
-    setPrecoVenda(initTotal * 2);
+
+    const calc = calculateProductPricing({
+      materials: defaultMaterials,
+      filaments,
+      tempoImpressao: 4,
+      impressoraPadraoId: defaultPrinter,
+      printers,
+      tariffs,
+      margemLucro: globalCfg.margemLucroPadrao,
+      outrasDespesas: globalCfg.outrasDespesasPadrao,
+      valorMaoDeObra: globalCfg.valorMaoDeObraPadrao,
+      overPercent: 0,
+      hasCustomMargemLucro: false,
+      hasCustomMaoDeObra: false,
+      hasCustomOutrasDespesas: false,
+      globalConfig: globalCfg
+    });
+    
+    setPrecoVenda(calc.suggestedPrice);
     setIsCustomPriceManual(false);
     setIsModalOpen(true);
   };
 
   const handleOpenEditModal = (p: Product) => {
+    const globalCfg = getGlobalPricingConfig();
     setEditingProduct(p);
     setNome(p.nome);
     setCategoria(p.categoria);
@@ -171,41 +194,132 @@ export default function Products() {
     setTempoImpressao(p.tempoImpressao);
     setImpressoraPadraoId(p.impressoraPadraoId);
     setTempoAcabamento(p.tempoAcabamento || 0);
-    setValorMaoDeObra(p.valorMaoDeObra);
-    setOutrasDespesas(p.outrasDespesas || 0);
+    
+    const customMargem = Boolean(p.hasCustomMargemLucro);
+    const customMao = Boolean(p.hasCustomMaoDeObra);
+    const customOutras = Boolean(p.hasCustomOutrasDespesas);
+
+    setHasCustomMargemLucro(customMargem);
+    setHasCustomMaoDeObra(customMao);
+    setHasCustomOutrasDespesas(customOutras);
+
+    const loadedMargin = customMargem && p.margemLucro !== undefined ? p.margemLucro : globalCfg.margemLucroPadrao;
+    const loadedMao = customMao ? p.valorMaoDeObra : globalCfg.valorMaoDeObraPadrao;
+    const loadedOutras = customOutras && p.outrasDespesas !== undefined ? p.outrasDespesas : globalCfg.outrasDespesasPadrao;
+    const loadedOver = p.overPercent !== undefined ? p.overPercent : 0;
+
+    setMarginPercentage(loadedMargin);
+    setValorMaoDeObra(loadedMao);
+    setOutrasDespesas(loadedOutras);
+    setOverPercent(loadedOver);
     setObservacoes(p.observacoes || '');
     
     const mats = Array.isArray(p.materials) && p.materials.length > 0 
       ? p.materials.map(m => ({ ...m })) 
       : [{ tipoFilamento: 'PLA' as FilamentType, filamentoId: 'any', quantidadeGrams: 100 }];
     setFormMaterials(mats);
-    
-    const loadedMargin = p.margemLucro !== undefined ? p.margemLucro : 100;
-    const loadedOver = p.overPercent !== undefined ? p.overPercent : 0;
-    setMarginPercentage(loadedMargin);
-    setOverPercent(loadedOver);
 
-    const bCost = calculateBOMCost(mats);
-    const eCost = calculateEnergyCost(p.tempoImpressao, p.impressoraPadraoId);
-    const tCost = bCost + eCost + p.valorMaoDeObra + (p.outrasDespesas || 0);
+    const calc = calculateProductPricing({
+      materials: mats,
+      filaments,
+      tempoImpressao: p.tempoImpressao,
+      impressoraPadraoId: p.impressoraPadraoId,
+      printers,
+      tariffs,
+      margemLucro: loadedMargin,
+      outrasDespesas: loadedOutras,
+      valorMaoDeObra: loadedMao,
+      overPercent: loadedOver,
+      hasCustomMargemLucro: customMargem,
+      hasCustomMaoDeObra: customMao,
+      hasCustomOutrasDespesas: customOutras,
+      globalConfig: globalCfg
+    });
 
     if (p.precoVenda && p.precoVenda > 0) {
       setPrecoVenda(p.precoVenda);
       setIsCustomPriceManual(true);
     } else {
-      setPrecoVenda(tCost * (1 + (loadedMargin + loadedOver) / 100));
+      setPrecoVenda(calc.suggestedPrice);
       setIsCustomPriceManual(false);
     }
     setIsModalOpen(true);
+  };
+
+  const handleUseGlobalDefaults = () => {
+    const globalCfg = getGlobalPricingConfig();
+    setMarginPercentage(globalCfg.margemLucroPadrao);
+    setValorMaoDeObra(globalCfg.valorMaoDeObraPadrao);
+    setOutrasDespesas(globalCfg.outrasDespesasPadrao);
+    setHasCustomMargemLucro(false);
+    setHasCustomMaoDeObra(false);
+    setHasCustomOutrasDespesas(false);
+    setIsCustomPriceManual(false);
+
+    const calc = calculateProductPricing({
+      materials: formMaterials,
+      filaments,
+      tempoImpressao,
+      impressoraPadraoId,
+      printers,
+      tariffs,
+      margemLucro: globalCfg.margemLucroPadrao,
+      outrasDespesas: globalCfg.outrasDespesasPadrao,
+      valorMaoDeObra: globalCfg.valorMaoDeObraPadrao,
+      overPercent,
+      hasCustomMargemLucro: false,
+      hasCustomMaoDeObra: false,
+      hasCustomOutrasDespesas: false,
+      globalConfig: globalCfg
+    });
+    setPrecoVenda(calc.suggestedPrice);
+    showToast('Configurações herdadas do padrão global do sistema com sucesso!', 'info');
+  };
+
+  const handleRecalculateSingleProduct = () => {
+    const globalCfg = getGlobalPricingConfig();
+    const calc = calculateProductPricing({
+      materials: formMaterials,
+      filaments,
+      tempoImpressao,
+      impressoraPadraoId,
+      printers,
+      tariffs,
+      margemLucro: hasCustomMargemLucro ? marginPercentage : globalCfg.margemLucroPadrao,
+      outrasDespesas: hasCustomOutrasDespesas ? outrasDespesas : globalCfg.outrasDespesasPadrao,
+      valorMaoDeObra: hasCustomMaoDeObra ? valorMaoDeObra : globalCfg.valorMaoDeObraPadrao,
+      overPercent,
+      hasCustomMargemLucro,
+      hasCustomMaoDeObra,
+      hasCustomOutrasDespesas,
+      globalConfig: globalCfg
+    });
+
+    setPrecoVenda(calc.suggestedPrice);
+    setIsCustomPriceManual(false);
+    showToast(`Preço recalculado: R$ ${calc.suggestedPrice.toFixed(2)}`, 'success');
   };
 
   const handleAddBOMItem = () => {
     const list = [...formMaterials, { tipoFilamento: 'PLA' as FilamentType, filamentoId: 'any', quantidadeGrams: 50 }];
     setFormMaterials(list);
     if (!isCustomPriceManual) {
-      const newBOM = calculateBOMCost(list);
-      const newTot = newBOM + costEnergy + Number(valorMaoDeObra) + Number(outrasDespesas);
-      setPrecoVenda(newTot * (1 + (marginPercentage + overPercent) / 100));
+      const calc = calculateProductPricing({
+        materials: list,
+        filaments,
+        tempoImpressao,
+        impressoraPadraoId,
+        printers,
+        tariffs,
+        margemLucro: marginPercentage,
+        outrasDespesas,
+        valorMaoDeObra,
+        overPercent,
+        hasCustomMargemLucro,
+        hasCustomMaoDeObra,
+        hasCustomOutrasDespesas
+      });
+      setPrecoVenda(calc.suggestedPrice);
     }
   };
 
@@ -214,9 +328,22 @@ export default function Products() {
     const list = formMaterials.filter((_, idx) => idx !== index);
     setFormMaterials(list);
     if (!isCustomPriceManual) {
-      const newBOM = calculateBOMCost(list);
-      const newTot = newBOM + costEnergy + Number(valorMaoDeObra) + Number(outrasDespesas);
-      setPrecoVenda(newTot * (1 + (marginPercentage + overPercent) / 100));
+      const calc = calculateProductPricing({
+        materials: list,
+        filaments,
+        tempoImpressao,
+        impressoraPadraoId,
+        printers,
+        tariffs,
+        margemLucro: marginPercentage,
+        outrasDespesas,
+        valorMaoDeObra,
+        overPercent,
+        hasCustomMargemLucro,
+        hasCustomMaoDeObra,
+        hasCustomOutrasDespesas
+      });
+      setPrecoVenda(calc.suggestedPrice);
     }
   };
 
@@ -232,9 +359,22 @@ export default function Products() {
     }
     setFormMaterials(list);
     if (!isCustomPriceManual) {
-      const newBOM = calculateBOMCost(list);
-      const newTot = newBOM + costEnergy + Number(valorMaoDeObra) + Number(outrasDespesas);
-      setPrecoVenda(newTot * (1 + (marginPercentage + overPercent) / 100));
+      const calc = calculateProductPricing({
+        materials: list,
+        filaments,
+        tempoImpressao,
+        impressoraPadraoId,
+        printers,
+        tariffs,
+        margemLucro: marginPercentage,
+        outrasDespesas,
+        valorMaoDeObra,
+        overPercent,
+        hasCustomMargemLucro,
+        hasCustomMaoDeObra,
+        hasCustomOutrasDespesas
+      });
+      setPrecoVenda(calc.suggestedPrice);
     }
   };
 
@@ -262,6 +402,9 @@ export default function Products() {
       margemLucro: Number(marginPercentage),
       overPercent: Number(overPercent),
       precoVenda: Number(precoVenda),
+      hasCustomMargemLucro,
+      hasCustomMaoDeObra,
+      hasCustomOutrasDespesas,
       observacoes
     };
 
@@ -799,7 +942,7 @@ export default function Products() {
                       <button
                         type="button"
                         onClick={() => handleRemoveBOMItem(index)}
-                        className="text-red-500 hover:text-red-400 p-1 bg-neutral-950 rounded border border-neutral-850 mt-4 cursor-pointer"
+                        className="text-red-500 hover:text-red-400 p-1 bg-neutral-950 rounded border border-neutral-850 cursor-pointer"
                         title="Remover Item"
                       >
                         <Trash2 size={14} />
@@ -810,12 +953,35 @@ export default function Products() {
               );
             })}
           </div>
+
           {/* REAL-TIME COST SUMMARY & MARGINS */}
           <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-4">
-            <div className="flex justify-between items-center border-b border-neutral-900 pb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-900 pb-2">
               <h4 className="text-xs font-bold text-orange-500 uppercase tracking-wider flex items-center gap-1.5">
                 <DollarSign size={14} /> Detalhamento de Custos, Margem & Over
               </h4>
+              
+              <div className="flex items-center gap-2">
+                {(hasCustomMargemLucro || hasCustomMaoDeObra || hasCustomOutrasDespesas) && (
+                  <button
+                    type="button"
+                    onClick={handleUseGlobalDefaults}
+                    className="px-2.5 py-1 bg-neutral-900 hover:bg-neutral-800 text-amber-400 border border-amber-500/30 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <RotateCcw size={12} />
+                    Usar Configuração Padrão
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleRecalculateSingleProduct}
+                  className="px-2.5 py-1 bg-orange-950/60 hover:bg-orange-900/60 text-orange-300 border border-orange-500/30 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <Sparkles size={12} />
+                  Recalcular Preço
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono text-xs">
@@ -830,12 +996,26 @@ export default function Products() {
               </div>
 
               <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
-                <span className="text-neutral-500 uppercase text-[9px] block">Mão de Obra</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-neutral-500 uppercase text-[9px]">Mão de Obra</span>
+                  {hasCustomMaoDeObra ? (
+                    <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded">Exceção</span>
+                  ) : (
+                    <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded">Global</span>
+                  )}
+                </div>
                 <strong className="text-white text-xs">R$ {Number(valorMaoDeObra).toFixed(2)}</strong>
               </div>
 
               <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
-                <span className="text-neutral-500 uppercase text-[9px] block">Outras Despesas</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-neutral-500 uppercase text-[9px]">Outras Despesas</span>
+                  {hasCustomOutrasDespesas ? (
+                    <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded">Exceção</span>
+                  ) : (
+                    <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded">Global</span>
+                  )}
+                </div>
                 <strong className="text-white text-xs">R$ {Number(outrasDespesas).toFixed(2)}</strong>
               </div>
 
@@ -847,15 +1027,30 @@ export default function Products() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
               <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800">
-                <label className="block text-neutral-400 text-[10px] uppercase tracking-wider font-semibold mb-1">
-                  Margem de Lucro %
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-neutral-400 text-[10px] uppercase tracking-wider font-semibold">
+                    Margem de Lucro %
+                  </label>
+                  {hasCustomMargemLucro ? (
+                    <span className="text-[9px] px-1.5 py-0.2 bg-amber-950 border border-amber-500/30 text-amber-300 rounded font-mono font-bold">
+                      Exceção
+                    </span>
+                  ) : (
+                    <span className="text-[9px] px-1.5 py-0.2 bg-neutral-950 border border-neutral-800 text-neutral-500 rounded font-mono">
+                      Padrão Global
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
                     step="1"
+                    min="0"
                     value={Number(marginPercentage.toFixed(1))}
-                    onChange={(e) => handleMarginChange(Number(e.target.value))}
+                    onChange={(e) => {
+                      setHasCustomMargemLucro(true);
+                      handleMarginChange(Number(e.target.value));
+                    }}
                     className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold"
                   />
                   <span className="text-neutral-400 font-mono text-xs">%</span>

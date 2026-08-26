@@ -18,7 +18,7 @@ import {
   LayoutDashboard, Users, Layers, ShoppingBag, Cpu, 
   Zap, FolderHeart, PlayCircle, FileCheck, DollarSign, LogOut, Shield, 
   AlertTriangle, Loader2, PanelLeftClose, PanelLeftOpen, Sparkles, Building2,
-  Menu, X, Package, Wallet, Sun, Moon
+  Menu, X, Package, Wallet, Sun, Moon, Sliders
 } from 'lucide-react';
 
 import { useAuth } from './context/AuthContext';
@@ -84,7 +84,7 @@ export default function App() {
     { id: 'commercial', label: 'Comercial & Vendas', icon: DollarSign },
     { id: 'procurement', label: 'Compras & Suprimentos', icon: ShoppingBag },
     { id: 'inventory', label: 'Estoque, Ativos & Produção', icon: Layers },
-    { id: 'tariffs', label: 'Tarifa de Energia', icon: Zap },
+    { id: 'tariffs', label: 'Custos & Preço de Venda', icon: Sliders },
     { id: 'company', label: 'Dados da Empresa', icon: Building2 },
     { id: 'backup', label: 'Segurança / Backup', icon: Shield },
   ];
