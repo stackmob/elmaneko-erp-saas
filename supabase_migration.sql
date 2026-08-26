@@ -415,21 +415,83 @@ AS $$
   );
 $$;
 
+CREATE OR REPLACE FUNCTION public.is_empresa_admin(target_empresa_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.usuario_empresa ue
+    WHERE ue.empresa_id = target_empresa_id AND ue.user_id = auth.uid() AND ue.role = 'admin'
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.can_manage_finance(target_empresa_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.usuario_empresa ue
+    WHERE ue.empresa_id = target_empresa_id AND ue.user_id = auth.uid() AND ue.role IN ('admin', 'financeiro')
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.can_manage_operations(target_empresa_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.usuario_empresa ue
+    WHERE ue.empresa_id = target_empresa_id AND ue.user_id = auth.uid() AND ue.role IN ('admin', 'operador', 'financeiro')
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.can_manage_commercial(target_empresa_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.usuario_empresa ue
+    WHERE ue.empresa_id = target_empresa_id AND ue.user_id = auth.uid() AND ue.role IN ('admin', 'financeiro', 'operador')
+  );
+$$;
+
 REVOKE ALL ON FUNCTION public.is_empresa_member(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.is_empresa_admin(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.can_manage_finance(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.can_manage_operations(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.can_manage_commercial(UUID) FROM PUBLIC;
+
 GRANT EXECUTE ON FUNCTION public.is_empresa_member(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_empresa_admin(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.can_manage_finance(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.can_manage_operations(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.can_manage_commercial(UUID) TO authenticated;
 
 -- Políticas Específicas para Empresas e Usuario_Empresa
 DROP POLICY IF EXISTS empresas_select_member ON empresas;
 DROP POLICY IF EXISTS empresas_insert_authenticated ON empresas;
 DROP POLICY IF EXISTS empresas_update_member ON empresas;
+DROP POLICY IF EXISTS empresas_update_admin ON empresas;
 CREATE POLICY empresas_select_member ON empresas FOR SELECT TO authenticated USING (public.is_empresa_member(id));
-CREATE POLICY empresas_update_member ON empresas FOR UPDATE TO authenticated USING (public.is_empresa_member(id)) WITH CHECK (public.is_empresa_member(id));
+CREATE POLICY empresas_update_admin ON empresas FOR UPDATE TO authenticated USING (public.is_empresa_admin(id)) WITH CHECK (public.is_empresa_admin(id));
 
 DROP POLICY IF EXISTS usuario_empresa_select_self ON usuario_empresa;
 DROP POLICY IF EXISTS usuario_empresa_insert_self ON usuario_empresa;
 CREATE POLICY usuario_empresa_select_self ON usuario_empresa FOR SELECT TO authenticated USING (user_id = auth.uid());
 
--- Membership is managed exclusively by server-side functions.  Allowing an
+-- Membership is managed exclusively by server-side functions. Allowing an
 -- authenticated user to insert its own row here would let it join any tenant
 -- whose UUID became known.
 REVOKE INSERT, UPDATE, DELETE ON public.usuario_empresa FROM authenticated;
@@ -476,7 +538,11 @@ $$;
 REVOKE ALL ON FUNCTION public.bootstrap_empresa_do_usuario() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.bootstrap_empresa_do_usuario() TO authenticated;
 
--- Aplicação Única e Estrita das Políticas Multi-Tenant em TODAS as Tabelas Operacionais e Financeiras
+-- ============================================================
+-- POLÍTICAS MULTI-TENANT GRANULARES POR AÇÃO E DOMÍNIO (RBAC)
+-- ============================================================
+
+-- 1. Leitura Universal para Membros em Todas as Tabelas Operacionais e Financeiras
 DO $$
 DECLARE tenant_table TEXT;
 BEGIN
@@ -489,7 +555,47 @@ BEGIN
   ] LOOP
     EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', tenant_table || '_policy', tenant_table);
     EXECUTE format('DROP POLICY IF EXISTS tenant_access ON public.%I', tenant_table);
-    EXECUTE format('CREATE POLICY tenant_access ON public.%I FOR ALL TO authenticated USING (public.is_empresa_member(empresa_id)) WITH CHECK (public.is_empresa_member(empresa_id))', tenant_table);
+    EXECUTE format('DROP POLICY IF EXISTS tenant_read_member ON public.%I', tenant_table);
+    EXECUTE format('CREATE POLICY tenant_read_member ON public.%I FOR SELECT TO authenticated USING (public.is_empresa_member(empresa_id))', tenant_table);
+  END LOOP;
+END $$;
+
+-- 2. Escrita Financeira Restrita (admin e financeiro)
+DO $$
+DECLARE fin_table TEXT;
+BEGIN
+  FOREACH fin_table IN ARRAY ARRAY[
+    'contas_financeiras', 'categorias_financeiras', 'centros_custo',
+    'lancamentos_financeiros', 'movimentacoes_financeiras',
+    'transferencias_financeiras', 'auditoria_financeira', 'compras'
+  ] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS tenant_financial_write ON public.%I', fin_table);
+    EXECUTE format('CREATE POLICY tenant_financial_write ON public.%I FOR ALL TO authenticated USING (public.can_manage_finance(empresa_id)) WITH CHECK (public.can_manage_finance(empresa_id))', fin_table);
+  END LOOP;
+END $$;
+
+-- 3. Escrita Operacional e Manufatura 3D (admin, operador e financeiro)
+DO $$
+DECLARE ops_table TEXT;
+BEGIN
+  FOREACH ops_table IN ARRAY ARRAY[
+    'filamentos', 'impressoras', 'tarifas_energia', 'produtos',
+    'produto_materiais', 'producoes', 'insumos', 'movimentacoes_estoque'
+  ] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS tenant_operations_write ON public.%I', ops_table);
+    EXECUTE format('CREATE POLICY tenant_operations_write ON public.%I FOR ALL TO authenticated USING (public.can_manage_operations(empresa_id)) WITH CHECK (public.can_manage_operations(empresa_id))', ops_table);
+  END LOOP;
+END $$;
+
+-- 4. Escrita Comercial (admin, financeiro e operador)
+DO $$
+DECLARE comm_table TEXT;
+BEGIN
+  FOREACH comm_table IN ARRAY ARRAY[
+    'clientes', 'orcamentos', 'orcamento_itens', 'vendas'
+  ] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS tenant_commercial_write ON public.%I', comm_table);
+    EXECUTE format('CREATE POLICY tenant_commercial_write ON public.%I FOR ALL TO authenticated USING (public.can_manage_commercial(empresa_id)) WITH CHECK (public.can_manage_commercial(empresa_id))', comm_table);
   END LOOP;
 END $$;
 
@@ -558,9 +664,9 @@ BEGIN
     RAISE EXCEPTION 'Lançamento financeiro não encontrado.';
   END IF;
 
-  -- Verifica tenant
-  IF NOT public.is_empresa_member(v_lanc.empresa_id) THEN
-    RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
+  -- Verifica permissão financeira na empresa
+  IF NOT public.can_manage_finance(v_lanc.empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Apenas administradores e financeiros podem liquidar lançamentos.';
   END IF;
 
   IF v_lanc.status IN ('Liquidado', 'Cancelado') OR v_lanc.is_deleted THEN
@@ -671,8 +777,8 @@ BEGIN
     RAISE EXCEPTION 'Conta de origem não encontrada.';
   END IF;
 
-  IF NOT public.is_empresa_member(v_c_orig.empresa_id) THEN
-    RAISE EXCEPTION 'Acesso negado para a conta de origem.';
+  IF NOT public.can_manage_finance(v_c_orig.empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Apenas administradores e financeiros podem realizar transferências.';
   END IF;
 
   -- 2. Lock e valida conta destino
@@ -750,8 +856,8 @@ BEGIN
     RAISE EXCEPTION 'Orçamento não encontrado.';
   END IF;
 
-  IF NOT public.is_empresa_member(v_orc.empresa_id) THEN
-    RAISE EXCEPTION 'Acesso negado ao orçamento.';
+  IF NOT public.can_manage_commercial(v_orc.empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Permissão comercial necessária para converter orçamentos.';
   END IF;
 
   SELECT id, numero INTO v_venda_id, v_num_venda
@@ -864,8 +970,8 @@ DECLARE
   v_venda_id UUID;
   v_numero TEXT;
 BEGIN
-  IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) THEN
-    RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
+  IF auth.uid() IS NULL OR NOT public.can_manage_commercial(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Permissão comercial necessária para criar vendas.';
   END IF;
   IF p_valor_total IS NULL OR p_valor_total < 0 THEN
     RAISE EXCEPTION 'O valor total da venda é inválido.';
@@ -916,8 +1022,8 @@ BEGIN
   END IF;
 
   SELECT * INTO v_producao FROM public.producoes WHERE id = p_producao_id FOR UPDATE;
-  IF NOT FOUND OR NOT public.is_empresa_member(v_producao.empresa_id) THEN
-    RAISE EXCEPTION 'Ordem de produção não encontrada ou acesso negado.';
+  IF NOT FOUND OR NOT public.can_manage_operations(v_producao.empresa_id) THEN
+    RAISE EXCEPTION 'Ordem de produção não encontrada ou permissão insuficiente.';
   END IF;
   IF v_producao.status = 'Finalizada' THEN
     RAISE EXCEPTION 'A ordem de produção já foi concluída.';
@@ -1023,8 +1129,8 @@ DECLARE
   v_cached_result JSONB;
   v_result JSONB;
 BEGIN
-  IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) THEN
-    RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
+  IF auth.uid() IS NULL OR NOT public.can_manage_finance(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Apenas administradores e financeiros podem registrar compras.';
   END IF;
   IF COALESCE(trim(p_compra->>'fornecedor'), '') = '' OR v_valor < 0 THEN
     RAISE EXCEPTION 'Fornecedor e valor da compra são obrigatórios.';
@@ -1085,8 +1191,8 @@ DECLARE
   v_cached_result JSONB;
   v_result JSONB;
 BEGIN
-  IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) THEN
-    RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
+  IF auth.uid() IS NULL OR NOT public.can_manage_commercial(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Permissão comercial necessária para salvar orçamentos.';
   END IF;
   IF jsonb_typeof(p_itens) <> 'array' OR jsonb_array_length(p_itens) = 0 THEN
     RAISE EXCEPTION 'Um orçamento deve conter ao menos um item.';
@@ -1155,8 +1261,8 @@ DECLARE
   v_cached_result JSONB;
   v_result JSONB;
 BEGIN
-  IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) THEN
-    RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
+  IF auth.uid() IS NULL OR NOT public.can_manage_operations(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Permissão operacional necessária para salvar produtos e fichas técnicas.';
   END IF;
   IF COALESCE(trim(p_produto->>'nome'), '') = '' OR COALESCE(trim(p_produto->>'categoria'), '') = '' THEN
     RAISE EXCEPTION 'Nome e categoria do produto são obrigatórios.';
@@ -1275,8 +1381,8 @@ SET search_path = public
 AS $$
 DECLARE v_lancamento lancamentos_financeiros%ROWTYPE;
 BEGIN
-  IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) THEN
-    RAISE EXCEPTION 'Acesso negado para a empresa correspondente.';
+  IF auth.uid() IS NULL OR NOT public.can_manage_finance(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Apenas administradores e financeiros podem alterar compras.';
   END IF;
   PERFORM 1 FROM compras WHERE id = p_compra_id AND empresa_id = p_empresa_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Compra não encontrada.'; END IF;
@@ -1310,7 +1416,9 @@ SET search_path = public
 AS $$
 DECLARE v_lancamento lancamentos_financeiros%ROWTYPE;
 BEGIN
-  IF auth.uid() IS NULL OR NOT public.is_empresa_member(p_empresa_id) THEN RAISE EXCEPTION 'Acesso negado para a empresa correspondente.'; END IF;
+  IF auth.uid() IS NULL OR NOT public.can_manage_finance(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Apenas administradores e financeiros podem excluir compras.';
+  END IF;
   PERFORM 1 FROM compras WHERE id = p_compra_id AND empresa_id = p_empresa_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Compra não encontrada.'; END IF;
   SELECT * INTO v_lancamento FROM lancamentos_financeiros WHERE empresa_id = p_empresa_id AND origem = 'Compra' AND origem_id = p_compra_id FOR UPDATE;

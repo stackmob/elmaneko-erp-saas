@@ -34,6 +34,12 @@ function runSuite() {
 
   assert(!migrationContent.includes('USING (true)'), 'supabase_migration.sql NÃO contém nenhuma política permissiva USING (true)');
   assert(migrationContent.includes('is_empresa_member'), 'supabase_migration.sql utiliza a função is_empresa_member');
+  assert(migrationContent.includes('can_manage_finance'), 'supabase_migration.sql implementa verificação de permissão financeira (can_manage_finance)');
+  assert(migrationContent.includes('can_manage_operations'), 'supabase_migration.sql implementa verificação de permissão operacional (can_manage_operations)');
+  assert(migrationContent.includes('can_manage_commercial'), 'supabase_migration.sql implementa verificação de permissão comercial (can_manage_commercial)');
+  assert(migrationContent.includes('tenant_financial_write'), 'supabase_migration.sql restringe escrita financeira via política tenant_financial_write');
+  assert(migrationContent.includes('tenant_operations_write'), 'supabase_migration.sql restringe escrita operacional via política tenant_operations_write');
+  assert(migrationContent.includes('tenant_commercial_write'), 'supabase_migration.sql restringe escrita comercial via política tenant_commercial_write');
   assert(!migrationContent.includes('00000000-0000-0000-0000-000000000001'), 'supabase_migration.sql NÃO contém o UUID demo hardcoded');
   assert(!migrationContent.includes('CREATE POLICY usuario_empresa_insert_self'), 'Associação de usuário à empresa não pode ser inserida diretamente pelo cliente');
   assert(migrationContent.includes('bootstrap_empresa_do_usuario'), 'Provisionamento inicial de empresa utiliza RPC segura');
