@@ -53,8 +53,10 @@ function runSuite() {
   assert(migrationContent.includes('cancelar_lancamento_financeiro'), 'supabase_migration.sql implementa RPC cancelar_lancamento_financeiro');
   assert(migrationContent.includes('conciliar_lancamento_financeiro'), 'supabase_migration.sql implementa RPC conciliar_lancamento_financeiro');
   assert(migrationContent.includes('excluir_lancamento_financeiro'), 'supabase_migration.sql implementa RPC excluir_lancamento_financeiro');
-  assert(migrationContent.includes('REVOKE INSERT, UPDATE, DELETE ON public.movimentacoes_financeiras FROM authenticated'), 'Mutações diretas em movimentacoes_financeiras são revogadas');
-  assert(migrationContent.includes('REVOKE INSERT, UPDATE, DELETE ON public.auditoria_financeira FROM authenticated'), 'Mutações diretas em auditoria_financeira são revogadas');
+  assert(migrationContent.includes('REVOKE INSERT, UPDATE, DELETE ON public.movimentacoes_financeiras FROM PUBLIC, authenticated, anon'), 'Mutações diretas em movimentacoes_financeiras são revogadas');
+  assert(migrationContent.includes('REVOKE INSERT, UPDATE, DELETE ON public.auditoria_financeira FROM PUBLIC, authenticated, anon'), 'Mutações diretas em auditoria_financeira são revogadas');
+  assert(migrationContent.includes('registrar_auditoria_financeira_interna'), 'supabase_migration.sql implementa registrar_auditoria_financeira_interna');
+  assert(migrationContent.includes('user_id UUID REFERENCES auth.users(id)'), 'auditoria_financeira armazena o user_id autenticado no banco');
 
   // 3. Testes de Integridade no Hook Frontend useFinancialData.ts
   console.log('\n[3] Testes de Integridade em useFinancialData.ts');
@@ -69,6 +71,7 @@ function runSuite() {
   assert(financialHookContent.includes("rpc('excluir_lancamento_financeiro'"), 'useFinancialData.ts utiliza RPC excluir_lancamento_financeiro');
   assert(!financialHookContent.includes(".update({ status: 'Cancelado' })"), 'useFinancialData.ts NÃO faz update direto de status Cancelado');
   assert(!financialHookContent.includes(".update({ is_deleted: true })"), 'useFinancialData.ts NÃO faz update direto de is_deleted');
+  assert(!financialHookContent.includes("useAddAuditLog"), 'useFinancialData.ts NÃO exporta useAddAuditLog para o cliente');
 
   // 4. Teste de Resolução de Tenant
   console.log('\n[4] Teste de Resolução de Tenant (getActiveTenantId)');

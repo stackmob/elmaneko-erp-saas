@@ -695,30 +695,7 @@ export function useAuditoriaFinanceira() {
   });
 }
 
-export function useAddAuditLog() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (log: Omit<FinancialAuditLog, 'id'> & { id?: string }) => {
-      const empresaId = getActiveTenantId();
-      const { data, error } = await supabase.from('auditoria_financeira').insert([{
-        empresa_id: empresaId,
-        data_hora: log.dataHora,
-        usuario: log.usuario,
-        ip: log.ip,
-        operacao: log.operacao,
-        entidade: log.entidade,
-        entidade_id: log.entidadeId,
-        valor_anterior: log.valorAnterior,
-        valor_novo: log.valorNovo,
-      }]).select().single();
-      if (error) throw error;
-      const created: FinancialAuditLog = { ...log, id: data.id };
-      addToLocalCache('auditoria_financeira', created);
-      return created;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auditoria_financeira'] }),
-  });
-}
+
 
 // 8. RETROACTIVE FINANCIAL SYNC
 export function useSyncFinancialEntries() {

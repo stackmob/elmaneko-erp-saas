@@ -23,7 +23,7 @@ import {
   useCentrosCusto, useAddCentroCusto, useUpdateCentroCusto, useDeleteCentroCusto,
   useLancamentosFinanceiros, useAddLancamentoFinanceiro, useLiquidarLancamento, useConciliateLancamento, useCancelLancamento, useDeleteLancamento,
   useMovimentacoesFinanceiras, useTransferenciasFinanceiras, useAddTransferenciaFinanceira,
-  useAuditoriaFinanceira, useAddAuditLog, useSyncFinancialEntries
+  useAuditoriaFinanceira, useSyncFinancialEntries
 } from './data/useFinancialData';
 
 export function useData() {
@@ -101,7 +101,6 @@ export function useData() {
     useTransferenciasFinanceiras,
     useAddTransferenciaFinanceira,
     useAuditoriaFinanceira,
-    useAddAuditLog,
     useSyncFinancialEntries
   };
 }
@@ -172,6 +171,5 @@ export {
   useTransferenciasFinanceiras,
   useAddTransferenciaFinanceira,
   useAuditoriaFinanceira,
-  useAddAuditLog,
   useSyncFinancialEntries
 };

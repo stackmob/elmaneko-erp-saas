@@ -26,7 +26,7 @@ export default function Financial() {
     useCentrosCusto, useAddCentroCusto, useUpdateCentroCusto, useDeleteCentroCusto,
     useLancamentosFinanceiros, useAddLancamentoFinanceiro, useLiquidarLancamento, useConciliateLancamento, useDeleteLancamento, useSyncFinancialEntries,
     useMovimentacoesFinanceiras, useTransferenciasFinanceiras, useAddTransferenciaFinanceira,
-    useAuditoriaFinanceira, useAddAuditLog,
+    useAuditoriaFinanceira,
     useClientes
   } = useData();
 
@@ -56,7 +56,6 @@ export default function Financial() {
   const deleteEntryMutation = useDeleteLancamento();
   const syncMutation = useSyncFinancialEntries();
   const addTransferMutation = useAddTransferenciaFinanceira();
-  const addAuditMutation = useAddAuditLog();
 
   const handleSyncFinancial = () => {
     syncMutation.mutate(undefined, {
@@ -459,17 +458,6 @@ export default function Financial() {
       addEntryMutation.mutate(singleEntry);
     }
 
-    addAuditMutation.mutate({
-      id: crypto.randomUUID(),
-      dataHora: new Date().toISOString(),
-      usuario: 'Administrador ERP',
-      ip: '127.0.0.1',
-      operacao: `Criou Lançamento (${entryTipo})`,
-      entidade: 'FinancialEntry',
-      entidadeId: entryDoc,
-      valorNovo: `R$ ${valorLiquido.toFixed(2)}`
-    });
-
     setIsEntryModalOpen(false);
     showToast(isParcelado ? `${entryTotalParcelas} parcelas geradas com sucesso!` : 'Lançamento registrado!', 'success');
   };
@@ -501,17 +489,6 @@ export default function Financial() {
       },
       {
         onSuccess: () => {
-          addAuditMutation.mutate({
-            id: crypto.randomUUID(),
-            dataHora: new Date().toISOString(),
-            usuario: 'Administrador ERP',
-            ip: '127.0.0.1',
-            operacao: 'Liquidou Título',
-            entidade: 'FinancialEntry',
-            entidadeId: selectedEntryForAction.id,
-            valorAnterior: selectedEntryForAction.status,
-            valorNovo: 'Liquidado'
-          });
           setIsLiquidateModalOpen(false);
           showToast('Título liquidado e saldo bancário atualizado!', 'success');
         },

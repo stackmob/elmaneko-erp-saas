@@ -363,7 +363,8 @@ CREATE TABLE IF NOT EXISTS transferencias_financeiras (
 CREATE TABLE IF NOT EXISTS auditoria_financeira (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
-  data_hora TIMESTAMPTZ DEFAULT now(),
+  user_id UUID REFERENCES auth.users(id),
+  data_hora TIMESTAMPTZ NOT NULL DEFAULT now(),
   usuario TEXT NOT NULL,
   ip TEXT,
   operacao TEXT NOT NULL,
@@ -372,6 +373,8 @@ CREATE TABLE IF NOT EXISTS auditoria_financeira (
   valor_anterior TEXT,
   valor_novo TEXT
 );
+
+ALTER TABLE auditoria_financeira ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
 
 -- ============================================================
 -- HABILITAR RLS NAS 20 TABELAS DO SISTEMA
@@ -560,17 +563,28 @@ BEGIN
   END LOOP;
 END $$;
 
--- 2. Escrita Financeira Restrita (admin e financeiro)
+-- 2. Escrita Financeira Restrita em Tabelas Cadastrais (admin e financeiro)
 DO $$
 DECLARE fin_table TEXT;
+DECLARE read_only_table TEXT;
 BEGIN
+  -- Tabelas cadastrais com escrita controlada por papel
   FOREACH fin_table IN ARRAY ARRAY[
     'contas_financeiras', 'categorias_financeiras', 'centros_custo',
-    'lancamentos_financeiros', 'movimentacoes_financeiras',
-    'transferencias_financeiras', 'auditoria_financeira', 'compras'
+    'lancamentos_financeiros', 'compras'
   ] LOOP
     EXECUTE format('DROP POLICY IF EXISTS tenant_financial_write ON public.%I', fin_table);
     EXECUTE format('CREATE POLICY tenant_financial_write ON public.%I FOR ALL TO authenticated USING (public.can_manage_finance(empresa_id)) WITH CHECK (public.can_manage_finance(empresa_id))', fin_table);
+  END LOOP;
+
+  -- Tabelas imutáveis / append-only pelo servidor (auditoria, movimentações e transferências)
+  -- Nenhuma política de escrita é concedida ao cliente authenticated.
+  FOREACH read_only_table IN ARRAY ARRAY[
+    'auditoria_financeira', 'movimentacoes_financeiras', 'transferencias_financeiras'
+  ] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS tenant_financial_write ON public.%I', read_only_table);
+    EXECUTE format('DROP POLICY IF EXISTS tenant_access ON public.%I', read_only_table);
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', read_only_table || '_policy', read_only_table);
   END LOOP;
 END $$;
 
@@ -839,6 +853,39 @@ GRANT EXECUTE ON FUNCTION public.transferir_saldo_financeiro(UUID, UUID, NUMERIC
 -- PROCEDURES / RPCs TRANSACIONAIS DE INTEGRIDADE FINANCEIRA
 -- ============================================================
 
+-- FUNÇÃO HELPER INTERNA DE AUDITORIA IMUTÁVEL (SERVER-SIDE ONLY)
+CREATE OR REPLACE FUNCTION public.registrar_auditoria_financeira_interna(
+  p_empresa_id UUID,
+  p_operacao TEXT,
+  p_entidade TEXT,
+  p_entidade_id UUID,
+  p_valor_anterior TEXT DEFAULT NULL,
+  p_valor_novo TEXT DEFAULT NULL
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_user_id UUID := auth.uid();
+  v_usuario TEXT := COALESCE(auth.jwt()->>'email', auth.uid()::text, 'Sistema');
+  v_ip TEXT := COALESCE(
+    current_setting('request.headers', true)::json->>'x-forwarded-for',
+    inet_client_addr()::text,
+    '127.0.0.1'
+  );
+BEGIN
+  INSERT INTO auditoria_financeira (
+    empresa_id, user_id, usuario, ip, operacao, entidade, entidade_id, valor_anterior, valor_novo, data_hora
+  ) VALUES (
+    p_empresa_id, v_user_id, v_usuario, v_ip, p_operacao, p_entidade, p_entidade_id, p_valor_anterior, p_valor_novo, now()
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.registrar_auditoria_financeira_interna(UUID, TEXT, TEXT, UUID, TEXT, TEXT) FROM PUBLIC, authenticated, anon;
+
 -- 1. SALVAR CONTA FINANCEIRA
 CREATE OR REPLACE FUNCTION public.salvar_conta_financeira(
   p_empresa_id UUID,
@@ -888,8 +935,7 @@ BEGIN
       p_conta->>'observacoes'
     ) RETURNING to_jsonb(contas_financeiras.*) INTO v_result;
 
-    INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_novo)
-    VALUES (p_empresa_id, COALESCE(auth.jwt()->>'email', auth.uid()::text), 'Criacao', 'Conta', (v_result->>'id')::UUID, v_result::text);
+    PERFORM public.registrar_auditoria_financeira_interna(p_empresa_id, 'Criacao', 'Conta', (v_result->>'id')::UUID, NULL, v_result::text);
   ELSE
     SELECT * INTO v_current FROM contas_financeiras WHERE id = v_conta_id AND empresa_id = p_empresa_id FOR UPDATE;
     IF NOT FOUND THEN
@@ -913,8 +959,7 @@ BEGIN
     WHERE id = v_conta_id
     RETURNING to_jsonb(contas_financeiras.*) INTO v_result;
 
-    INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_anterior, valor_novo)
-    VALUES (p_empresa_id, COALESCE(auth.jwt()->>'email', auth.uid()::text), 'Alteracao', 'Conta', v_conta_id, to_jsonb(v_current)::text, v_result::text);
+    PERFORM public.registrar_auditoria_financeira_interna(p_empresa_id, 'Alteracao', 'Conta', v_conta_id, to_jsonb(v_current)::text, v_result::text);
   END IF;
 
   RETURN v_result;
@@ -958,8 +1003,7 @@ BEGIN
 
   DELETE FROM contas_financeiras WHERE id = p_conta_id;
 
-  INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_anterior)
-  VALUES (p_empresa_id, COALESCE(auth.jwt()->>'email', auth.uid()::text), 'Exclusao', 'Conta', p_conta_id, to_jsonb(v_current)::text);
+  PERFORM public.registrar_auditoria_financeira_interna(p_empresa_id, 'Exclusao', 'Conta', p_conta_id, to_jsonb(v_current)::text, NULL);
 END;
 $$;
 
@@ -1031,8 +1075,7 @@ BEGIN
       p_lancamento->>'observacoes'
     ) RETURNING to_jsonb(lancamentos_financeiros.*) INTO v_result;
 
-    INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_novo)
-    VALUES (p_empresa_id, COALESCE(auth.jwt()->>'email', auth.uid()::text), 'Criacao', 'Lancamento', (v_result->>'id')::UUID, v_result::text);
+    PERFORM public.registrar_auditoria_financeira_interna(p_empresa_id, 'Criacao', 'Lancamento', (v_result->>'id')::UUID, NULL, v_result::text);
   ELSE
     SELECT * INTO v_current FROM lancamentos_financeiros WHERE id = v_id AND empresa_id = p_empresa_id FOR UPDATE;
     IF NOT FOUND THEN
@@ -1062,8 +1105,7 @@ BEGIN
     WHERE id = v_id
     RETURNING to_jsonb(lancamentos_financeiros.*) INTO v_result;
 
-    INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_anterior, valor_novo)
-    VALUES (p_empresa_id, COALESCE(auth.jwt()->>'email', auth.uid()::text), 'Alteracao', 'Lancamento', v_id, to_jsonb(v_current)::text, v_result::text);
+    PERFORM public.registrar_auditoria_financeira_interna(p_empresa_id, 'Alteracao', 'Lancamento', v_id, to_jsonb(v_current)::text, v_result::text);
   END IF;
 
   RETURN v_result;
@@ -1110,10 +1152,8 @@ BEGIN
     END
   WHERE id = p_lancamento_id;
 
-  INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_anterior, valor_novo)
-  VALUES (
+  PERFORM public.registrar_auditoria_financeira_interna(
     p_empresa_id,
-    COALESCE(auth.jwt()->>'email', auth.uid()::text),
     'Cancelamento',
     'Lancamento',
     p_lancamento_id,
@@ -1154,10 +1194,8 @@ BEGIN
     tipo_conciliacao = p_tipo_conciliacao
   WHERE id = p_lancamento_id;
 
-  INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_anterior, valor_novo)
-  VALUES (
+  PERFORM public.registrar_auditoria_financeira_interna(
     p_empresa_id,
-    COALESCE(auth.jwt()->>'email', auth.uid()::text),
     'Conciliacao',
     'Lancamento',
     p_lancamento_id,
@@ -1197,10 +1235,8 @@ BEGIN
 
   UPDATE lancamentos_financeiros SET is_deleted = true WHERE id = p_lancamento_id;
 
-  INSERT INTO auditoria_financeira (empresa_id, usuario, operacao, entidade, entidade_id, valor_anterior, valor_novo)
-  VALUES (
+  PERFORM public.registrar_auditoria_financeira_interna(
     p_empresa_id,
-    COALESCE(auth.jwt()->>'email', auth.uid()::text),
     'Exclusao_Logica',
     'Lancamento',
     p_lancamento_id,
@@ -1228,9 +1264,9 @@ GRANT EXECUTE ON FUNCTION public.conciliar_lancamento_financeiro(UUID, UUID, TEX
 GRANT EXECUTE ON FUNCTION public.excluir_lancamento_financeiro(UUID, UUID) TO authenticated;
 
 -- Revogar mutações diretas em tabelas financeiras críticas por integridade
-REVOKE INSERT, UPDATE, DELETE ON public.movimentacoes_financeiras FROM authenticated;
-REVOKE INSERT, UPDATE, DELETE ON public.transferencias_financeiras FROM authenticated;
-REVOKE INSERT, UPDATE, DELETE ON public.auditoria_financeira FROM authenticated;
+REVOKE INSERT, UPDATE, DELETE ON public.movimentacoes_financeiras FROM PUBLIC, authenticated, anon;
+REVOKE INSERT, UPDATE, DELETE ON public.transferencias_financeiras FROM PUBLIC, authenticated, anon;
+REVOKE INSERT, UPDATE, DELETE ON public.auditoria_financeira FROM PUBLIC, authenticated, anon;
 
 CREATE OR REPLACE FUNCTION public.converter_orcamento_em_venda(
   p_orcamento_id UUID,
