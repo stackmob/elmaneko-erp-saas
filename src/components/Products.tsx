@@ -462,6 +462,13 @@ export default function Products() {
     setConfirmDialog({ open: false, id: '', name: '' });
   };
 
+  // ── Lazy Loading ──────────────────────────────────────────────
+  const PAGE_SIZE = 20;
+  const [visibleCount, setVisibleCount] = React.useState(PAGE_SIZE);
+
+  // Reset pagination whenever the filter or base list changes
+  React.useEffect(() => { setVisibleCount(PAGE_SIZE); }, [products, searchQuery]);
+
   // Filtered Products Search Computation
   const filteredProducts = React.useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -473,10 +480,20 @@ export default function Products() {
     ));
   }, [products, searchQuery]);
 
-  // Pre-compute pricing for all visible products once to avoid 2x calc per row render
+  // Slice: only what's actually rendered in the DOM
+  const paginatedProducts = React.useMemo(
+    () => filteredProducts.slice(0, visibleCount),
+    [filteredProducts, visibleCount]
+  );
+
+  const handleLoadMore = React.useCallback(() => {
+    setVisibleCount(prev => Math.min(prev + PAGE_SIZE, filteredProducts.length));
+  }, [filteredProducts.length]);
+
+  // Pre-compute pricing only for the VISIBLE slice (not the full list)
   const productPricingMap = React.useMemo(() => {
     const map = new Map<string, ReturnType<typeof calculateProductPricing>>();
-    for (const p of filteredProducts) {
+    for (const p of paginatedProducts) {
       map.set(p.id, calculateProductPricing({
         materials: p.materials,
         filaments,
@@ -494,7 +511,7 @@ export default function Products() {
       }));
     }
     return map;
-  }, [filteredProducts, filaments, printers, tariffs]);
+  }, [paginatedProducts, filaments, printers, tariffs]);
 
   return (
     <div className="space-y-6" id="products-module-container">
@@ -545,7 +562,9 @@ export default function Products() {
 
       {/* PRODUCT LIST */}
       <DataList<Product>
-        data={filteredProducts}
+        data={paginatedProducts}
+        totalCount={filteredProducts.length}
+        onLoadMore={visibleCount < filteredProducts.length ? handleLoadMore : undefined}
         rowKey={(p) => p.id}
         columns={[
           {
@@ -554,7 +573,7 @@ export default function Products() {
             render: (p) => (
               <div className="flex items-center gap-3">
                 {p.imagem ? (
-                  <img src={p.imagem} alt={p.nome} className="w-10 h-10 rounded-lg object-cover border border-neutral-800 shrink-0" />
+                  <img src={p.imagem} alt={p.nome} loading="lazy" decoding="async" className="w-10 h-10 rounded-lg object-cover border border-neutral-800 shrink-0" />
                 ) : (
                   <div className="w-10 h-10 rounded-lg bg-neutral-800 border border-neutral-700 flex items-center justify-center text-neutral-500 shrink-0">
                     <ImageIcon size={18} />
@@ -694,6 +713,7 @@ export default function Products() {
         onEdit={handleOpenEditModal}
         onDelete={(p) => handleDelete(p.id, p.nome)}
         emptyMessage={searchQuery ? 'Nenhuma peça encontrada para a pesquisa.' : 'Nenhuma peça cadastrada ainda.'}
+        pageSize={PAGE_SIZE}
       />
 
       {/* PRODUCT / BOM DIALOG FORM MODAL */}

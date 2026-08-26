@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Edit, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ChevronDown, ChevronUp, Edit, Trash2, Loader2 } from 'lucide-react';
 
 // ============================================================
 // Column definition type
@@ -20,6 +20,12 @@ interface DataListProps<T> {
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
   emptyMessage?: string;
+  /** If set, enables infinite scroll: shows this many items at a time */
+  pageSize?: number;
+  /** Total items count (before pagination). Shows progress indicator when > data.length */
+  totalCount?: number;
+  /** Called when the user scrolls near the bottom and more items are available */
+  onLoadMore?: () => void;
 }
 
 // ============================================================
@@ -33,8 +39,12 @@ export function DataList<T>({
   onEdit,
   onDelete,
   emptyMessage = 'Nenhum registro encontrado.',
+  pageSize,
+  totalCount,
+  onLoadMore,
 }: DataListProps<T>) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const toggleRow = (id: string) => {
     setExpandedRows(prev => {
@@ -48,9 +58,25 @@ export function DataList<T>({
     });
   };
 
+  // IntersectionObserver — auto-load when sentinel enters viewport
+  useEffect(() => {
+    if (!onLoadMore || !sentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [onLoadMore]);
+
   const mainCols = columns.filter(c => c.visible !== false);
   const hasExtras = extraColumns.length > 0;
   const hasActions = !!(onEdit || onDelete);
+  const hasMore = totalCount !== undefined ? data.length < totalCount : false;
 
   return (
     <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
@@ -189,13 +215,29 @@ export function DataList<T>({
       {/* ── FOOTER SUMMARY ── */}
       {data.length > 0 && (
         <div className="px-4 py-2.5 border-t border-neutral-800/60 bg-neutral-950/40 text-[11px] font-mono text-neutral-500 flex items-center justify-between">
-          <span>{data.length} registro{data.length !== 1 ? 's' : ''}</span>
-          {hasExtras && (
+          <span>
+            {hasMore
+              ? `Exibindo ${data.length} de ${totalCount} registro${totalCount !== 1 ? 's' : ''}`
+              : `${data.length} registro${data.length !== 1 ? 's' : ''}`
+            }
+          </span>
+          {hasExtras && !hasMore && (
             <span className="text-neutral-600 text-[10px]">
               ▸ Clique em ‹›› para ver campos adicionais
             </span>
           )}
+          {hasMore && (
+            <span className="text-orange-400 text-[10px] flex items-center gap-1">
+              <Loader2 size={10} className="animate-spin" />
+              Carregando mais...
+            </span>
+          )}
         </div>
+      )}
+
+      {/* ── SENTINEL for IntersectionObserver ── */}
+      {hasMore && onLoadMore && (
+        <div ref={sentinelRef} className="h-4" aria-hidden="true" />
       )}
     </div>
   );
