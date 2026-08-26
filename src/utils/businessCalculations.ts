@@ -108,24 +108,12 @@ export function calculateProductPricing(input: PricingCalculationInput): Pricing
   const isUsingGlobalOutrasDespesas = !input.hasCustomOutrasDespesas && (input.outrasDespesas === undefined || input.outrasDespesas === null);
 
   const margemLucro = Math.max(0, isUsingGlobalMargin ? global.margemLucroPadrao : Number(input.margemLucro ?? global.margemLucroPadrao));
-  const rawValorMaoDeObra = Math.max(0, isUsingGlobalMaoDeObra ? global.valorMaoDeObraPadrao : Number(input.valorMaoDeObra ?? global.valorMaoDeObraPadrao));
-  const rawOutrasDespesas = Math.max(0, isUsingGlobalOutrasDespesas ? global.outrasDespesasPadrao : Number(input.outrasDespesas ?? global.outrasDespesasPadrao));
+  const valorMaoDeObra = Math.max(0, isUsingGlobalMaoDeObra ? global.valorMaoDeObraPadrao : Number(input.valorMaoDeObra ?? global.valorMaoDeObraPadrao));
+  const outrasDespesas = Math.max(0, isUsingGlobalOutrasDespesas ? global.outrasDespesasPadrao : Number(input.outrasDespesas ?? global.outrasDespesasPadrao));
   const overPercent = Math.max(0, Number(input.overPercent ?? 0));
 
-  // Direct costs base (BOM + Energy)
-  const costDirect = costBOM + costEnergy;
-
-  // Limite individual de 50% do Custo Total para Mão de Obra e Outras Despesas:
-  // Componente C <= 0.5 * (costDirect + C + O) <=> C <= costDirect + O
-  let effectiveOutrasDespesas = Math.min(rawOutrasDespesas, costDirect + rawValorMaoDeObra);
-  let effectiveValorMaoDeObra = Math.min(rawValorMaoDeObra, costDirect + effectiveOutrasDespesas);
-  effectiveOutrasDespesas = Math.min(rawOutrasDespesas, costDirect + effectiveValorMaoDeObra);
-
-  const isMaoDeObraCapped = effectiveValorMaoDeObra < rawValorMaoDeObra;
-  const isOutrasDespesasCapped = effectiveOutrasDespesas < rawOutrasDespesas;
-
-  // 4. Total Manufacturing Cost
-  const costTotal = Number((costBOM + costEnergy + effectiveValorMaoDeObra + effectiveOutrasDespesas).toFixed(2));
+  // 4. Total Manufacturing Cost (BOM + Energy + Labor + Other Expenses)
+  const costTotal = Number((costBOM + costEnergy + valorMaoDeObra + outrasDespesas).toFixed(2));
 
   // 5. Final Selling Price
   const totalMarkup = 1 + (margemLucro + overPercent) / 100;
@@ -134,8 +122,8 @@ export function calculateProductPricing(input: PricingCalculationInput): Pricing
   return {
     costBOM,
     costEnergy,
-    valorMaoDeObra: Number(effectiveValorMaoDeObra.toFixed(2)),
-    outrasDespesas: Number(effectiveOutrasDespesas.toFixed(2)),
+    valorMaoDeObra: Number(valorMaoDeObra.toFixed(2)),
+    outrasDespesas: Number(outrasDespesas.toFixed(2)),
     costTotal,
     margemLucro,
     overPercent,
@@ -144,8 +132,8 @@ export function calculateProductPricing(input: PricingCalculationInput): Pricing
     isUsingGlobalMargin,
     isUsingGlobalOutrasDespesas,
     isUsingGlobalMaoDeObra,
-    isMaoDeObraCapped,
-    isOutrasDespesasCapped,
+    isMaoDeObraCapped: false,
+    isOutrasDespesasCapped: false,
   };
 }
 

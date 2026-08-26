@@ -813,7 +813,7 @@ export default function Products() {
               <Sliders size={14} className="text-orange-500" /> Parâmetros Técnicos de Impressão & Acabamento
             </h4>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               <div>
                 <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Tempo Impressão (h) *</label>
                 <input
@@ -826,9 +826,22 @@ export default function Products() {
                     const val = Number(e.target.value);
                     setTempoImpressao(val);
                     if (!isCustomPriceManual) {
-                      const nrg = calculateEnergyCost(val, impressoraPadraoId);
-                      const tot = costBOM + nrg + Number(valorMaoDeObra) + Number(outrasDespesas);
-                      setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
+                      const calc = calculateProductPricing({
+                        materials: formMaterials,
+                        filaments,
+                        tempoImpressao: val,
+                        impressoraPadraoId,
+                        printers,
+                        tariffs,
+                        margemLucro: marginPercentage,
+                        outrasDespesas,
+                        valorMaoDeObra,
+                        overPercent,
+                        hasCustomMargemLucro,
+                        hasCustomMaoDeObra,
+                        hasCustomOutrasDespesas
+                      });
+                      setPrecoVenda(calc.suggestedPrice);
                     }
                   }}
                   className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
@@ -843,9 +856,22 @@ export default function Products() {
                     const pid = e.target.value;
                     setImpressoraPadraoId(pid);
                     if (!isCustomPriceManual) {
-                      const nrg = calculateEnergyCost(tempoImpressao, pid);
-                      const tot = costBOM + nrg + Number(valorMaoDeObra) + Number(outrasDespesas);
-                      setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
+                      const calc = calculateProductPricing({
+                        materials: formMaterials,
+                        filaments,
+                        tempoImpressao,
+                        impressoraPadraoId: pid,
+                        printers,
+                        tariffs,
+                        margemLucro: marginPercentage,
+                        outrasDespesas,
+                        valorMaoDeObra,
+                        overPercent,
+                        hasCustomMargemLucro,
+                        hasCustomMaoDeObra,
+                        hasCustomOutrasDespesas
+                      });
+                      setPrecoVenda(calc.suggestedPrice);
                     }
                   }}
                   className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
@@ -871,7 +897,14 @@ export default function Products() {
               </div>
 
               <div>
-                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Mão de Obra (R$) *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-neutral-400 uppercase tracking-wider font-semibold text-[11px]">Mão de Obra (R$) *</label>
+                  {hasCustomMaoDeObra ? (
+                    <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded">Exceção</span>
+                  ) : (
+                    <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded">Global</span>
+                  )}
+                </div>
                 <input
                   type="number"
                   required
@@ -881,9 +914,65 @@ export default function Products() {
                   onChange={(e) => {
                     const val = Number(e.target.value);
                     setValorMaoDeObra(val);
+                    setHasCustomMaoDeObra(true);
                     if (!isCustomPriceManual) {
-                      const tot = costBOM + costEnergy + val + Number(outrasDespesas);
-                      setPrecoVenda(tot * (1 + (marginPercentage + overPercent) / 100));
+                      const calc = calculateProductPricing({
+                        materials: formMaterials,
+                        filaments,
+                        tempoImpressao,
+                        impressoraPadraoId,
+                        printers,
+                        tariffs,
+                        margemLucro: marginPercentage,
+                        outrasDespesas,
+                        valorMaoDeObra: val,
+                        overPercent,
+                        hasCustomMargemLucro,
+                        hasCustomMaoDeObra: true,
+                        hasCustomOutrasDespesas
+                      });
+                      setPrecoVenda(calc.suggestedPrice);
+                    }
+                  }}
+                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-neutral-400 uppercase tracking-wider font-semibold text-[11px]">Outras Despesas (R$)</label>
+                  {hasCustomOutrasDespesas ? (
+                    <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded">Exceção</span>
+                  ) : (
+                    <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded">Global</span>
+                  )}
+                </div>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={outrasDespesas}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setOutrasDespesas(val);
+                    setHasCustomOutrasDespesas(true);
+                    if (!isCustomPriceManual) {
+                      const calc = calculateProductPricing({
+                        materials: formMaterials,
+                        filaments,
+                        tempoImpressao,
+                        impressoraPadraoId,
+                        printers,
+                        tariffs,
+                        margemLucro: marginPercentage,
+                        outrasDespesas: val,
+                        valorMaoDeObra,
+                        overPercent,
+                        hasCustomMargemLucro,
+                        hasCustomMaoDeObra,
+                        hasCustomOutrasDespesas: true
+                      });
+                      setPrecoVenda(calc.suggestedPrice);
                     }
                   }}
                   className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"

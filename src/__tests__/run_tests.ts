@@ -94,14 +94,13 @@ function runSuite() {
     valorMaoDeObraPadrao: 20.00
   };
 
-  // Teste 5.1: Cálculo com Herança Global e Limite de 50% por componente
+  // Teste 5.1: Cálculo com Herança Global Padrão
   // BOM: 100g * R$ 0.12/g = R$ 12.00
   // Energia: (350W * 4h / 1000) * R$ 1.00 = R$ 1.40
-  // Custo Direto = R$ 13.40
-  // Mão de Obra (Global raw = R$ 20.00, limitada a 13.40 + 5.00 = R$ 18.40)
-  // Outras Despesas (Global) = R$ 5.00
-  // Custo Total Limitado = 13.40 + 18.40 + 5.00 = R$ 36.80
-  // Preço (Margem 100%): 36.80 * 2.0 = R$ 73.60
+  // Mão de Obra (Global): R$ 20.00
+  // Outras Despesas (Global): R$ 5.00
+  // Custo Total = 12.00 + 1.40 + 20.00 + 5.00 = R$ 38.40
+  // Preço (Margem 100%): 38.40 * 2.0 = R$ 76.80
   const resultGlobal = calculateProductPricing({
     materials: [{ tipoFilamento: 'PLA', filamentoId: 'f1', quantidadeGrams: 100 }],
     filaments: mockFilaments,
@@ -114,17 +113,17 @@ function runSuite() {
 
   assert(resultGlobal.costBOM === 12.00, 'Calcula custo dos materiais (BOM) corretamente');
   assert(resultGlobal.costEnergy === 1.40, 'Calcula custo de energia elétrica corretamente');
-  assert(resultGlobal.costTotal === 36.80, 'Soma o custo total de manufatura respeitando o limite de 50% de custo total');
-  assert(resultGlobal.suggestedPrice === 73.60, 'Calcula preço final sugerido respeitando a limitação dos componentes');
+  assert(resultGlobal.costTotal === 38.40, 'Soma o custo total de manufatura (BOM + Energia + Mão de Obra + Outras Despesas)');
+  assert(resultGlobal.suggestedPrice === 76.80, 'Calcula preço final sugerido com margem global de 100%');
   assert(resultGlobal.isUsingGlobalMargin === true, 'Identifica herança da margem global');
   assert(resultGlobal.isUsingGlobalMaoDeObra === true, 'Identifica herança da mão de obra global');
   assert(resultGlobal.isUsingGlobalOutrasDespesas === true, 'Identifica herança de outras despesas globais');
 
-  // Teste 5.2: Cálculo com Exceções Específicas no Produto e Limite de 50%
-  // Mão de obra customizada: R$ 40.00 (limitada a 13.40 + 5 = R$ 18.40)
+  // Teste 5.2: Cálculo com Exceções Específicas no Produto
+  // Mão de obra customizada: R$ 40.00
   // Margem customizada: 150%
-  // Custo Total = 13.40 + 18.40 + 5.00 = R$ 36.80
-  // Preço (Margem 150%): 36.80 * 2.5 = R$ 92.00
+  // Custo Total = 12.00 + 1.40 + 40.00 + 5.00 = R$ 58.40
+  // Preço (Margem 150%): 58.40 * 2.5 = R$ 146.00
   const resultCustom = calculateProductPricing({
     materials: [{ tipoFilamento: 'PLA', filamentoId: 'f1', quantidadeGrams: 100 }],
     filaments: mockFilaments,
@@ -139,8 +138,8 @@ function runSuite() {
     globalConfig: customGlobalConfig
   });
 
-  assert(resultCustom.costTotal === 36.80, 'Aplica exceção de mão de obra limitada a 50% do custo total no produto');
-  assert(resultCustom.suggestedPrice === 92.00, 'Aplica exceção de margem de lucro do produto sobre o custo total limitado');
+  assert(resultCustom.costTotal === 58.40, 'Aplica exceção de mão de obra do produto no custo total');
+  assert(resultCustom.suggestedPrice === 146.00, 'Aplica exceção de margem de lucro do produto sobre o custo total');
   assert(resultCustom.isUsingGlobalMargin === false, 'Reconhece exceção de margem de lucro');
   assert(resultCustom.isUsingGlobalMaoDeObra === false, 'Reconhece exceção de mão de obra');
   assert(resultCustom.isUsingGlobalOutrasDespesas === true, 'Mantém herança global para campo não sobrescrito');
@@ -165,11 +164,11 @@ function runSuite() {
   assert(resultNegative.valorMaoDeObra >= 0, 'Rejeita mão de obra negativa');
   assert(Number.isInteger(Math.round(resultNegative.suggestedPrice * 100)), 'Garante arredondamento exato em 2 casas decimais');
 
-  // Teste 5.4: Limite individual de 50% do Custo Total para Mão de Obra e Outras Despesas
-  // Custo Direto (BOM + Energia) = R$ 13.40
-  // Mão de Obra informada = R$ 50.00
-  // Limite de 50% do custo total = R$ 13.40
-  const resultCapped = calculateProductPricing({
+  // Teste 5.4: Preservação de Valores de Mão de Obra e Outras Despesas
+  // Custo Direto (100g PLA + 4h Energia) = R$ 13.40
+  // Mão de obra fixada em R$ 50.00, Outras Despesas em R$ 10.00
+  // Custo Total = 13.40 + 50.00 + 10.00 = R$ 73.40
+  const resultPreserved = calculateProductPricing({
     materials: [{ tipoFilamento: 'PLA', filamentoId: 'f1', quantidadeGrams: 100 }],
     filaments: mockFilaments,
     tempoImpressao: 4,
@@ -179,13 +178,13 @@ function runSuite() {
     hasCustomMaoDeObra: true,
     valorMaoDeObra: 50.00,
     hasCustomOutrasDespesas: true,
-    outrasDespesas: 0.00,
+    outrasDespesas: 10.00,
     globalConfig: customGlobalConfig
   });
 
-  assert(resultCapped.isMaoDeObraCapped === true, 'Sinaliza que a mão de obra excedeu 50% do custo total e foi limitada');
-  assert(resultCapped.valorMaoDeObra === 13.40, 'Limita o valor da mão de obra a exatamente 50% do custo total final (R$ 13.40)');
-  assert(resultCapped.costTotal === 26.80, 'Calcula o custo total limitado a R$ 26.80');
+  assert(resultPreserved.valorMaoDeObra === 50.00, 'Preserva exatamente o valor de mão de obra atribuído (R$ 50.00)');
+  assert(resultPreserved.outrasDespesas === 10.00, 'Preserva exatamente o valor de outras despesas atribuído (R$ 10.00)');
+  assert(resultPreserved.costTotal === 73.40, 'Calcula o custo total exato (R$ 73.40)');
 
   console.log(`\n========================================`);
   console.log(`Resultado Final: ${passed} passaram, ${failed} falharam.`);
