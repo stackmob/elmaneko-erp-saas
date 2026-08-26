@@ -813,9 +813,9 @@ export default function Products() {
               <Sliders size={14} className="text-orange-500" /> Parâmetros Técnicos de Impressão & Acabamento
             </h4>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
               <div>
-                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Tempo Impressão (h) *</label>
+                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px] min-h-[28px] flex items-end">Tempo Impressão (h) *</label>
                 <input
                   type="number"
                   required
@@ -849,7 +849,7 @@ export default function Products() {
               </div>
 
               <div>
-                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Impressora Padrão *</label>
+                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px] min-h-[28px] flex items-end">Impressora Padrão *</label>
                 <select
                   value={impressoraPadraoId}
                   onChange={(e) => {
@@ -885,7 +885,7 @@ export default function Products() {
               </div>
 
               <div>
-                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px]">Acabamento (h)</label>
+                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px] min-h-[28px] flex items-end">Acabamento (h)</label>
                 <input
                   type="number"
                   step="0.1"
@@ -897,12 +897,12 @@ export default function Products() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-neutral-400 uppercase tracking-wider font-semibold text-[11px]">Mão de Obra (R$) *</label>
+                <div className="flex items-center gap-1 mb-1 min-h-[28px] overflow-hidden">
+                  <label className="text-neutral-400 uppercase tracking-wider font-semibold text-[11px] whitespace-nowrap truncate">Mão de Obra (R$) *</label>
                   {hasCustomMaoDeObra ? (
-                    <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded">Exceção</span>
+                    <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded flex-shrink-0">Exceção</span>
                   ) : (
-                    <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded">Global</span>
+                    <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded flex-shrink-0">Global</span>
                   )}
                 </div>
                 <input
@@ -939,12 +939,12 @@ export default function Products() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-neutral-400 uppercase tracking-wider font-semibold text-[11px]">Outras Despesas (R$)</label>
+                <div className="flex items-center gap-1 mb-1 min-h-[28px] overflow-hidden">
+                  <label className="text-neutral-400 uppercase tracking-wider font-semibold text-[11px] whitespace-nowrap truncate">Desp. Extras (R$)</label>
                   {hasCustomOutrasDespesas ? (
-                    <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded">Exceção</span>
+                    <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded flex-shrink-0">Exceção</span>
                   ) : (
-                    <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded">Global</span>
+                    <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded flex-shrink-0">Global</span>
                   )}
                 </div>
                 <input
@@ -1000,7 +1000,7 @@ export default function Products() {
               const availableTypeFilaments = filaments.filter(f => f.tipo === item.tipoFilamento);
 
               return (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end bg-neutral-900 p-3 rounded-lg border border-neutral-850 relative">
+                <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end bg-neutral-900 p-3 rounded-lg border border-neutral-850 relative">
                   <div>
                     <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Polímero *</label>
                     <select
