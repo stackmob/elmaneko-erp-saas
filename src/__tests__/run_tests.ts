@@ -94,13 +94,14 @@ function runSuite() {
     valorMaoDeObraPadrao: 20.00
   };
 
-  // Teste 5.1: Cálculo com Herança Global (Sem Exceção do Produto)
+  // Teste 5.1: Cálculo com Herança Global e Limite de 50% por componente
   // BOM: 100g * R$ 0.12/g = R$ 12.00
   // Energia: (350W * 4h / 1000) * R$ 1.00 = R$ 1.40
-  // Mão de Obra (Global): R$ 20.00
-  // Outras Despesas (Global): R$ 5.00
-  // Custo Total = 12 + 1.40 + 20 + 5 = R$ 38.40
-  // Preço (Margem 100%): 38.40 * 2.0 = R$ 76.80
+  // Custo Direto = R$ 13.40
+  // Mão de Obra (Global raw = R$ 20.00, limitada a 13.40 + 5.00 = R$ 18.40)
+  // Outras Despesas (Global) = R$ 5.00
+  // Custo Total Limitado = 13.40 + 18.40 + 5.00 = R$ 36.80
+  // Preço (Margem 100%): 36.80 * 2.0 = R$ 73.60
   const resultGlobal = calculateProductPricing({
     materials: [{ tipoFilamento: 'PLA', filamentoId: 'f1', quantidadeGrams: 100 }],
     filaments: mockFilaments,
@@ -113,17 +114,17 @@ function runSuite() {
 
   assert(resultGlobal.costBOM === 12.00, 'Calcula custo dos materiais (BOM) corretamente');
   assert(resultGlobal.costEnergy === 1.40, 'Calcula custo de energia elétrica corretamente');
-  assert(resultGlobal.costTotal === 38.40, 'Soma o custo total de manufatura corretamente com herança global');
-  assert(resultGlobal.suggestedPrice === 76.80, 'Calcula preço final sugerido com margem padrão global de 100%');
+  assert(resultGlobal.costTotal === 36.80, 'Soma o custo total de manufatura respeitando o limite de 50% de custo total');
+  assert(resultGlobal.suggestedPrice === 73.60, 'Calcula preço final sugerido respeitando a limitação dos componentes');
   assert(resultGlobal.isUsingGlobalMargin === true, 'Identifica herança da margem global');
   assert(resultGlobal.isUsingGlobalMaoDeObra === true, 'Identifica herança da mão de obra global');
   assert(resultGlobal.isUsingGlobalOutrasDespesas === true, 'Identifica herança de outras despesas globais');
 
-  // Teste 5.2: Cálculo com Exceções Específicas no Produto
-  // Mão de obra customizada: R$ 40.00
+  // Teste 5.2: Cálculo com Exceções Específicas no Produto e Limite de 50%
+  // Mão de obra customizada: R$ 40.00 (limitada a 13.40 + 5 = R$ 18.40)
   // Margem customizada: 150%
-  // Custo Total = 12 + 1.40 + 40 + 5 = R$ 58.40
-  // Preço (Margem 150%): 58.40 * 2.5 = R$ 146.00
+  // Custo Total = 13.40 + 18.40 + 5.00 = R$ 36.80
+  // Preço (Margem 150%): 36.80 * 2.5 = R$ 92.00
   const resultCustom = calculateProductPricing({
     materials: [{ tipoFilamento: 'PLA', filamentoId: 'f1', quantidadeGrams: 100 }],
     filaments: mockFilaments,
@@ -138,8 +139,8 @@ function runSuite() {
     globalConfig: customGlobalConfig
   });
 
-  assert(resultCustom.costTotal === 58.40, 'Aplica exceção de mão de obra do produto no custo total');
-  assert(resultCustom.suggestedPrice === 146.00, 'Aplica exceção de margem de lucro do produto no preço final');
+  assert(resultCustom.costTotal === 36.80, 'Aplica exceção de mão de obra limitada a 50% do custo total no produto');
+  assert(resultCustom.suggestedPrice === 92.00, 'Aplica exceção de margem de lucro do produto sobre o custo total limitado');
   assert(resultCustom.isUsingGlobalMargin === false, 'Reconhece exceção de margem de lucro');
   assert(resultCustom.isUsingGlobalMaoDeObra === false, 'Reconhece exceção de mão de obra');
   assert(resultCustom.isUsingGlobalOutrasDespesas === true, 'Mantém herança global para campo não sobrescrito');
@@ -163,6 +164,28 @@ function runSuite() {
   assert(resultNegative.margemLucro >= 0, 'Rejeita margem de lucro negativa');
   assert(resultNegative.valorMaoDeObra >= 0, 'Rejeita mão de obra negativa');
   assert(Number.isInteger(Math.round(resultNegative.suggestedPrice * 100)), 'Garante arredondamento exato em 2 casas decimais');
+
+  // Teste 5.4: Limite individual de 50% do Custo Total para Mão de Obra e Outras Despesas
+  // Custo Direto (BOM + Energia) = R$ 13.40
+  // Mão de Obra informada = R$ 50.00
+  // Limite de 50% do custo total = R$ 13.40
+  const resultCapped = calculateProductPricing({
+    materials: [{ tipoFilamento: 'PLA', filamentoId: 'f1', quantidadeGrams: 100 }],
+    filaments: mockFilaments,
+    tempoImpressao: 4,
+    impressoraPadraoId: 'p1',
+    printers: mockPrinters,
+    tariffs: mockTariffs,
+    hasCustomMaoDeObra: true,
+    valorMaoDeObra: 50.00,
+    hasCustomOutrasDespesas: true,
+    outrasDespesas: 0.00,
+    globalConfig: customGlobalConfig
+  });
+
+  assert(resultCapped.isMaoDeObraCapped === true, 'Sinaliza que a mão de obra excedeu 50% do custo total e foi limitada');
+  assert(resultCapped.valorMaoDeObra === 13.40, 'Limita o valor da mão de obra a exatamente 50% do custo total final (R$ 13.40)');
+  assert(resultCapped.costTotal === 26.80, 'Calcula o custo total limitado a R$ 26.80');
 
   console.log(`\n========================================`);
   console.log(`Resultado Final: ${passed} passaram, ${failed} falharam.`);
