@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ProductionOrder, Product, Printer, Filament, EnergyTariff, StockMovement, ProductStock, FilamentType } from '../types';
+import { ProductionOrder, FilamentType } from '../types';
 import { 
   Plus, Play, CheckCircle, XCircle, Clock, Calendar, 
   User, Database, Zap, Sparkles, AlertOctagon, HelpCircle, FileText, Search, Printer as PrinterIcon 
@@ -131,56 +131,34 @@ export default function Production() {
     const newProdOrderNo = `PROD-${String(maxNum + 1).padStart(3, '0')}`;
     const timestamp = new Date().toISOString().split('T')[0];
 
-    // Arrays to collect updates
-    const stockMovements: StockMovement[] = [];
-    const updatedFilaments = [...filaments];
-    const updatedProductStocks: ProductStock[] = [];
+    // If finalized immediately, determine primary filament to deduct stock
+    let matchedFilamentId = '';
+    let totalFilamentGrams = 0;
 
-    // IF FINALIZED IMMEDIATELY: CHECK STOCK SUFFICIENCY & PREPARE DEDUCTIONS
     if (formData.status === 'Finalizada') {
       let isStockSufficient = true;
       const stockErrors: string[] = [];
 
-      // Check each material in the product BOM
       prodObj.materials.forEach(mat => {
         const totalNeeded = mat.quantidadeGrams * formData.quantidade;
-        
-        // locate exact filament used or match by polimer type (we deduct from the matching spool with largest stock)
-        let matchedFilament = filaments.find(f => f.id === mat.filamentoId);
-        if (!matchedFilament || mat.filamentoId === 'any') {
-          // find spool of same type with highest stock
+        let matched = filaments.find(f => f.id === mat.filamentoId);
+        if (!matched || mat.filamentoId === 'any') {
           const typeSpools = filaments
             .filter(f => f.tipo === mat.tipoFilamento)
             .sort((a, b) => b.quantidadeDisponivel - a.quantidadeDisponivel);
           if (typeSpools.length > 0) {
-            matchedFilament = typeSpools[0];
+            matched = typeSpools[0];
           }
         }
 
-        if (!matchedFilament || matchedFilament.quantidadeDisponivel < totalNeeded) {
+        if (!matched || matched.quantidadeDisponivel < totalNeeded) {
           isStockSufficient = false;
-          stockErrors.push(`${mat.tipoFilamento} (Necessário: ${totalNeeded}g, Disponível: ${matchedFilament ? matchedFilament.quantidadeDisponivel : 0}g)`);
+          stockErrors.push(`${mat.tipoFilamento} (Necessário: ${totalNeeded}g, Disponível: ${matched ? matched.quantidadeDisponivel : 0}g)`);
+        } else if (!matchedFilamentId) {
+          matchedFilamentId = matched.id;
+          totalFilamentGrams += totalNeeded;
         } else {
-          // Record deduction logic
-          const idx = updatedFilaments.findIndex(f => f.id === matchedFilament!.id);
-          if (idx !== -1) {
-            updatedFilaments[idx] = {
-              ...updatedFilaments[idx],
-              quantidadeDisponivel: updatedFilaments[idx].quantidadeDisponivel - totalNeeded
-            };
-
-            // Register movement
-            stockMovements.push({
-              id: `mvt-${Date.now()}-${matchedFilament!.id}`,
-              data: timestamp,
-              tipo: 'saida',
-              origem: 'producao_consumo',
-              referenciaId: newProdOrderNo,
-              filamentoId: matchedFilament!.id,
-              quantidade: totalNeeded,
-              descricao: `Consumo de ${totalNeeded}g de ${matchedFilament!.tipo} (${matchedFilament!.cor}) na ordem ${newProdOrderNo}`
-            });
-          }
+          totalFilamentGrams += totalNeeded;
         }
       });
 
@@ -188,18 +166,6 @@ export default function Production() {
         setFormError(`Estoque insuficiente para concluir esta produção: ${stockErrors.join(', ')}.`);
         return;
       }
-
-      // Record entry for finished product
-      stockMovements.push({
-        id: `mvt-${Date.now()}-prod-entry`,
-        data: timestamp,
-        tipo: 'entrada',
-        origem: 'producao_entrada',
-        referenciaId: newProdOrderNo,
-        produtoId: formData.produtoId,
-        quantidade: formData.quantidade,
-        descricao: `Fabricação concluída de ${formData.quantidade}x ${prodObj.nome} (${newProdOrderNo})`
-      });
     }
 
     // Prepare production order object
@@ -223,8 +189,12 @@ export default function Production() {
     };
 
     addMutation.mutate(newOrder, {
-      onSuccess: () => {
+      onSuccess: (createdOrder) => {
         showToast(`Ordem ${newProdOrderNo} registrada com sucesso!`, 'success');
+        if (formData.status === 'Finalizada' && matchedFilamentId && totalFilamentGrams > 0) {
+          const orderIdToComplete = createdOrder?.id || newOrder.id;
+          completeMutation.mutate({ id: orderIdToComplete, filamentoId: matchedFilamentId, quantidadeGramas: totalFilamentGrams });
+        }
       }
     });
     
@@ -233,7 +203,7 @@ export default function Production() {
     setTimeout(() => {
       setFormSuccess('');
       setActiveTab('historico');
-    }, 2000);
+    }, 1500);
   };
 
   // FINALIZE PRODUCTION FROM HISTORY
@@ -943,6 +913,7 @@ export default function Production() {
         onClose={() => setCompletingOrder(null)}
         order={completingOrder}
         filaments={filaments}
+        products={products}
         onConfirmComplete={(orderId, filamentId, pesoGramas) => {
           if (!completingOrder) return;
           completeMutation.mutate({ id: orderId, filamentoId: filamentId, quantidadeGramas: pesoGramas }, {

@@ -124,6 +124,9 @@ ALTER TABLE produtos ADD COLUMN IF NOT EXISTS pdf_projeto TEXT;
 ALTER TABLE produtos ADD COLUMN IF NOT EXISTS pdf_projeto_nome TEXT;
 ALTER TABLE produtos ADD COLUMN IF NOT EXISTS link_projeto TEXT;
 ALTER TABLE produtos ADD COLUMN IF NOT EXISTS outras_despesas NUMERIC DEFAULT 0;
+ALTER TABLE produtos ADD COLUMN IF NOT EXISTS has_custom_margem_lucro BOOLEAN DEFAULT false;
+ALTER TABLE produtos ADD COLUMN IF NOT EXISTS has_custom_mao_de_obra BOOLEAN DEFAULT false;
+ALTER TABLE produtos ADD COLUMN IF NOT EXISTS has_custom_outras_despesas BOOLEAN DEFAULT false;
 
 -- 8. PRODUTO MATERIAIS (BOM - Bill of Materials)
 CREATE TABLE IF NOT EXISTS produto_materiais (
@@ -1170,13 +1173,13 @@ BEGIN
   END IF;
 
   IF v_produto_id IS NULL THEN
-    INSERT INTO produtos (empresa_id, nome, categoria, descricao, imagem, tempo_impressao, impressora_padrao_id, tempo_acabamento, valor_mao_de_obra, margem_lucro, over_percent, preco_venda, pdf_projeto, pdf_projeto_nome, link_projeto, outras_despesas, observacoes)
-    VALUES (p_empresa_id, p_produto->>'nome', p_produto->>'categoria', p_produto->>'descricao', p_produto->>'imagem', COALESCE((p_produto->>'tempoImpressao')::NUMERIC, 0), NULLIF(p_produto->>'impressoraPadraoId', '')::UUID, COALESCE((p_produto->>'tempoAcabamento')::NUMERIC, 0), COALESCE((p_produto->>'valorMaoDeObra')::NUMERIC, 0), COALESCE((p_produto->>'margemLucro')::NUMERIC, 100), COALESCE((p_produto->>'overPercent')::NUMERIC, 0), COALESCE((p_produto->>'precoVenda')::NUMERIC, 0), p_produto->>'pdfProjeto', p_produto->>'pdfProjetoNome', p_produto->>'linkProjeto', COALESCE((p_produto->>'outrasDespesas')::NUMERIC, 0), p_produto->>'observacoes') RETURNING id INTO v_produto_id;
+    INSERT INTO produtos (empresa_id, nome, categoria, descricao, imagem, tempo_impressao, impressora_padrao_id, tempo_acabamento, valor_mao_de_obra, margem_lucro, over_percent, preco_venda, pdf_projeto, pdf_projeto_nome, link_projeto, outras_despesas, has_custom_margem_lucro, has_custom_mao_de_obra, has_custom_outras_despesas, observacoes)
+    VALUES (p_empresa_id, p_produto->>'nome', p_produto->>'categoria', p_produto->>'descricao', p_produto->>'imagem', COALESCE((p_produto->>'tempoImpressao')::NUMERIC, 0), NULLIF(p_produto->>'impressoraPadraoId', '')::UUID, COALESCE((p_produto->>'tempoAcabamento')::NUMERIC, 0), COALESCE((p_produto->>'valorMaoDeObra')::NUMERIC, 0), COALESCE((p_produto->>'margemLucro')::NUMERIC, 100), COALESCE((p_produto->>'overPercent')::NUMERIC, 0), COALESCE((p_produto->>'precoVenda')::NUMERIC, 0), p_produto->>'pdfProjeto', p_produto->>'pdfProjetoNome', p_produto->>'linkProjeto', COALESCE((p_produto->>'outrasDespesas')::NUMERIC, 0), COALESCE((p_produto->>'hasCustomMargemLucro')::BOOLEAN, false), COALESCE((p_produto->>'hasCustomMaoDeObra')::BOOLEAN, false), COALESCE((p_produto->>'hasCustomOutrasDespesas')::BOOLEAN, false), p_produto->>'observacoes') RETURNING id INTO v_produto_id;
   ELSE
     IF NOT EXISTS (SELECT 1 FROM produtos WHERE id = v_produto_id AND empresa_id = p_empresa_id) THEN
       RAISE EXCEPTION 'Produto não encontrado.';
     END IF;
-    UPDATE produtos SET nome = p_produto->>'nome', categoria = p_produto->>'categoria', descricao = p_produto->>'descricao', imagem = p_produto->>'imagem', tempo_impressao = COALESCE((p_produto->>'tempoImpressao')::NUMERIC, 0), impressora_padrao_id = NULLIF(p_produto->>'impressoraPadraoId', '')::UUID, tempo_acabamento = COALESCE((p_produto->>'tempoAcabamento')::NUMERIC, 0), valor_mao_de_obra = COALESCE((p_produto->>'valorMaoDeObra')::NUMERIC, 0), margem_lucro = COALESCE((p_produto->>'margemLucro')::NUMERIC, 100), over_percent = COALESCE((p_produto->>'overPercent')::NUMERIC, 0), preco_venda = COALESCE((p_produto->>'precoVenda')::NUMERIC, 0), pdf_projeto = p_produto->>'pdfProjeto', pdf_projeto_nome = p_produto->>'pdfProjetoNome', link_projeto = p_produto->>'linkProjeto', outras_despesas = COALESCE((p_produto->>'outrasDespesas')::NUMERIC, 0), observacoes = p_produto->>'observacoes' WHERE id = v_produto_id;
+    UPDATE produtos SET nome = p_produto->>'nome', categoria = p_produto->>'categoria', descricao = p_produto->>'descricao', imagem = p_produto->>'imagem', tempo_impressao = COALESCE((p_produto->>'tempoImpressao')::NUMERIC, 0), impressora_padrao_id = NULLIF(p_produto->>'impressoraPadraoId', '')::UUID, tempo_acabamento = COALESCE((p_produto->>'tempoAcabamento')::NUMERIC, 0), valor_mao_de_obra = COALESCE((p_produto->>'valorMaoDeObra')::NUMERIC, 0), margem_lucro = COALESCE((p_produto->>'margemLucro')::NUMERIC, 100), over_percent = COALESCE((p_produto->>'overPercent')::NUMERIC, 0), preco_venda = COALESCE((p_produto->>'precoVenda')::NUMERIC, 0), pdf_projeto = p_produto->>'pdfProjeto', pdf_projeto_nome = p_produto->>'pdfProjetoNome', link_projeto = p_produto->>'linkProjeto', outras_despesas = COALESCE((p_produto->>'outrasDespesas')::NUMERIC, 0), has_custom_margem_lucro = COALESCE((p_produto->>'hasCustomMargemLucro')::BOOLEAN, false), has_custom_mao_de_obra = COALESCE((p_produto->>'hasCustomMaoDeObra')::BOOLEAN, false), has_custom_outras_despesas = COALESCE((p_produto->>'hasCustomOutrasDespesas')::BOOLEAN, false), observacoes = p_produto->>'observacoes' WHERE id = v_produto_id;
     DELETE FROM produto_materiais WHERE produto_id = v_produto_id;
   END IF;
 

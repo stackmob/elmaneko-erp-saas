@@ -6,7 +6,7 @@ import {
 } from '../../utils/storage';
 import { enqueueOfflineOperation, isNetworkFailure } from '../../utils/offlineQueue';
 
-const productColumns = 'id,nome,categoria,descricao,imagem,tempo_impressao,impressora_padrao_id,tempo_acabamento,valor_mao_de_obra,margem_lucro,over_percent,preco_venda,pdf_projeto,pdf_projeto_nome,link_projeto,outras_despesas,observacoes,created_at';
+const productColumns = 'id,nome,categoria,descricao,imagem,tempo_impressao,impressora_padrao_id,tempo_acabamento,valor_mao_de_obra,margem_lucro,over_percent,preco_venda,pdf_projeto,pdf_projeto_nome,link_projeto,outras_despesas,has_custom_margem_lucro,has_custom_mao_de_obra,has_custom_outras_despesas,observacoes,created_at';
 
 function normalizeMaterials(materials: Product['materials'] = []) {
   const grouped = new Map<string, Product['materials'][number]>();
@@ -61,6 +61,9 @@ export function useProdutos() {
           pdfProjetoNome: item.pdf_projeto_nome || '',
           linkProjeto: item.link_projeto || '',
           outrasDespesas: item.outras_despesas !== null ? Number(item.outras_despesas) : 0,
+          hasCustomMargemLucro: Boolean(item.has_custom_margem_lucro),
+          hasCustomMaoDeObra: Boolean(item.has_custom_mao_de_obra),
+          hasCustomOutrasDespesas: Boolean(item.has_custom_outras_despesas),
           observacoes: item.observacoes,
           materials
         };
@@ -101,7 +104,7 @@ export function useAddProduto() {
       addToLocalCache('produtos', created);
       return created;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['produtos'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: getTenantQueryKey('produtos') }),
   });
 }
 
@@ -121,7 +124,7 @@ export function useUpdateProduto() {
       addToLocalCache('produtos', produto);
       return produto;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['produtos'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: getTenantQueryKey('produtos') }),
   });
 }
 
@@ -135,7 +138,7 @@ export function useDeleteProduto() {
       removeFromLocalCache('produtos', id);
       return id;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['produtos'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: getTenantQueryKey('produtos') }),
   });
 }
 
@@ -227,7 +230,7 @@ export function useAddProducao() {
       addToLocalCache('producoes', created);
       return created;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['producoes'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: getTenantQueryKey('producoes') }),
   });
 }
 
@@ -245,7 +248,7 @@ export function useUpdateProducaoStatus() {
 
       return { id, status };
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['producoes'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: getTenantQueryKey('producoes') }),
   });
 }
 
@@ -262,8 +265,8 @@ export function useConcluirProducao() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['producoes'] });
-      queryClient.invalidateQueries({ queryKey: ['filamentos'] });
+      queryClient.invalidateQueries({ queryKey: getTenantQueryKey('producoes') });
+      queryClient.invalidateQueries({ queryKey: getTenantQueryKey('filamentos') });
     },
   });
 }
@@ -283,6 +286,6 @@ export function useUpdateProducao() {
       addToLocalCache('producoes', producao);
       return producao;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['producoes'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: getTenantQueryKey('producoes') }),
   });
 }

@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
-import { ProductionOrder, Filament } from '../../types';
+import React, { useState, useEffect } from 'react';
+import { ProductionOrder, Filament, Product } from '../../types';
 import { Modal } from '../ui/Modal';
-import { Package, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Package, CheckCircle2, ArrowRight } from 'lucide-react';
 
 interface CompleteOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
   order: ProductionOrder | null;
   filaments: Filament[];
+  products?: Product[];
   onConfirmComplete: (orderId: string, filamentId: string, pesoGramas: number) => void;
 }
 
@@ -16,18 +17,31 @@ export const CompleteOrderModal: React.FC<CompleteOrderModalProps> = ({
   onClose,
   order,
   filaments,
+  products = [],
   onConfirmComplete,
 }) => {
   if (!order) return null;
 
-  // Calculo estimado de peso consumido em gramas
-  const pesoUnitarioGramas = order.pesoEstimadoGramas || 50;
-  const totalPesoGramas = (order.quantidade || 1) * pesoUnitarioGramas;
+  // Localiza o produto para calcular o peso unitário com base na engenharia BOM
+  const product = products.find(p => p.id === order.produtoId);
+  const totalBOMUnitGrams = product?.materials?.reduce((acc, m) => acc + (Number(m.quantidadeGrams) || 0), 0) || 50;
+  const initialTotalGrams = (order.quantidade || 1) * totalBOMUnitGrams;
 
-  const [selectedFilamentId, setSelectedFilamentId] = useState<string>(
-    order.filamentoId || (filaments.length > 0 ? filaments[0].id : '')
-  );
-  const [pesoEfetivoGramas, setPesoEfetivoGramas] = useState<number>(totalPesoGramas);
+  // Localiza o filamento padrão preferencial pelo tipo do material no BOM
+  const primaryMaterial = product?.materials?.[0];
+  const preferredFilament = primaryMaterial
+    ? filaments.find(f => primaryMaterial.filamentoId && primaryMaterial.filamentoId !== 'any' ? f.id === primaryMaterial.filamentoId : f.tipo === primaryMaterial.tipoFilamento)
+    : undefined;
+
+  const defaultFilamentId = preferredFilament?.id || (filaments.length > 0 ? filaments[0].id : '');
+
+  const [selectedFilamentId, setSelectedFilamentId] = useState<string>(defaultFilamentId);
+  const [pesoEfetivoGramas, setPesoEfetivoGramas] = useState<number>(initialTotalGrams);
+
+  useEffect(() => {
+    setSelectedFilamentId(defaultFilamentId);
+    setPesoEfetivoGramas(initialTotalGrams);
+  }, [order?.id, defaultFilamentId, initialTotalGrams]);
 
   const selectedFilament = filaments.find(f => f.id === selectedFilamentId);
 

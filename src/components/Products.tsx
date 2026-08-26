@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { Product, BOMItem, Printer, Filament, EnergyTariff, FilamentType } from '../types';
-import { Plus, Search, ClipboardList, DollarSign, Sliders, Trash2, X, Image as ImageIcon, FileText, ExternalLink, Paperclip, Upload, PackageCheck, RotateCcw, Sparkles } from 'lucide-react';
+import { Product, BOMItem, FilamentType } from '../types';
+import { Plus, Search, ClipboardList, DollarSign, Sliders, Trash2, Image as ImageIcon, FileText, ExternalLink, Paperclip, Upload, RotateCcw, Sparkles } from 'lucide-react';
 import { useData } from '../hooks/useData';
-import { DataList, ColumnDef } from './ui/DataList';
+import { DataList } from './ui/DataList';
 import { useToast } from '../hooks/useToast';
 import Toast from './ui/Toast';
 import ConfirmDialog from './ui/ConfirmDialog';
 import { Modal } from './ui/Modal';
-import { activeEnergyRate, bomCost, highestFilamentRate, calculateProductPricing, getGlobalPricingConfig } from '../utils/businessCalculations';
+import { activeEnergyRate, bomCost, calculateProductPricing, getGlobalPricingConfig } from '../utils/businessCalculations';
 
 export default function Products() {
   const { useProdutos, useImpressoras, useFilamentos, useTarifas, useAddProduto, useUpdateProduto, useDeleteProduto } = useData();
@@ -59,9 +59,6 @@ export default function Products() {
   // Active energy tariff
   const currentTariff = activeEnergyRate(tariffs);
 
-  // CM-07: Corrige divisão por zero quando pesoTotal = 0
-  const getMaxCostPerGram = (type: FilamentType) => highestFilamentRate(filaments, type);
-
   // Helper to calculate BOM costs safely for UI
   const calculateBOMCost = (materials?: BOMItem[]) => bomCost(materials, filaments);
 
@@ -72,32 +69,50 @@ export default function Products() {
     return consumptionKwh * currentTariff;
   };
 
-  // Calculate total manufacturing cost (BOM + Energy + Labor + Secondary Expenses)
-  const costBOM = calculateBOMCost(formMaterials);
-  const costEnergy = calculateEnergyCost(tempoImpressao, impressoraPadraoId);
-  const costTotal = costBOM + costEnergy + Number(valorMaoDeObra) + Number(outrasDespesas);
+  // Helper for centralized calculation using current state
+  const getCurrentPricing = (customMargem?: number, customOver?: number, customMao?: number, customOutras?: number, customMat?: BOMItem[], customTempo?: number, customPrinter?: string) => {
+    return calculateProductPricing({
+      materials: customMat ?? formMaterials,
+      filaments,
+      tempoImpressao: customTempo ?? tempoImpressao,
+      impressoraPadraoId: customPrinter ?? impressoraPadraoId,
+      printers,
+      tariffs,
+      margemLucro: customMargem !== undefined ? customMargem : marginPercentage,
+      outrasDespesas: customOutras !== undefined ? customOutras : outrasDespesas,
+      valorMaoDeObra: customMao !== undefined ? customMao : valorMaoDeObra,
+      overPercent: customOver !== undefined ? customOver : overPercent,
+      hasCustomMargemLucro,
+      hasCustomMaoDeObra,
+      hasCustomOutrasDespesas
+    });
+  };
+
+  const currentCalc = getCurrentPricing();
+  const costBOM = currentCalc.costBOM;
+  const costEnergy = currentCalc.costEnergy;
+  const costTotal = currentCalc.costTotal;
 
   // Dynamic price & margin handlers
   const handleMarginChange = (newMargin: number) => {
     setMarginPercentage(newMargin);
-    const totalMarkup = newMargin + overPercent;
-    const newPrice = costTotal * (1 + totalMarkup / 100);
-    setPrecoVenda(newPrice);
+    const calc = getCurrentPricing(newMargin, overPercent);
+    setPrecoVenda(calc.suggestedPrice);
     setIsCustomPriceManual(false);
   };
 
   const handleOverChange = (newOver: number) => {
     setOverPercent(newOver);
-    const totalMarkup = marginPercentage + newOver;
-    const newPrice = costTotal * (1 + totalMarkup / 100);
-    setPrecoVenda(newPrice);
+    const calc = getCurrentPricing(marginPercentage, newOver);
+    setPrecoVenda(calc.suggestedPrice);
     setIsCustomPriceManual(false);
   };
 
   const handlePriceChange = (newPrice: number) => {
     setPrecoVenda(newPrice);
-    const diff = newPrice - costTotal;
-    const totalMarkup = costTotal > 0 ? (diff / costTotal) * 100 : 0;
+    const calc = getCurrentPricing(marginPercentage, overPercent);
+    const diff = newPrice - calc.costTotal;
+    const totalMarkup = calc.costTotal > 0 ? (diff / calc.costTotal) * 100 : 0;
     const newMargin = Math.max(0, totalMarkup - overPercent);
     setMarginPercentage(newMargin);
     setIsCustomPriceManual(true);
@@ -236,9 +251,10 @@ export default function Products() {
       globalConfig: globalCfg
     });
 
+    const isExplicitlyManual = Boolean(p.precoVenda && p.precoVenda > 0 && Math.abs(p.precoVenda - calc.suggestedPrice) > 0.05);
     if (p.precoVenda && p.precoVenda > 0) {
       setPrecoVenda(p.precoVenda);
-      setIsCustomPriceManual(true);
+      setIsCustomPriceManual(isExplicitlyManual);
     } else {
       setPrecoVenda(calc.suggestedPrice);
       setIsCustomPriceManual(false);
@@ -539,10 +555,22 @@ export default function Products() {
             header: 'Custo Total',
             align: 'right',
             render: (p) => {
-              const fc = calculateBOMCost(p.materials);
-              const ec = calculateEnergyCost(p.tempoImpressao, p.impressoraPadraoId);
-              const total = fc + ec + p.valorMaoDeObra + (p.outrasDespesas || 0);
-              return <span className="font-mono font-semibold text-white">R$ {total.toFixed(2)}</span>;
+              const calc = calculateProductPricing({
+                materials: p.materials,
+                filaments,
+                tempoImpressao: p.tempoImpressao,
+                impressoraPadraoId: p.impressoraPadraoId,
+                printers,
+                tariffs,
+                margemLucro: p.margemLucro,
+                outrasDespesas: p.outrasDespesas,
+                valorMaoDeObra: p.valorMaoDeObra,
+                overPercent: p.overPercent,
+                hasCustomMargemLucro: p.hasCustomMargemLucro,
+                hasCustomMaoDeObra: p.hasCustomMaoDeObra,
+                hasCustomOutrasDespesas: p.hasCustomOutrasDespesas
+              });
+              return <span className="font-mono font-semibold text-white">R$ {calc.costTotal.toFixed(2)}</span>;
             },
           },
           {
@@ -550,14 +578,24 @@ export default function Products() {
             header: 'Preço Sugerido / Venda',
             align: 'right',
             render: (p) => {
-              const fc = calculateBOMCost(p.materials);
-              const ec = calculateEnergyCost(p.tempoImpressao, p.impressoraPadraoId);
-              const totalCost = fc + ec + p.valorMaoDeObra + (p.outrasDespesas || 0);
+              const calc = calculateProductPricing({
+                materials: p.materials,
+                filaments,
+                tempoImpressao: p.tempoImpressao,
+                impressoraPadraoId: p.impressoraPadraoId,
+                printers,
+                tariffs,
+                margemLucro: p.margemLucro,
+                outrasDespesas: p.outrasDespesas,
+                valorMaoDeObra: p.valorMaoDeObra,
+                overPercent: p.overPercent,
+                hasCustomMargemLucro: p.hasCustomMargemLucro,
+                hasCustomMaoDeObra: p.hasCustomMaoDeObra,
+                hasCustomOutrasDespesas: p.hasCustomOutrasDespesas
+              });
+              const finalPrice = (p.precoVenda && p.precoVenda > 0) ? p.precoVenda : calc.suggestedPrice;
               const marginPct = p.margemLucro !== undefined ? p.margemLucro : 100;
               const overPct = p.overPercent !== undefined ? p.overPercent : 0;
-              const finalPrice = (p.precoVenda && p.precoVenda > 0) 
-                ? p.precoVenda 
-                : totalCost * (1 + (marginPct + overPct) / 100);
 
               return (
                 <div className="text-right">
@@ -1000,7 +1038,7 @@ export default function Products() {
               const availableTypeFilaments = filaments.filter(f => f.tipo === item.tipoFilamento);
 
               return (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end bg-neutral-900 p-3 rounded-lg border border-neutral-850 relative">
+                <div key={index} className="grid grid-cols-1 md:grid-cols-[1.2fr_1.8fr_1fr_auto] gap-3 items-end bg-neutral-900 p-3 rounded-lg border border-neutral-850 relative">
                   <div>
                     <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Polímero *</label>
                     <select
@@ -1015,27 +1053,46 @@ export default function Products() {
                     </select>
                   </div>
 
-                  <div className="flex gap-2 items-center">
-                    <div className="flex-1">
-                      <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Massa (g) *</label>
-                      <input
-                        type="number"
-                        required
-                        min={1}
-                        value={item.quantidadeGrams}
-                        onChange={(e) => handleBOMChange(index, 'quantidadeGrams', e.target.value)}
-                        className="w-full px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none"
-                      />
-                    </div>
-                    {formMaterials.length > 1 && (
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Bobina Específica (Opcional)</label>
+                    <select
+                      value={item.filamentoId || 'any'}
+                      onChange={(e) => handleBOMChange(index, 'filamentoId', e.target.value)}
+                      className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none cursor-pointer"
+                    >
+                      <option value="any">Qualquer bobina {item.tipoFilamento} (Custo Padrão)</option>
+                      {availableTypeFilaments.map(f => (
+                        <option key={f.id} value={f.id}>
+                          {f.nome} - {f.cor} ({f.quantidadeDisponivel}g disp.)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-neutral-400 mb-1 uppercase tracking-wider text-[10px]">Massa (g) *</label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={item.quantidadeGrams}
+                      onChange={(e) => handleBOMChange(index, 'quantidadeGrams', e.target.value)}
+                      className="w-full px-2 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white text-[11px] focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    {formMaterials.length > 1 ? (
                       <button
                         type="button"
                         onClick={() => handleRemoveBOMItem(index)}
-                        className="text-red-500 hover:text-red-400 p-1 bg-neutral-950 rounded border border-neutral-850 cursor-pointer"
+                        className="text-red-500 hover:text-red-400 p-1.5 bg-neutral-950 rounded border border-neutral-850 cursor-pointer"
                         title="Remover Item"
                       >
                         <Trash2 size={14} />
                       </button>
+                    ) : (
+                      <div className="w-7" />
                     )}
                   </div>
                 </div>
