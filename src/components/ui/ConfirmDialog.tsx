@@ -1,5 +1,6 @@
-import React from 'react';
-import { AlertTriangle } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { AlertTriangle, Trash2 } from 'lucide-react';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -18,45 +19,65 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  if (!open) return null;
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && open) {
+        onCancel();
+      }
+    };
+    if (open) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onCancel]);
 
-  return (
+  if (!open || typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-fade-in"
+      className="fixed inset-0 bg-black/80 backdrop-blur-xs z-[100] flex items-center justify-center p-3 sm:p-4 overflow-hidden animate-fade-in"
       id="confirm-dialog-overlay"
       onClick={onCancel}
     >
       <div
-        className="bg-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl"
+        className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md flex flex-col shadow-2xl overflow-hidden my-auto text-neutral-100 font-sans"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-start gap-4 mb-5">
-          <div className="w-10 h-10 rounded-xl bg-red-950/60 border border-red-500/20 flex items-center justify-center shrink-0 mt-0.5">
+        {/* HEADER — mesmo padrão do Modal */}
+        <div className="p-4 sm:p-5 border-b border-neutral-800 flex items-center gap-3 bg-neutral-900 shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-red-950/70 border border-red-500/30 flex items-center justify-center shrink-0">
             <AlertTriangle size={18} className="text-red-400" />
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-white leading-tight">{title}</h3>
-            <p className="text-xs text-neutral-400 mt-1.5 leading-relaxed">{description}</p>
-          </div>
+          <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">{title}</h3>
         </div>
 
-        <div className="flex justify-end gap-3">
+        {/* BODY */}
+        <div className="p-4 sm:p-6 text-sm text-neutral-300 leading-relaxed">
+          {description}
+        </div>
+
+        {/* FOOTER — mesmo padrão do Modal */}
+        <div className="p-4 border-t border-neutral-800 bg-neutral-950/90 backdrop-blur-md flex items-center justify-end gap-3 shrink-0">
           <button
+            type="button"
             onClick={onCancel}
-            className="px-4 py-2 border border-neutral-700 hover:bg-neutral-800 text-neutral-300 font-semibold text-xs rounded-xl cursor-pointer transition-colors"
+            className="px-4 py-2 border border-neutral-700 hover:bg-neutral-800 text-neutral-300 font-semibold text-sm rounded-xl cursor-pointer transition-colors"
             id="confirm-dialog-cancel-btn"
           >
             Cancelar
           </button>
           <button
+            type="button"
             onClick={onConfirm}
-            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold text-xs rounded-xl cursor-pointer transition-colors shadow-lg shadow-red-900/30"
+            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold text-sm rounded-xl cursor-pointer transition-colors shadow-lg shadow-red-950/40 flex items-center gap-1.5"
             id="confirm-dialog-confirm-btn"
           >
+            <Trash2 size={15} />
             {confirmLabel}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

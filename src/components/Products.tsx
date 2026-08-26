@@ -473,6 +473,29 @@ export default function Products() {
     ));
   }, [products, searchQuery]);
 
+  // Pre-compute pricing for all visible products once to avoid 2x calc per row render
+  const productPricingMap = React.useMemo(() => {
+    const map = new Map<string, ReturnType<typeof calculateProductPricing>>();
+    for (const p of filteredProducts) {
+      map.set(p.id, calculateProductPricing({
+        materials: p.materials,
+        filaments,
+        tempoImpressao: p.tempoImpressao,
+        impressoraPadraoId: p.impressoraPadraoId,
+        printers,
+        tariffs,
+        margemLucro: p.margemLucro,
+        outrasDespesas: p.outrasDespesas,
+        valorMaoDeObra: p.valorMaoDeObra,
+        overPercent: p.overPercent,
+        hasCustomMargemLucro: p.hasCustomMargemLucro,
+        hasCustomMaoDeObra: p.hasCustomMaoDeObra,
+        hasCustomOutrasDespesas: p.hasCustomOutrasDespesas
+      }));
+    }
+    return map;
+  }, [filteredProducts, filaments, printers, tariffs]);
+
   return (
     <div className="space-y-6" id="products-module-container">
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
@@ -567,22 +590,8 @@ export default function Products() {
             header: 'Custo Total',
             align: 'right',
             render: (p) => {
-              const calc = calculateProductPricing({
-                materials: p.materials,
-                filaments,
-                tempoImpressao: p.tempoImpressao,
-                impressoraPadraoId: p.impressoraPadraoId,
-                printers,
-                tariffs,
-                margemLucro: p.margemLucro,
-                outrasDespesas: p.outrasDespesas,
-                valorMaoDeObra: p.valorMaoDeObra,
-                overPercent: p.overPercent,
-                hasCustomMargemLucro: p.hasCustomMargemLucro,
-                hasCustomMaoDeObra: p.hasCustomMaoDeObra,
-                hasCustomOutrasDespesas: p.hasCustomOutrasDespesas
-              });
-              return <span className="font-mono font-semibold text-white">R$ {calc.costTotal.toFixed(2)}</span>;
+              const calc = productPricingMap.get(p.id);
+              return <span className="font-mono font-semibold text-white">R$ {calc?.costTotal.toFixed(2) ?? '—'}</span>;
             },
           },
           {
@@ -590,22 +599,8 @@ export default function Products() {
             header: 'Preço Sugerido / Venda',
             align: 'right',
             render: (p) => {
-              const calc = calculateProductPricing({
-                materials: p.materials,
-                filaments,
-                tempoImpressao: p.tempoImpressao,
-                impressoraPadraoId: p.impressoraPadraoId,
-                printers,
-                tariffs,
-                margemLucro: p.margemLucro,
-                outrasDespesas: p.outrasDespesas,
-                valorMaoDeObra: p.valorMaoDeObra,
-                overPercent: p.overPercent,
-                hasCustomMargemLucro: p.hasCustomMargemLucro,
-                hasCustomMaoDeObra: p.hasCustomMaoDeObra,
-                hasCustomOutrasDespesas: p.hasCustomOutrasDespesas
-              });
-              const finalPrice = (p.precoVenda && p.precoVenda > 0) ? p.precoVenda : calc.suggestedPrice;
+              const calc = productPricingMap.get(p.id);
+              const finalPrice = (p.precoVenda && p.precoVenda > 0) ? p.precoVenda : (calc?.suggestedPrice ?? 0);
               const marginPct = p.margemLucro !== undefined ? p.margemLucro : 100;
               const overPct = p.overPercent !== undefined ? p.overPercent : 0;
 
