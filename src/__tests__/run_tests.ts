@@ -72,6 +72,7 @@ function runSuite() {
   assert(!financialHookContent.includes(".update({ status: 'Cancelado' })"), 'useFinancialData.ts NÃO faz update direto de status Cancelado');
   assert(!financialHookContent.includes(".update({ is_deleted: true })"), 'useFinancialData.ts NÃO faz update direto de is_deleted');
   assert(!financialHookContent.includes("useAddAuditLog"), 'useFinancialData.ts NÃO exporta useAddAuditLog para o cliente');
+  assert(!financialHookContent.includes("offlineItem"), 'useFinancialData.ts NÃO mascara falhas de gravação financeira como offlineItem fictício');
 
   // 4. Teste de Resolução de Tenant
   console.log('\n[4] Teste de Resolução de Tenant (getActiveTenantId)');

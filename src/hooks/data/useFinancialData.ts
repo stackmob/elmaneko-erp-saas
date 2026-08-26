@@ -224,9 +224,8 @@ export function useAddCategoriaFinanceira() {
 
       const { data, error } = await supabase.from('categorias_financeiras').insert([payload]).select().single();
       if (error) {
-        const offlineItem: FinancialCategory = { ...nova, id: crypto.randomUUID() };
-        addToLocalCache('categorias_financeiras', offlineItem);
-        return offlineItem;
+        console.error("Erro ao cadastrar categoria financeira:", error.message);
+        throw error;
       }
 
       const created: FinancialCategory = {
@@ -256,7 +255,11 @@ export function useUpdateCategoriaFinanceira() {
       };
 
       if (isValidUuid(cat.id)) {
-        await supabase.from('categorias_financeiras').update(payload).eq('id', cat.id);
+        const { error } = await supabase.from('categorias_financeiras').update(payload).eq('id', cat.id);
+        if (error) {
+          console.error("Erro ao atualizar categoria financeira:", error.message);
+          throw error;
+        }
       }
 
       addToLocalCache('categorias_financeiras', cat);
@@ -271,7 +274,11 @@ export function useDeleteCategoriaFinanceira() {
   return useMutation({
     mutationFn: async (id: string) => {
       if (isValidUuid(id)) {
-        await supabase.from('categorias_financeiras').delete().eq('id', id);
+        const { error } = await supabase.from('categorias_financeiras').delete().eq('id', id);
+        if (error) {
+          console.error("Erro ao excluir categoria financeira:", error.message);
+          throw error;
+        }
       }
       removeFromLocalCache('categorias_financeiras', id);
       return id;
@@ -317,9 +324,8 @@ export function useAddCentroCusto() {
 
       const { data, error } = await supabase.from('centros_custo').insert([payload]).select().single();
       if (error) {
-        const offlineItem: CostCenter = { ...novo, id: crypto.randomUUID() };
-        addToLocalCache('centros_custo', offlineItem);
-        return offlineItem;
+        console.error("Erro ao cadastrar centro de custo:", error.message);
+        throw error;
       }
 
       const created: CostCenter = {
@@ -347,7 +353,11 @@ export function useUpdateCentroCusto() {
       };
 
       if (isValidUuid(cc.id)) {
-        await supabase.from('centros_custo').update(payload).eq('id', cc.id);
+        const { error } = await supabase.from('centros_custo').update(payload).eq('id', cc.id);
+        if (error) {
+          console.error("Erro ao atualizar centro de custo:", error.message);
+          throw error;
+        }
       }
 
       addToLocalCache('centros_custo', cc);
@@ -362,7 +372,11 @@ export function useDeleteCentroCusto() {
   return useMutation({
     mutationFn: async (id: string) => {
       if (isValidUuid(id)) {
-        await supabase.from('centros_custo').delete().eq('id', id);
+        const { error } = await supabase.from('centros_custo').delete().eq('id', id);
+        if (error) {
+          console.error("Erro ao excluir centro de custo:", error.message);
+          throw error;
+        }
       }
       removeFromLocalCache('centros_custo', id);
       return id;
