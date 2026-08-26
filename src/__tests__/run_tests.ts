@@ -58,6 +58,8 @@ function runSuite() {
   assert(migrationContent.includes('registrar_auditoria_financeira_interna'), 'supabase_migration.sql implementa registrar_auditoria_financeira_interna');
   assert(migrationContent.includes('user_id UUID REFERENCES auth.users(id)'), 'auditoria_financeira armazena o user_id autenticado no banco');
   assert(migrationContent.includes("'Restauracao_Backup'"), 'restaurar_backup_empresa registra evento imutável de restauração na auditoria');
+  assert(migrationContent.includes('idx_lancamentos_empresa_origem_unique'), 'supabase_migration.sql implementa índice único de unicidade por origem de lançamento');
+  assert(migrationContent.includes('sincronizar_lancamentos_financeiros_retroativos'), 'supabase_migration.sql implementa RPC sincronizar_lancamentos_financeiros_retroativos');
 
   // 3. Testes de Integridade no Hook Frontend useFinancialData.ts
   console.log('\n[3] Testes de Integridade em useFinancialData.ts');
@@ -70,6 +72,7 @@ function runSuite() {
   assert(financialHookContent.includes("rpc('cancelar_lancamento_financeiro'"), 'useFinancialData.ts utiliza RPC cancelar_lancamento_financeiro');
   assert(financialHookContent.includes("rpc('conciliar_lancamento_financeiro'"), 'useFinancialData.ts utiliza RPC conciliar_lancamento_financeiro');
   assert(financialHookContent.includes("rpc('excluir_lancamento_financeiro'"), 'useFinancialData.ts utiliza RPC excluir_lancamento_financeiro');
+  assert(financialHookContent.includes("rpc('sincronizar_lancamentos_financeiros_retroativos'"), 'useSyncFinancialEntries utiliza RPC atômica sincronizar_lancamentos_financeiros_retroativos');
   assert(!financialHookContent.includes(".update({ status: 'Cancelado' })"), 'useFinancialData.ts NÃO faz update direto de status Cancelado');
   assert(!financialHookContent.includes(".update({ is_deleted: true })"), 'useFinancialData.ts NÃO faz update direto de is_deleted');
   assert(!financialHookContent.includes("useAddAuditLog"), 'useFinancialData.ts NÃO exporta useAddAuditLog para o cliente');

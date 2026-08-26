@@ -711,106 +711,33 @@ export function useAuditoriaFinanceira() {
 
 
 
-// 8. RETROACTIVE FINANCIAL SYNC
+// 8. RETROACTIVE FINANCIAL SYNC (ATOMIC SERVER-SIDE RPC)
 export function useSyncFinancialEntries() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
       const empresaId = getActiveTenantId();
-      
-      try {
-        const { data: vendas, error: errVendas } = await supabase.from('vendas').select('*').eq('empresa_id', empresaId);
-        const { data: compras, error: errCompras } = await supabase.from('compras').select('*').eq('empresa_id', empresaId);
-        const { data: lancamentos } = await supabase.from('lancamentos_financeiros').select('origem_id').eq('empresa_id', empresaId);
+      const { data, error } = await supabase.rpc('sincronizar_lancamentos_financeiros_retroativos', {
+        p_empresa_id: empresaId
+      });
 
-        const existingOrigemIds = new Set((lancamentos || []).map(l => l.origem_id));
-
-        const newEntries: any[] = [];
-        const nowStr = new Date().toISOString().split('T')[0];
-
-        if (!errVendas && vendas && Array.isArray(vendas)) {
-          vendas.forEach(venda => {
-            if (venda && venda.id && !existingOrigemIds.has(venda.id)) {
-              const vendaData = (venda.data && typeof venda.data === 'string') ? venda.data : nowStr;
-              const shortId = String(venda.id).slice(0, 8);
-              newEntries.push({
-                empresa_id: empresaId,
-                numero_documento: `VENDA-${shortId}`,
-                tipo: 'Receita',
-                origem: 'Venda',
-                origem_id: venda.id,
-                cliente_id: venda.cliente_id || null,
-                data_emissao: vendaData,
-                data_vencimento: vendaData,
-                valor_bruto: Number(venda.valor_total || 0),
-                valor_liquido: Number(venda.valor_total || 0),
-                forma_pagamento: venda.forma_pagamento || 'PIX',
-                status: 'Aberto',
-                conciliado: false,
-                observacoes: 'Faturamento retroativo importado automaticamente de Vendas'
-              });
-            }
-          });
-        }
-
-        if (!errCompras && compras && Array.isArray(compras)) {
-          compras.forEach(compra => {
-            if (compra && compra.id && !existingOrigemIds.has(compra.id)) {
-              const compraData = (compra.data && typeof compra.data === 'string') ? compra.data : nowStr;
-              const shortId = String(compra.id).slice(0, 8);
-              const docNum = (compra.nota_fiscal && String(compra.nota_fiscal).trim() !== '') 
-                ? `NF-${compra.nota_fiscal}` 
-                : `COMP-${shortId}`;
-
-              newEntries.push({
-                empresa_id: empresaId,
-                numero_documento: docNum,
-                tipo: 'Despesa',
-                origem: 'Compra',
-                origem_id: compra.id,
-                fornecedor: compra.fornecedor || 'Fornecedor Diversos',
-                data_emissao: compraData,
-                data_vencimento: compraData,
-                valor_bruto: Number(compra.valor_pago || 0),
-                valor_liquido: Number(compra.valor_pago || 0),
-                forma_pagamento: 'PIX',
-                status: 'Aberto',
-                conciliado: false,
-                observacoes: 'Despesa retroativa importada automaticamente de Compras'
-              });
-            }
-          });
-        }
-
-        for (const entry of newEntries) {
-          await supabase.rpc('salvar_lancamento_financeiro', {
-            p_empresa_id: empresaId,
-            p_lancamento: {
-              numeroDocumento: entry.numero_documento,
-              tipo: entry.tipo,
-              origem: entry.origem,
-              origemId: entry.origem_id,
-              clienteId: entry.cliente_id,
-              fornecedor: entry.fornecedor,
-              dataEmissao: entry.data_emissao,
-              dataVencimento: entry.data_vencimento,
-              valorBruto: entry.valor_bruto,
-              valorLiquido: entry.valor_liquido,
-              formaPagamento: entry.forma_pagamento,
-              status: entry.status,
-              observacoes: entry.observacoes
-            }
-          });
-        }
-
-        return { total: newEntries.length, syncedSales: newEntries.filter(entry => entry.origem === 'Venda').length, syncedPurchases: newEntries.filter(entry => entry.origem === 'Compra').length };
-      } catch (e) {
-        console.error("Erro na sincronização financeira retroativa:", e);
-        return { total: 0, syncedSales: 0, syncedPurchases: 0 };
+      if (error) {
+        console.error("Erro na sincronização financeira retroativa:", error.message);
+        throw error;
       }
+
+      return data as {
+        success: boolean;
+        syncedSales: number;
+        syncedPurchases: number;
+        alreadyExisting: number;
+        total: number;
+      };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lancamentos_financeiros'] });
+      queryClient.invalidateQueries({ queryKey: ['movimentacoes_financeiras'] });
+      queryClient.invalidateQueries({ queryKey: ['auditoria_financeira'] });
     },
   });
 }

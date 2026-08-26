@@ -61,13 +61,13 @@ export default function Financial() {
     syncMutation.mutate(undefined, {
       onSuccess: (res) => {
         if (res && res.total > 0) {
-          showToast(`Sincronização concluída! ${res.syncedSales} faturamento(s) de vendas e ${res.syncedPurchases} compra(s) alimentaram o Financeiro.`, 'success');
+          showToast(`Sincronização concluída! ${res.syncedSales} receita(s) de vendas e ${res.syncedPurchases} despesa(s) de compras foram alimentadas no Financeiro.`, 'success');
         } else {
-          showToast('Todos os faturamentos de vendas e compras já estão alimentados no Financeiro!', 'info');
+          showToast('Tudo em dia! Todos os faturamentos de vendas e compras já estão sincronizados no Financeiro.', 'info');
         }
       },
-      onError: () => {
-        showToast('Erro ao sincronizar faturamentos com o financeiro.', 'error');
+      onError: (err: any) => {
+        showToast(err?.message || 'Erro ao sincronizar faturamentos com o financeiro.', 'error');
       }
     });
   };
@@ -587,11 +587,12 @@ export default function Financial() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleSyncFinancial}
-            className="py-2.5 px-3 bg-emerald-950/80 border border-emerald-500/30 hover:bg-emerald-900 text-emerald-300 font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer text-xs transition-colors"
+            disabled={syncMutation.isPending}
+            className="py-2.5 px-3 bg-emerald-950/80 border border-emerald-500/30 hover:bg-emerald-900 text-emerald-300 font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Sincronizar faturamentos de vendas e compras retroativas para o financeiro"
           >
             <RefreshCw size={15} className={syncMutation.isPending ? 'animate-spin' : ''} />
-            Sincronizar Faturamentos
+            {syncMutation.isPending ? 'Sincronizando...' : 'Sincronizar Faturamentos'}
           </button>
 
           <button

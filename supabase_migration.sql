@@ -377,6 +377,37 @@ CREATE TABLE IF NOT EXISTS auditoria_financeira (
 ALTER TABLE auditoria_financeira ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
 
 -- ============================================================
+-- SANEAMENTO DE DUPLICIDADES E UNICIDADE DE LANÇAMENTOS POR ORIGEM
+-- ============================================================
+-- 1. Saneamento controlado de duplicidades abertas e sem movimentações financeiras
+DO $$
+DECLARE
+  v_dup RECORD;
+BEGIN
+  FOR v_dup IN (
+    SELECT id
+    FROM (
+      SELECT id,
+             row_number() OVER (PARTITION BY empresa_id, origem, origem_id ORDER BY created_at ASC, id ASC) as rn
+      FROM public.lancamentos_financeiros
+      WHERE origem_id IS NOT NULL
+        AND status = 'Aberto'
+        AND NOT EXISTS (
+          SELECT 1 FROM public.movimentacoes_financeiras mf WHERE mf.lancamento_id = lancamentos_financeiros.id
+        )
+    ) t
+    WHERE t.rn > 1
+  ) LOOP
+    DELETE FROM public.lancamentos_financeiros WHERE id = v_dup.id;
+  END LOOP;
+END $$;
+
+-- 2. Índice Único de Unicidade por Empresa e Origem de Negócio
+CREATE UNIQUE INDEX IF NOT EXISTS idx_lancamentos_empresa_origem_unique
+ON public.lancamentos_financeiros (empresa_id, origem, origem_id)
+WHERE origem_id IS NOT NULL;
+
+-- ============================================================
 -- HABILITAR RLS NAS 20 TABELAS DO SISTEMA
 -- ============================================================
 ALTER TABLE empresas ENABLE ROW LEVEL SECURITY;
@@ -1248,6 +1279,140 @@ BEGIN
 END;
 $$;
 
+-- 7. SINCRONIZAR LANÇAMENTOS FINANCEIROS RETROATIVOS (TRANSACTIONAL BATCH RPC)
+CREATE OR REPLACE FUNCTION public.sincronizar_lancamentos_financeiros_retroativos(
+  p_empresa_id UUID
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_synced_sales INT := 0;
+  v_synced_purchases INT := 0;
+  v_existing INT := 0;
+  v_venda RECORD;
+  v_compra RECORD;
+  v_inserted_id UUID;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.can_manage_finance(p_empresa_id) THEN
+    RAISE EXCEPTION 'Acesso negado. Apenas administradores e financeiros podem sincronizar faturamentos.';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtext(p_empresa_id::text || '_sync_fin'));
+
+  -- 1. Sincronizar Vendas
+  FOR v_venda IN (
+    SELECT v.*
+    FROM public.vendas v
+    WHERE v.empresa_id = p_empresa_id
+      AND NOT EXISTS (
+        SELECT 1 FROM public.lancamentos_financeiros lf
+        WHERE lf.empresa_id = p_empresa_id
+          AND lf.origem = 'Venda'
+          AND lf.origem_id = v.id
+      )
+    ORDER BY v.data ASC, v.id ASC
+  ) LOOP
+    INSERT INTO public.lancamentos_financeiros (
+      empresa_id, numero_documento, tipo, origem, origem_id,
+      cliente_id, data_emissao, data_vencimento,
+      valor_bruto, desconto, acrescimo, valor_liquido,
+      forma_pagamento, status, observacoes
+    ) VALUES (
+      p_empresa_id,
+      'VENDA-' || substring(v_venda.id::text from 1 for 8),
+      'Receita',
+      'Venda',
+      v_venda.id,
+      v_venda.cliente_id,
+      COALESCE(v_venda.data, CURRENT_DATE),
+      COALESCE(v_venda.data, CURRENT_DATE),
+      COALESCE(v_venda.valor_total, 0),
+      0,
+      0,
+      COALESCE(v_venda.valor_total, 0),
+      COALESCE(v_venda.forma_pagamento, 'PIX'),
+      'Aberto',
+      'Faturamento retroativo importado automaticamente de Vendas'
+    )
+    ON CONFLICT (empresa_id, origem, origem_id) WHERE origem_id IS NOT NULL DO NOTHING
+    RETURNING id INTO v_inserted_id;
+
+    IF v_inserted_id IS NOT NULL THEN
+      v_synced_sales := v_synced_sales + 1;
+      PERFORM public.registrar_auditoria_financeira_interna(
+        p_empresa_id, 'Criacao_Retroativa', 'Lancamento', v_inserted_id,
+        NULL, 'Faturamento retroativo gerado a partir da Venda ' || v_venda.id::text
+      );
+    ELSE
+      v_existing := v_existing + 1;
+    END IF;
+  END LOOP;
+
+  -- 2. Sincronizar Compras
+  FOR v_compra IN (
+    SELECT c.*
+    FROM public.compras c
+    WHERE c.empresa_id = p_empresa_id
+      AND NOT EXISTS (
+        SELECT 1 FROM public.lancamentos_financeiros lf
+        WHERE lf.empresa_id = p_empresa_id
+          AND lf.origem = 'Compra'
+          AND lf.origem_id = c.id
+      )
+    ORDER BY c.data ASC, c.id ASC
+  ) LOOP
+    INSERT INTO public.lancamentos_financeiros (
+      empresa_id, numero_documento, tipo, origem, origem_id,
+      fornecedor, data_emissao, data_vencimento,
+      valor_bruto, desconto, acrescimo, valor_liquido,
+      forma_pagamento, status, observacoes
+    ) VALUES (
+      p_empresa_id,
+      CASE
+        WHEN c.nota_fiscal IS NOT NULL AND trim(c.nota_fiscal) <> '' THEN 'NF-' || trim(c.nota_fiscal)
+        ELSE 'COMP-' || substring(c.id::text from 1 for 8)
+      END,
+      'Despesa',
+      'Compra',
+      c.id,
+      COALESCE(c.fornecedor, 'Fornecedor Diversos'),
+      COALESCE(c.data, CURRENT_DATE),
+      COALESCE(c.data, CURRENT_DATE),
+      COALESCE(c.valor_pago, 0),
+      0,
+      0,
+      COALESCE(c.valor_pago, 0),
+      'PIX',
+      'Aberto',
+      'Despesa retroativa importada automaticamente de Compras'
+    )
+    ON CONFLICT (empresa_id, origem, origem_id) WHERE origem_id IS NOT NULL DO NOTHING
+    RETURNING id INTO v_inserted_id;
+
+    IF v_inserted_id IS NOT NULL THEN
+      v_synced_purchases := v_synced_purchases + 1;
+      PERFORM public.registrar_auditoria_financeira_interna(
+        p_empresa_id, 'Criacao_Retroativa', 'Lancamento', v_inserted_id,
+        NULL, 'Despesa retroativa gerada a partir da Compra ' || c.id::text
+      );
+    ELSE
+      v_existing := v_existing + 1;
+    END IF;
+  END LOOP;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'syncedSales', v_synced_sales,
+    'syncedPurchases', v_synced_purchases,
+    'alreadyExisting', v_existing,
+    'total', v_synced_sales + v_synced_purchases
+  );
+END;
+$$;
+
 -- Permissões de Execução nas RPCs Financeiras
 REVOKE ALL ON FUNCTION public.salvar_conta_financeira(UUID, JSONB) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.excluir_conta_financeira(UUID, UUID) FROM PUBLIC;
@@ -1255,6 +1420,7 @@ REVOKE ALL ON FUNCTION public.salvar_lancamento_financeiro(UUID, JSONB) FROM PUB
 REVOKE ALL ON FUNCTION public.cancelar_lancamento_financeiro(UUID, UUID, TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.conciliar_lancamento_financeiro(UUID, UUID, TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.excluir_lancamento_financeiro(UUID, UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.sincronizar_lancamentos_financeiros_retroativos(UUID) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.salvar_conta_financeira(UUID, JSONB) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.excluir_conta_financeira(UUID, UUID) TO authenticated;
@@ -1262,6 +1428,7 @@ GRANT EXECUTE ON FUNCTION public.salvar_lancamento_financeiro(UUID, JSONB) TO au
 GRANT EXECUTE ON FUNCTION public.cancelar_lancamento_financeiro(UUID, UUID, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.conciliar_lancamento_financeiro(UUID, UUID, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.excluir_lancamento_financeiro(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.sincronizar_lancamentos_financeiros_retroativos(UUID) TO authenticated;
 
 -- Revogar mutações diretas em tabelas financeiras críticas por integridade
 REVOKE INSERT, UPDATE, DELETE ON public.movimentacoes_financeiras FROM PUBLIC, authenticated, anon;
