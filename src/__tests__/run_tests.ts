@@ -58,8 +58,15 @@ function runSuite() {
   assert(migrationContent.includes('registrar_auditoria_financeira_interna'), 'supabase_migration.sql implementa registrar_auditoria_financeira_interna');
   assert(migrationContent.includes('user_id UUID REFERENCES auth.users(id)'), 'auditoria_financeira armazena o user_id autenticado no banco');
   assert(migrationContent.includes("'Restauracao_Backup'"), 'restaurar_backup_empresa registra evento imutável de restauração na auditoria');
+  assert(migrationContent.includes("'Criacao_Backup'"), 'registrar_backup_empresa registra evento imutável de criação na auditoria');
   assert(migrationContent.includes('idx_lancamentos_empresa_origem_unique'), 'supabase_migration.sql implementa índice único de unicidade por origem de lançamento');
   assert(migrationContent.includes('sincronizar_lancamentos_financeiros_retroativos'), 'supabase_migration.sql implementa RPC sincronizar_lancamentos_financeiros_retroativos');
+
+  const backupComponentPath = path.join(process.cwd(), 'src', 'components', 'Backup.tsx');
+  const backupComponentContent = fs.readFileSync(backupComponentPath, 'utf-8');
+  assert(backupComponentContent.includes("functions.invoke('create-secure-backup'"), 'Backup.tsx cria backup pela Edge Function segura');
+  assert(backupComponentContent.includes("functions.invoke('restore-secure-backup'"), 'Backup.tsx restaura backup pela Edge Function segura');
+  assert(!backupComponentContent.includes('downloadPackage'), 'Backup.tsx não exporta dados operacionais para o navegador');
 
   // 3. Testes de Integridade no Hook Frontend useFinancialData.ts
   console.log('\n[3] Testes de Integridade em useFinancialData.ts');
@@ -265,4 +272,3 @@ function runSuite() {
 }
 
 runSuite();
-

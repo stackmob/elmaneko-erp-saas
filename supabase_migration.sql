@@ -2157,6 +2157,15 @@ BEGIN
     RETURNING b.storage_path
   ) SELECT COALESCE(jsonb_agg(storage_path), '[]'::jsonb) INTO v_expired_paths FROM expired;
 
+  PERFORM public.registrar_auditoria_financeira_interna(
+    p_empresa_id,
+    'Criacao_Backup',
+    'Backup',
+    v_backup_id,
+    'Backup criptografado criado em armazenamento privado.',
+    jsonb_build_object('backup_id', v_backup_id, 'checksum', p_checksum, 'size_bytes', p_size_bytes, 'snapshot_version', p_snapshot_version)::text
+  );
+
   RETURN jsonb_build_object('id', v_backup_id, 'expiredPaths', v_expired_paths);
 END;
 $$;
