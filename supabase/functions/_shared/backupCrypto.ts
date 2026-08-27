@@ -1,10 +1,12 @@
 const encoder = new TextEncoder();
 
-export function corsHeaders() {
-  const origin = Deno.env.get('APP_URL') || 'http://localhost:3000';
+export function corsHeaders(request: Request) {
+  const allowedOrigins = [Deno.env.get('APP_URL'), 'http://localhost:5173'].filter((origin): origin is string => Boolean(origin));
+  const requestedOrigin = request.headers.get('Origin');
+  const origin = requestedOrigin && allowedOrigins.includes(requestedOrigin) ? requestedOrigin : allowedOrigins[0] || 'http://localhost:5173';
   return {
     'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     Vary: 'Origin',
   };
 }

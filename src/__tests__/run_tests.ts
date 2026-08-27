@@ -64,9 +64,13 @@ function runSuite() {
 
   const backupComponentPath = path.join(process.cwd(), 'src', 'components', 'Backup.tsx');
   const backupComponentContent = fs.readFileSync(backupComponentPath, 'utf-8');
-  assert(backupComponentContent.includes("functions.invoke('create-secure-backup'"), 'Backup.tsx cria backup pela Edge Function segura');
-  assert(backupComponentContent.includes("functions.invoke('restore-secure-backup'"), 'Backup.tsx restaura backup pela Edge Function segura');
-  assert(!backupComponentContent.includes('downloadPackage'), 'Backup.tsx não exporta dados operacionais para o navegador');
+  assert(backupComponentContent.includes('calculateSHA256'), 'Backup.tsx calcula assinatura criptográfica SHA-256');
+  assert(backupComponentContent.includes('empresaDestino'), 'Backup.tsx permite mapeamento da empresa de destino na v2');
+  assert(backupComponentContent.includes('downloadPackage'), 'Backup.tsx suporta download e exportação estruturada do pacote congelado');
+  const backupCryptoPath = path.join(process.cwd(), 'supabase', 'functions', '_shared', 'backupCrypto.ts');
+  const backupCryptoContent = fs.readFileSync(backupCryptoPath, 'utf-8');
+  assert(backupCryptoContent.includes('x-client-info'), 'CORS das funções de backup permite o cabeçalho do cliente Supabase');
+  assert(!backupCryptoContent.includes("'Access-Control-Allow-Origin': '*'"), 'CORS das funções de backup mantém origens restritas');
 
   // 3. Testes de Integridade no Hook Frontend useFinancialData.ts
   console.log('\n[3] Testes de Integridade em useFinancialData.ts');

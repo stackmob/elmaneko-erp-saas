@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, decryptSnapshot, sha256 } from '../_shared/backupCrypto.ts';
 
 Deno.serve(async (request) => {
-  const headers = corsHeaders();
+  const headers = corsHeaders(request);
   if (request.method === 'OPTIONS') return new Response('ok', { headers });
   let empresaId: string | undefined;
   let backupId: string | undefined;
