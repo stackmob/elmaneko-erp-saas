@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronUp, Edit, Trash2, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ChevronDown, ChevronUp, Edit, Trash2, Loader2, ChevronDown as MoreIcon } from 'lucide-react';
 
 // ============================================================
 // Column definition type
@@ -44,7 +44,6 @@ export function DataList<T>({
   onLoadMore,
 }: DataListProps<T>) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const toggleRow = (id: string) => {
     setExpandedRows(prev => {
@@ -58,20 +57,23 @@ export function DataList<T>({
     });
   };
 
-  // IntersectionObserver — auto-load when sentinel enters viewport
-  useEffect(() => {
-    if (!onLoadMore || !sentinelRef.current) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          onLoadMore();
-        }
-      },
-      { threshold: 0.1 }
-    );
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
+  // Window scroll — fire onLoadMore when user is near the page bottom
+  const handleScroll = useCallback(() => {
+    if (!onLoadMore) return;
+    const scrolledToBottom =
+      window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 300;
+    if (scrolledToBottom) {
+      onLoadMore();
+    }
   }, [onLoadMore]);
+
+  useEffect(() => {
+    if (!onLoadMore) return;
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    // Trigger immediately in case page content doesn't fill viewport yet
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [handleScroll, onLoadMore]);
 
   const mainCols = columns.filter(c => c.visible !== false);
   const hasExtras = extraColumns.length > 0;
@@ -235,9 +237,17 @@ export function DataList<T>({
         </div>
       )}
 
-      {/* ── SENTINEL for IntersectionObserver ── */}
+      {/* ── LOAD MORE BUTTON (fallback) ── */}
       {hasMore && onLoadMore && (
-        <div ref={sentinelRef} className="h-4" aria-hidden="true" />
+        <div className="px-4 py-3 border-t border-neutral-800/40 flex justify-center">
+          <button
+            onClick={onLoadMore}
+            className="flex items-center gap-2 px-5 py-2 text-xs font-semibold text-neutral-300 hover:text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-colors cursor-pointer"
+          >
+            <MoreIcon size={13} />
+            Carregar mais
+          </button>
+        </div>
       )}
     </div>
   );

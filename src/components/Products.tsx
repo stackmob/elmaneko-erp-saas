@@ -486,8 +486,16 @@ export default function Products() {
     [filteredProducts, visibleCount]
   );
 
+  const isLoadingMoreRef = React.useRef(false);
   const handleLoadMore = React.useCallback(() => {
-    setVisibleCount(prev => Math.min(prev + PAGE_SIZE, filteredProducts.length));
+    if (isLoadingMoreRef.current) return;
+    isLoadingMoreRef.current = true;
+    setVisibleCount(prev => {
+      const next = Math.min(prev + PAGE_SIZE, filteredProducts.length);
+      // release guard after state schedules the update
+      requestAnimationFrame(() => { isLoadingMoreRef.current = false; });
+      return next;
+    });
   }, [filteredProducts.length]);
 
   // Pre-compute pricing only for the VISIBLE slice (not the full list)
