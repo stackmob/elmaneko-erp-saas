@@ -185,6 +185,14 @@ CREATE TABLE IF NOT EXISTS orcamentos (
 
 ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS previsao_entrega DATE;
 
+-- Garante que o constraint de status inclui TODOS os valores válidos do sistema,
+-- incluindo 'Faturado' (usado pela RPC converter_orcamento_em_venda).
+ALTER TABLE public.orcamentos DROP CONSTRAINT IF EXISTS orcamentos_status_check;
+ALTER TABLE public.orcamentos
+  ADD CONSTRAINT orcamentos_status_check
+    CHECK (status IN ('Aberto', 'Enviado', 'Aprovado', 'Faturado', 'Rejeitado', 'Expirado', 'Cancelado'));
+
+
 -- 11. ORÇAMENTO ITENS
 CREATE TABLE IF NOT EXISTS orcamento_itens (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -885,58 +885,66 @@ export default function Budgets() {
       </Modal>
 
       {/* --- CONVERSION TO SALE CONFIRMATION MODAL --- */}
-      {conversionBudget && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" id="conversion-to-sale-modal">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-sm p-5 sm:p-6 shadow-2xl text-left max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-1.5">
-              <Check className="text-emerald-500 animate-bounce" /> Faturar Orçamento {conversionBudget.numero}
-            </h3>
-            <p className="text-xs text-neutral-400 font-mono mb-4 leading-relaxed">
-              Você está prestes a converter este orçamento em uma venda finalizada. Escolha a forma de pagamento preferida pelo cliente.
-            </p>
+      <Modal
+        isOpen={!!conversionBudget}
+        onClose={() => setConversionBudget(null)}
+        title={
+          <span className="flex items-center gap-2">
+            <Check className="text-emerald-500 animate-bounce" size={18} />
+            Faturar Orçamento {conversionBudget?.numero}
+          </span>
+        }
+        maxWidth="sm"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setConversionBudget(null)}
+              className="px-4 py-2 border border-neutral-700 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl cursor-pointer transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const formEl = document.getElementById('faturar-form') as HTMLFormElement;
+                if (formEl) formEl.requestSubmit();
+              }}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl cursor-pointer shadow-md shadow-emerald-600/20 transition-colors"
+            >
+              Confirmar Faturamento
+            </button>
+          </>
+        }
+      >
+        <form id="faturar-form" onSubmit={handleConvertToSaleSubmit} className="space-y-4">
+          <p className="text-neutral-400 leading-relaxed">
+            Você está prestes a converter este orçamento em uma venda finalizada. Escolha a forma de pagamento preferida pelo cliente.
+          </p>
 
-            <form onSubmit={handleConvertToSaleSubmit} className="space-y-4 font-mono text-xs">
-              <div>
-                <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Forma de Pagamento *</label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none cursor-pointer"
-                >
-                  <option value="Pix">Pix</option>
-                  <option value="Cartão de Crédito">Cartão de Crédito</option>
-                  <option value="Cartão de Débito">Cartão de Débito</option>
-                  <option value="Boleto">Boleto Bancário</option>
-                  <option value="Dinheiro">Dinheiro físico</option>
-                </select>
-              </div>
-
-              <div className="bg-neutral-950 p-3 rounded-lg border border-neutral-800 space-y-1">
-                <span className="text-neutral-500 uppercase text-[9px] block">Valor Comercial do Pedido</span>
-                <strong className="text-orange-500 text-sm">
-                  R$ {calculateTotal(conversionBudget.itens, conversionBudget.descontoGeral).toFixed(2)}
-                </strong>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setConversionBudget(null)}
-                  className="px-3 py-1.5 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-lg cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg cursor-pointer"
-                >
-                  Confirmar Faturamento
-                </button>
-              </div>
-            </form>
+          <div>
+            <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold">Forma de Pagamento *</label>
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value as any)}
+              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+            >
+              <option value="Pix">Pix</option>
+              <option value="Cartão de Crédito">Cartão de Crédito</option>
+              <option value="Cartão de Débito">Cartão de Débito</option>
+              <option value="Boleto">Boleto Bancário</option>
+              <option value="Dinheiro">Dinheiro físico</option>
+            </select>
           </div>
-        </div>
-      )}
+
+          <div className="bg-neutral-950 p-3 rounded-lg border border-neutral-800 space-y-1">
+            <span className="text-neutral-500 uppercase text-[9px] block tracking-wider">Valor Comercial do Pedido</span>
+            <strong className="text-orange-400 text-sm font-mono">
+              R$ {conversionBudget ? calculateTotal(conversionBudget.itens, conversionBudget.descontoGeral).toFixed(2) : '0.00'}
+            </strong>
+          </div>
+        </form>
+      </Modal>
 
       {/* --- MÓDULO 11: PDF PREVIEW MODAL --- */}
       <BudgetPreviewModal
