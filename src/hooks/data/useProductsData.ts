@@ -32,10 +32,12 @@ function normalizeMaterials(materials: Product['materials'] = []) {
 }
 
 // PRODUTOS & BOM
-export function useProdutos() {
+export function useProdutos(options?: { enabled?: boolean }) {
+  const isEnabled = options?.enabled ?? true;
   return useQuery({
     queryKey: getTenantQueryKey('produtos'),
     initialData: () => getLocalCache<Product>('produtos'),
+    enabled: isEnabled,
     placeholderData: (prev) => prev,
     queryFn: async () => {
       const empresaId = getActiveTenantId();
@@ -78,6 +80,7 @@ export function useProdutos() {
           hasCustomMaoDeObra: Boolean(item.has_custom_mao_de_obra),
           hasCustomOutrasDespesas: Boolean(item.has_custom_outras_despesas),
           observacoes: item.observacoes,
+          createdAt: item.created_at || '',
           materials
         };
       });

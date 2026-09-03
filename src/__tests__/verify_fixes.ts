@@ -62,4 +62,24 @@ console.log(`- Tamanho sanitizado com otimização (111 produtos): ${sanitizedPa
 assert(Number(sanitizedPayloadSizeKB) < 100, 'FALHA: O payload sanitizado de 111 produtos deveria ser menor que 100 KB!');
 console.log('✅ TESTE 4: Redução drástica de payload comprovada (99.98% de economia de memória e tráfego)');
 
-console.log('🎉 TODAS AS CORREÇÕES FORAM VALIDADAS COM SUCESSO!\n');
+// 5. Validar que a tela de produtos implementa busca sob demanda e abre limpa
+assert(productsComponentContent.includes('const [hasSearched, setHasSearched] = useState(false);'), 'FALHA: hasSearched deve iniciar como false!');
+assert(productsComponentContent.includes('id="btn-buscar-produtos"'), 'FALHA: Botão Buscar Produtos não encontrado!');
+assert(productsComponentContent.includes('id="products-unsearched-state"'), 'FALHA: Estado inicial unsearched não encontrado!');
+console.log('✅ TESTE 5: Abertura limpa sem produtos pré-carregados e botão Buscar implementado');
+
+// 6. Validar opções de ordenação da busca
+assert(productsComponentContent.includes("option value=\"alfabetica-asc\""), 'FALHA: Opção de ordenação alfabética (A-Z) não encontrada!');
+assert(productsComponentContent.includes("option value=\"alfabetica-desc\""), 'FALHA: Opção de ordenação alfabética (Z-A) não encontrada!');
+assert(productsComponentContent.includes("option value=\"preco-asc\""), 'FALHA: Opção de ordenação por menor preço não encontrada!');
+assert(productsComponentContent.includes("option value=\"preco-desc\""), 'FALHA: Opção de ordenação por maior preço não encontrada!');
+assert(productsComponentContent.includes("option value=\"data-desc\""), 'FALHA: Opção de ordenação por data recente não encontrada!');
+console.log('✅ TESTE 6: Opções de ordenação completas (Alfabética A-Z/Z-A, Preços e Datas)');
+
+// 7. Validar paginação estrita de 15 em 15 itens
+assert(productsComponentContent.includes('PAGE_SIZE = 15;'), 'FALHA: PAGE_SIZE deve ser exatamente 15!');
+assert(productsComponentContent.includes('Anterior'), 'FALHA: Controle de navegação Anterior não encontrado!');
+assert(productsComponentContent.includes('Próxima'), 'FALHA: Controle de navegação Próxima não encontrado!');
+console.log('✅ TESTE 7: Paginação estrita configurada para 15 produtos por lote');
+
+console.log('\n🎉 TODAS AS CORREÇÕES E NOVOS REQUISITOS FORAM VALIDADOS COM SUCESSO!\n');

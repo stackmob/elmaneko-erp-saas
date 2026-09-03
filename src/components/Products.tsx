@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Product, BOMItem, FilamentType } from '../types';
-import { Plus, Search, ClipboardList, DollarSign, Sliders, Trash2, Image as ImageIcon, FileText, ExternalLink, Paperclip, Upload, RotateCcw, Sparkles } from 'lucide-react';
+import { Plus, Search, ClipboardList, DollarSign, Sliders, Trash2, Image as ImageIcon, FileText, ExternalLink, Paperclip, Upload, RotateCcw, Sparkles, PackageSearch, ChevronLeft, ChevronRight, Loader2, SlidersHorizontal } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { DataList } from './ui/DataList';
 import { useToast } from '../hooks/useToast';
@@ -12,7 +12,17 @@ import { fetchProductPdf } from '../hooks/data/useProductsData';
 
 export default function Products() {
   const { useProdutos, useImpressoras, useFilamentos, useTarifas, useAddProduto, useUpdateProduto, useDeleteProduto } = useData();
-  const { data: products = [] } = useProdutos();
+  
+  // Controle de Busca Sob Demanda, Ordenação e Paginação (15 itens)
+  const [hasSearched, setHasSearched] = useState(false);
+  const [sortBy, setSortBy] = useState<
+    'alfabetica-asc' | 'alfabetica-desc' | 'data-desc' | 'data-asc' | 'preco-asc' | 'preco-desc' | 'tempo-asc' | 'tempo-desc'
+  >('alfabetica-asc');
+  const [categoryFilter, setCategoryFilter] = useState('todas');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 15;
+
+  const { data: products = [], isLoading: isLoadingProducts, isFetching: isFetchingProducts, refetch: refetchProducts } = useProdutos({ enabled: hasSearched });
   const { data: printers = [] } = useImpressoras();
   const { data: filaments = [] } = useFilamentos();
   const { data: tariffs = [] } = useTarifas();
@@ -348,6 +358,7 @@ export default function Products() {
 
     const onSuccess = () => {
       setIsModalOpen(false);
+      setHasSearched(true);
       showToast(editingProduct ? 'Produto atualizado com sucesso!' : 'Produto cadastrado com sucesso!', 'success');
     };
     const onError = (err: any) => showToast(`Erro ao salvar produto: ${err?.message || 'Tente novamente.'}`, 'error');
@@ -371,43 +382,86 @@ export default function Products() {
     setConfirmDialog({ open: false, id: '', name: '' });
   };
 
-  // ── Lazy Loading ──────────────────────────────────────────────
-  const PAGE_SIZE = 20;
-  const [visibleCount, setVisibleCount] = React.useState(PAGE_SIZE);
+  // ── Busca, Filtros, Ordenação & Paginação (15 itens por vez) ────────────────
+  const handleSearch = () => {
+    setHasSearched(true);
+    setCurrentPage(1);
+    if (hasSearched) {
+      refetchProducts();
+    }
+  };
 
-  // Reset pagination whenever the filter or base list changes
-  React.useEffect(() => { setVisibleCount(PAGE_SIZE); }, [products, searchQuery]);
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setCategoryFilter('todas');
+    setSortBy('alfabetica-asc');
+    setCurrentPage(1);
+    setHasSearched(false);
+  };
 
-  // Filtered Products Search Computation
-  const filteredProducts = React.useMemo(() => {
+  // Categorias disponíveis no catálogo
+  const availableCategories = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const p of products) {
+      if (p.categoria?.trim()) set.add(p.categoria.trim());
+    }
+    return Array.from(set).sort();
+  }, [products]);
+
+  // Filtragem e Ordenação
+  const filteredAndSortedProducts = React.useMemo(() => {
+    if (!hasSearched) return [];
+    let result = [...products];
+
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return products;
-    return products.filter(p => (
-      (p.nome && p.nome.toLowerCase().includes(q)) ||
-      (p.categoria && p.categoria.toLowerCase().includes(q)) ||
-      (p.descricao && p.descricao.toLowerCase().includes(q))
-    ));
-  }, [products, searchQuery]);
+    if (q) {
+      result = result.filter(p => (
+        (p.nome && p.nome.toLowerCase().includes(q)) ||
+        (p.categoria && p.categoria.toLowerCase().includes(q)) ||
+        (p.descricao && p.descricao.toLowerCase().includes(q))
+      ));
+    }
 
-  // Slice: only what's actually rendered in the DOM
-  const paginatedProducts = React.useMemo(
-    () => filteredProducts.slice(0, visibleCount),
-    [filteredProducts, visibleCount]
-  );
+    if (categoryFilter !== 'todas') {
+      result = result.filter(p => p.categoria?.toLowerCase() === categoryFilter.toLowerCase());
+    }
 
-  const isLoadingMoreRef = React.useRef(false);
-  const handleLoadMore = React.useCallback(() => {
-    if (isLoadingMoreRef.current) return;
-    isLoadingMoreRef.current = true;
-    setVisibleCount(prev => {
-      const next = Math.min(prev + PAGE_SIZE, filteredProducts.length);
-      // release guard after state schedules the update
-      requestAnimationFrame(() => { isLoadingMoreRef.current = false; });
-      return next;
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'alfabetica-asc':
+          return (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' });
+        case 'alfabetica-desc':
+          return (b.nome || '').localeCompare(a.nome || '', 'pt-BR', { sensitivity: 'base' });
+        case 'preco-asc':
+          return (a.precoVenda || 0) - (b.precoVenda || 0);
+        case 'preco-desc':
+          return (b.precoVenda || 0) - (a.precoVenda || 0);
+        case 'tempo-asc':
+          return (a.tempoImpressao || 0) - (b.tempoImpressao || 0);
+        case 'tempo-desc':
+          return (b.tempoImpressao || 0) - (a.tempoImpressao || 0);
+        case 'data-asc':
+          return (a.createdAt || '').localeCompare(b.createdAt || '');
+        case 'data-desc':
+        default:
+          return (b.createdAt || '').localeCompare(a.createdAt || '');
+      }
     });
-  }, [filteredProducts.length]);
 
-  // Pre-compute pricing only for the VISIBLE slice (not the full list)
+    return result;
+  }, [products, hasSearched, searchQuery, categoryFilter, sortBy]);
+
+  // Paginação estrita de 15 itens
+  const totalItems = filteredAndSortedProducts.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const endIndex = Math.min(startIndex + PAGE_SIZE, totalItems);
+
+  const paginatedProducts = React.useMemo(() => {
+    return filteredAndSortedProducts.slice(startIndex, endIndex);
+  }, [filteredAndSortedProducts, startIndex, endIndex]);
+
+  // Pre-compute pricing only for the VISIBLE slice (15 itens da página atual)
   const productPricingMap = React.useMemo(() => {
     const map = new Map<string, ReturnType<typeof calculateProductPricing>>();
     for (const p of paginatedProducts) {
@@ -464,175 +518,291 @@ export default function Products() {
         </div>
       )}
 
-      {/* SEARCH BAR */}
-      <div className="relative" id="products-search-bar">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Pesquisar peça por nome, categoria ou descrição..."
-          className="w-full pl-10 pr-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 transition-colors"
-          aria-label="Pesquisar produtos"
-        />
+      {/* SEARCH, FILTER & ORDER BAR */}
+      <div className="bg-neutral-900/90 border border-neutral-800 p-4 rounded-2xl space-y-3" id="products-search-bar">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+          {/* Input de Pesquisa Textual */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+              placeholder="Pesquisar por nome, categoria ou descrição..."
+              className="w-full pl-10 pr-4 py-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 transition-colors"
+              aria-label="Pesquisar produtos"
+            />
+          </div>
+
+          {/* Filtro por Categoria */}
+          <div className="w-full lg:w-48 shrink-0">
+            <select
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full px-3 py-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-sm text-neutral-200 focus:outline-none focus:border-orange-500 transition-colors cursor-pointer"
+              aria-label="Filtrar por categoria"
+            >
+              <option value="todas">Todas as Categorias</option>
+              {availableCategories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Ordenação da Busca */}
+          <div className="w-full lg:w-64 shrink-0 flex items-center gap-2">
+            <SlidersHorizontal size={16} className="text-neutral-500 shrink-0 hidden sm:block" />
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value as any);
+                setCurrentPage(1);
+              }}
+              className="w-full px-3 py-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-sm text-neutral-200 focus:outline-none focus:border-orange-500 transition-colors cursor-pointer"
+              aria-label="Ordenar produtos"
+            >
+              <option value="alfabetica-asc">Ordem Alfabética (A-Z)</option>
+              <option value="alfabetica-desc">Ordem Alfabética (Z-A)</option>
+              <option value="data-desc">Data de Cadastro (Mais Recentes)</option>
+              <option value="data-asc">Data de Cadastro (Mais Antigos)</option>
+              <option value="preco-asc">Preço de Venda (Menor Preço)</option>
+              <option value="preco-desc">Preço de Venda (Maior Preço)</option>
+              <option value="tempo-asc">Tempo de Impressão (Mais Rápido)</option>
+              <option value="tempo-desc">Tempo de Impressão (Mais Longo)</option>
+            </select>
+          </div>
+
+          {/* Botões de Ação: Buscar e Limpar */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleSearch}
+              disabled={isFetchingProducts}
+              className="flex-1 lg:flex-none px-5 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-semibold text-sm rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all shadow-lg shadow-orange-950/40"
+              id="btn-buscar-produtos"
+            >
+              {isFetchingProducts ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+              <span>Buscar</span>
+            </button>
+
+            {hasSearched && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="px-3 py-2.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-400 hover:text-white text-sm rounded-xl cursor-pointer transition-colors"
+                title="Limpar filtros e fechar busca"
+              >
+                <RotateCcw size={16} />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* PRODUCT LIST */}
-      <DataList<Product>
-        data={paginatedProducts}
-        totalCount={filteredProducts.length}
-        onLoadMore={visibleCount < filteredProducts.length ? handleLoadMore : undefined}
-        rowKey={(p) => p.id}
-        columns={[
-          {
-            key: 'nome',
-            header: 'Produto / Categoria',
-            render: (p) => (
-              <div className="flex items-center gap-3">
-                {p.imagem ? (
-                  <img src={p.imagem} alt={p.nome} loading="lazy" decoding="async" className="w-10 h-10 rounded-lg object-cover border border-neutral-800 shrink-0" />
-                ) : (
-                  <div className="w-10 h-10 rounded-lg bg-neutral-800 border border-neutral-700 flex items-center justify-center text-neutral-500 shrink-0">
-                    <ImageIcon size={18} />
+      {/* ESTADO INICIAL (Antes da Busca) OU LISTAGEM PAGINADA */}
+      {!hasSearched ? (
+        <div className="p-12 border border-neutral-800/80 bg-neutral-900/40 rounded-2xl text-center space-y-4" id="products-unsearched-state">
+          <div className="w-16 h-16 rounded-2xl bg-orange-950/40 border border-orange-500/20 flex items-center justify-center mx-auto text-orange-400">
+            <PackageSearch size={32} />
+          </div>
+          <div className="max-w-md mx-auto">
+            <h3 className="text-lg font-semibold text-white">Catálogo Pronto para Busca</h3>
+            <p className="text-sm text-neutral-400 mt-1">
+              Os produtos não são carregados automaticamente ao abrir a tela para garantir velocidade máxima e zero consumo desnecessário de internet.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleSearch}
+            className="px-6 py-2.5 bg-orange-600 hover:bg-orange-500 text-white font-semibold text-sm rounded-xl inline-flex items-center gap-2 cursor-pointer transition-all shadow-lg shadow-orange-950/40"
+          >
+            <Search size={16} />
+            <span>Buscar Produtos Agora</span>
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3" id="products-results-container">
+          {/* PRODUCT LIST (15 itens por vez) */}
+          <DataList<Product>
+            data={paginatedProducts}
+            rowKey={(p) => p.id}
+            columns={[
+              {
+                key: 'nome',
+                header: 'Produto / Categoria',
+                render: (p) => (
+                  <div className="flex items-center gap-3">
+                    {p.imagem ? (
+                      <img src={p.imagem} alt={p.nome} loading="lazy" decoding="async" className="w-10 h-10 rounded-lg object-cover border border-neutral-800 shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-neutral-800 border border-neutral-700 flex items-center justify-center text-neutral-500 shrink-0">
+                        <ImageIcon size={18} />
+                      </div>
+                    )}
+                    <div>
+                      <span className="font-semibold text-white block">{p.nome}</span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[11px] text-neutral-500 uppercase tracking-wider">{p.categoria}</span>
+                        {p.linkProjeto && (
+                          <a href={p.linkProjeto} target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:text-orange-300 flex items-center gap-0.5 text-[10px]" title="Abrir Link do Projeto">
+                            <ExternalLink size={10} /> Link
+                          </a>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                )}
-                <div>
-                  <span className="font-semibold text-white block">{p.nome}</span>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[11px] text-neutral-500 uppercase tracking-wider">{p.categoria}</span>
+                ),
+              },
+              {
+                key: 'tempo',
+                header: 'Tempo',
+                align: 'right',
+                render: (p) => (
+                  <span className="font-mono text-neutral-300 text-sm">
+                    {p.tempoImpressao}h
+                    {p.tempoAcabamento ? <span className="text-neutral-500"> +{p.tempoAcabamento}h</span> : null}
+                  </span>
+                ),
+              },
+              {
+                key: 'custo',
+                header: 'Custo Total',
+                align: 'right',
+                render: (p) => {
+                  const calc = productPricingMap.get(p.id);
+                  const total = calc?.costTotal ?? 0;
+                  return (
+                    <span className="font-mono font-semibold text-white text-sm">
+                      R$ {total.toFixed(2)}
+                    </span>
+                  );
+                },
+              },
+              {
+                key: 'preco_venda',
+                header: 'Preço Sugerido / Venda',
+                align: 'right',
+                render: (p) => {
+                  const calc = productPricingMap.get(p.id);
+                  const suggested = calc?.suggestedPrice ?? 0;
+                  const finalPrice = p.precoVenda && p.precoVenda > 0 ? p.precoVenda : suggested;
+
+                  return (
+                    <div>
+                      <span className="font-mono font-bold text-orange-400 text-sm block">
+                        R$ {finalPrice.toFixed(2)}
+                      </span>
+                      <span className="text-[10px] text-neutral-500 block font-mono">
+                        Margem: {p.margemLucro ?? 100}% | Over: {p.overPercent ?? 0}%
+                      </span>
+                    </div>
+                  );
+                },
+              },
+              {
+                key: 'materiais',
+                header: 'Insumos Utilizados',
+                render: (p) => {
+                  const mats = Array.isArray(p.materials) ? p.materials : [];
+                  return (
+                    <span className="text-neutral-300">
+                      {mats.length > 0 ? mats.map((m, i) => `${m.quantidadeGrams}g ${m.tipoFilamento}`).join(' · ') : 'Sem insumos'}
+                    </span>
+                  );
+                },
+              },
+              {
+                key: 'projeto_anexos',
+                header: 'Anexos & Links do Projeto',
+                render: (p) => (
+                  <div className="flex flex-wrap items-center gap-3 text-xs">
+                    {p.pdfProjetoNome || p.pdfProjeto ? (
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadPdf(p)}
+                        disabled={downloadingPdfId === p.id}
+                        className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-750 text-neutral-200 border border-neutral-700 rounded-lg flex items-center gap-1.5 font-mono text-[11px] cursor-pointer disabled:opacity-50"
+                      >
+                        <FileText size={13} className="text-red-400" />
+                        <span>{downloadingPdfId === p.id ? 'Baixando...' : (p.pdfProjetoNome || 'Baixar PDF Projeto')}</span>
+                      </button>
+                    ) : <span className="text-neutral-600 text-xs italic">Nenhum PDF anexo</span>}
+
                     {p.linkProjeto && (
-                      <a href={p.linkProjeto} target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:text-orange-300 flex items-center gap-0.5 text-[10px]" title="Abrir Link do Projeto">
-                        <ExternalLink size={10} /> Link
+                      <a
+                        href={p.linkProjeto}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1 bg-orange-950/40 hover:bg-orange-900/50 text-orange-300 border border-orange-500/30 rounded-lg flex items-center gap-1.5 font-mono text-[11px]"
+                      >
+                        <ExternalLink size={13} />
+                        <span>Ver no Site</span>
                       </a>
                     )}
                   </div>
-                </div>
-              </div>
-            ),
-          },
-          {
-            key: 'tempo',
-            header: 'Tempo',
-            align: 'right',
-            render: (p) => (
-              <span className="font-mono text-neutral-300 text-sm">
-                {p.tempoImpressao}h
-                {p.tempoAcabamento ? <span className="text-neutral-500"> +{p.tempoAcabamento}h</span> : null}
-              </span>
-            ),
-          },
-          {
-            key: 'custo',
-            header: 'Custo Total',
-            align: 'right',
-            render: (p) => {
-              const calc = productPricingMap.get(p.id);
-              return <span className="font-mono font-semibold text-white">R$ {calc?.costTotal.toFixed(2) ?? '—'}</span>;
-            },
-          },
-          {
-            key: 'preco',
-            header: 'Preço Sugerido / Venda',
-            align: 'right',
-            render: (p) => {
-              const calc = productPricingMap.get(p.id);
-              const finalPrice = (p.precoVenda && p.precoVenda > 0) ? p.precoVenda : (calc?.suggestedPrice ?? 0);
-              const marginPct = p.margemLucro !== undefined ? p.margemLucro : 100;
-              const overPct = p.overPercent !== undefined ? p.overPercent : 0;
+                ),
+              },
+            ]}
+            onEdit={handleOpenEditModal}
+            onDelete={(p) => handleDelete(p.id, p.nome)}
+            emptyMessage={searchQuery ? 'Nenhuma peça encontrada para os filtros informados.' : 'Nenhum produto cadastrado nesta categoria.'}
+          />
 
-              return (
-                <div className="text-right">
-                  <span className="font-mono font-bold text-orange-400 block text-sm">
-                    R$ {finalPrice.toFixed(2)}
-                  </span>
-                  <span className="font-mono text-[10px] text-neutral-500 block">
-                    Margem: {marginPct.toFixed(0)}% | Over: {overPct.toFixed(0)}%
-                  </span>
-                </div>
-              );
-            },
-          },
-        ]}
-        extraColumns={[
-          {
-            key: 'descricao',
-            header: 'Descrição',
-            render: (p) => <span className="text-neutral-300">{p.descricao || <span className="italic text-neutral-600">—</span>}</span>,
-          },
-          {
-            key: 'impressora',
-            header: 'Impressora Padrão',
-            render: (p) => <span className="text-neutral-300">{printers.find(pr => pr.id === p.impressoraPadraoId)?.nome || '—'}</span>,
-          },
-          {
-            key: 'insumos',
-            header: 'Custo Insumos',
-            render: (p) => <span className="text-neutral-300 font-mono">R$ {calculateBOMCost(p.materials).toFixed(2)}</span>,
-          },
-          {
-            key: 'energia',
-            header: 'Custo Energia',
-            render: (p) => <span className="text-neutral-300 font-mono">R$ {calculateEnergyCost(p.tempoImpressao, p.impressoraPadraoId).toFixed(2)}</span>,
-          },
-          {
-            key: 'mao_obra',
-            header: 'Mão de Obra',
-            render: (p) => <span className="text-neutral-300 font-mono">R$ {p.valorMaoDeObra.toFixed(2)}</span>,
-          },
-          {
-            key: 'outras_despesas',
-            header: 'Outras Despesas (Insumos Secundários)',
-            render: (p) => <span className="text-neutral-300 font-mono">R$ {(p.outrasDespesas || 0).toFixed(2)}</span>,
-          },
-          {
-            key: 'bom',
-            header: 'Materiais (BOM)',
-            render: (p) => {
-              const mats = Array.isArray(p.materials) ? p.materials : [];
-              return (
-                <span className="text-neutral-300">
-                  {mats.length > 0 ? mats.map((m, i) => `${m.quantidadeGrams}g ${m.tipoFilamento}`).join(' · ') : 'Sem insumos'}
+          {/* BARRA DE PAGINAÇÃO (15 itens por vez) */}
+          {totalItems > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-neutral-900/60 border border-neutral-800 rounded-xl text-sm text-neutral-400">
+              <div>
+                Exibindo <span className="font-semibold text-white">{startIndex + 1}</span> a <span className="font-semibold text-white">{endIndex}</span> de <span className="font-semibold text-white">{totalItems}</span> produtos
+                <span className="text-neutral-500 ml-2 text-xs">({PAGE_SIZE} por página)</span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed border border-neutral-800 rounded-lg text-xs font-semibold text-neutral-300 cursor-pointer transition-colors"
+                >
+                  Primeira
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed border border-neutral-800 rounded-lg text-xs font-semibold text-neutral-300 flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <ChevronLeft size={14} /> Anterior
+                </button>
+
+                <span className="px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded-lg text-xs font-mono text-orange-400 font-bold">
+                  {currentPage} / {totalPages}
                 </span>
-              );
-            },
-          },
-          {
-            key: 'projeto_anexos',
-            header: 'Anexos & Links do Projeto',
-            render: (p) => (
-              <div className="flex flex-wrap items-center gap-3 text-xs">
-                {p.pdfProjetoNome || p.pdfProjeto ? (
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadPdf(p)}
-                    disabled={downloadingPdfId === p.id}
-                    className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-750 text-neutral-200 border border-neutral-700 rounded-lg flex items-center gap-1.5 font-mono text-[11px] cursor-pointer disabled:opacity-50"
-                  >
-                    <FileText size={13} className="text-red-400" />
-                    <span>{downloadingPdfId === p.id ? 'Baixando...' : (p.pdfProjetoNome || 'Baixar PDF Projeto')}</span>
-                  </button>
-                ) : <span className="text-neutral-600 text-xs italic">Nenhum PDF anexo</span>}
 
-                {p.linkProjeto && (
-                  <a
-                    href={p.linkProjeto}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-2.5 py-1 bg-orange-950/40 hover:bg-orange-900/50 text-orange-300 border border-orange-500/30 rounded-lg flex items-center gap-1.5 font-mono text-[11px]"
-                  >
-                    <ExternalLink size={13} />
-                    <span>Ver no Site</span>
-                  </a>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed border border-neutral-800 rounded-lg text-xs font-semibold text-neutral-300 flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  Próxima <ChevronRight size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed border border-neutral-800 rounded-lg text-xs font-semibold text-neutral-300 cursor-pointer transition-colors"
+                >
+                  Última
+                </button>
               </div>
-            ),
-          },
-        ]}
-        onEdit={handleOpenEditModal}
-        onDelete={(p) => handleDelete(p.id, p.nome)}
-        emptyMessage={searchQuery ? 'Nenhuma peça encontrada para a pesquisa.' : 'Nenhuma peça cadastrada ainda.'}
-        pageSize={PAGE_SIZE}
-      />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* PRODUCT / BOM DIALOG FORM MODAL */}
       <Modal

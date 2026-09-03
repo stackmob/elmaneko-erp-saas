@@ -112,6 +112,7 @@ export interface Product {
   hasCustomMaoDeObra?: boolean; // Flag identifying specific product override
   hasCustomOutrasDespesas?: boolean; // Flag identifying specific product override
   observacoes?: string;
+  createdAt?: string;
 }
 
 export type ProductionStatus = 'Em Produção' | 'Finalizada' | 'Cancelada';
