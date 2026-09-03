@@ -54,6 +54,7 @@ export interface PricingCalculationInput {
   materials?: BOMItem[];
   filaments: Filament[];
   tempoImpressao: number;
+  tempoAcabamento?: number;
   impressoraPadraoId?: string;
   printers?: Printer[];
   tariffs: EnergyTariff[];

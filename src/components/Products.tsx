@@ -68,12 +68,45 @@ export default function Products() {
     return consumptionKwh * currentTariff;
   };
 
+  // Compressão client-side de imagens para evitar payloads Base64 pesados no banco
+  const compressImage = (file: File, maxWidth = 800, quality = 0.8): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(event.target?.result as string);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = (error) => reject(error);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   // Cálculo de custos para exibição no formulário (informacional — painel reativo)
   // O campo "Preço de Venda" NÃO é atualizado automaticamente — use o botão "Calcular Preço"
   const formCalc = React.useMemo(() => calculateProductPricing({
     materials: formMaterials,
     filaments,
     tempoImpressao,
+    tempoAcabamento,
     impressoraPadraoId,
     printers,
     tariffs,
@@ -84,24 +117,25 @@ export default function Products() {
     hasCustomMargemLucro,
     hasCustomMaoDeObra,
     hasCustomOutrasDespesas
-  }), [formMaterials, filaments, tempoImpressao, impressoraPadraoId, printers, tariffs,
+  }), [formMaterials, filaments, tempoImpressao, tempoAcabamento, impressoraPadraoId, printers, tariffs,
       marginPercentage, outrasDespesas, valorMaoDeObra, overPercent,
       hasCustomMargemLucro, hasCustomMaoDeObra, hasCustomOutrasDespesas]);
 
 
   // Local File Readers for Image & PDF
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       showToast('A imagem deve ser menor que 5MB.', 'error');
       return;
     }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagem(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImage(file, 800, 0.8);
+      setImagem(compressed);
+    } catch {
+      showToast('Erro ao processar imagem.', 'error');
+    }
   };
 
   const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -238,6 +272,11 @@ export default function Products() {
     e.preventDefault();
     if (!nome || !categoria || formMaterials.length === 0) {
       showToast('Preencha os campos obrigatórios (Nome, Categoria e Materiais).', 'error');
+      return;
+    }
+
+    if (!precoVenda || Number(precoVenda) <= 0) {
+      showToast('Defina o Preço de Venda ou utilize o botão "Calcular Preço" antes de salvar.', 'error');
       return;
     }
 
@@ -1028,26 +1067,39 @@ export default function Products() {
                 </span>
               </div>
 
-              <div className="bg-neutral-900 p-3 rounded-lg border border-orange-500/30 shadow-inner">
-                <label className="block text-orange-400 text-[10px] uppercase tracking-wider font-bold mb-1">
+              <div className={`p-3 rounded-lg border shadow-inner transition-colors ${
+                precoVenda > 0 
+                  ? 'bg-neutral-900 border-orange-500/30' 
+                  : 'bg-red-950/20 border-red-500/50'
+              }`}>
+                <label className={`block text-[10px] uppercase tracking-wider font-bold mb-1 ${
+                  precoVenda > 0 ? 'text-orange-400' : 'text-red-400'
+                }`}>
                   Preço de Venda (R$) *
                 </label>
                 <div className="flex items-center gap-2">
-                  <span className="text-orange-500 font-mono font-bold text-xs">R$</span>
+                  <span className={`font-mono font-bold text-xs ${precoVenda > 0 ? 'text-orange-500' : 'text-red-400'}`}>R$</span>
                   <input
                     type="number"
                     step="0.01"
-                    min="0"
+                    min="0.01"
                     required
-                    value={Number(precoVenda.toFixed(2))}
+                    value={precoVenda > 0 ? Number(precoVenda.toFixed(2)) : ''}
+                    placeholder="0.00"
                     onChange={(e) => setPrecoVenda(Number(e.target.value))}
-                    className="w-full px-3 py-1.5 bg-neutral-950 border border-orange-500/50 rounded text-orange-400 font-mono text-sm focus:outline-none focus:border-orange-500 font-black"
+                    className={`w-full px-3 py-1.5 bg-neutral-950 border rounded font-mono text-sm focus:outline-none font-black ${
+                      precoVenda > 0 
+                        ? 'border-orange-500/50 text-orange-400 focus:border-orange-500' 
+                        : 'border-red-500/60 text-red-300 focus:border-red-500 placeholder-red-700/50'
+                    }`}
                   />
                 </div>
-                <span className="text-[9px] text-neutral-400 block mt-1">
+                <span className={`text-[9px] block mt-1 font-medium ${
+                  precoVenda > 0 ? 'text-neutral-400' : 'text-red-400 font-semibold'
+                }`}>
                   {precoVenda > 0
                     ? `✅ R$ ${precoVenda.toFixed(2)} gravado — altere ou clique em "Calcular Preço"`
-                    : `⚠️ Defina o preço ou clique em "Calcular Preço"`}
+                    : `⚠️ Preço obrigatório: defina manualmente ou clique em "Calcular Preço"`}
                 </span>
               </div>
             </div>
