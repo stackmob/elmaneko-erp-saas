@@ -55,8 +55,23 @@ export const getLocalCache = <T>(key: string, empresaId?: string): T[] => {
 export const setLocalCache = <T>(key: string, data: T[], empresaId?: string): void => {
   try {
     const prefix = getEmpresaPrefix(empresaId);
-    localStorage.setItem(`${prefix}${key}`, JSON.stringify(data));
-  } catch (e) {}
+    let payload = data;
+    if (key === 'produtos' && Array.isArray(data)) {
+      payload = data.map((item: any) => {
+        if (!item || typeof item !== 'object') return item;
+        const copy = { ...item };
+        // Remove strings massivas em base64 que estouram a cota de 5MB do localStorage
+        delete copy.pdfProjeto;
+        if (typeof copy.imagem === 'string' && copy.imagem.length > 80000) {
+          delete copy.imagem;
+        }
+        return copy;
+      }) as unknown as T[];
+    }
+    localStorage.setItem(`${prefix}${key}`, JSON.stringify(payload));
+  } catch (e) {
+    console.warn(`[LocalCache] Erro de cota ao persistir cache para ${key}:`, e);
+  }
 };
 
 export const addToLocalCache = <T extends { id: string }>(key: string, item: T, empresaId?: string): void => {

@@ -8,6 +8,7 @@ import Toast from './ui/Toast';
 import ConfirmDialog from './ui/ConfirmDialog';
 import { Modal } from './ui/Modal';
 import { activeEnergyRate, bomCost, calculateProductPricing, getGlobalPricingConfig } from '../utils/businessCalculations';
+import { fetchProductPdf } from '../hooks/data/useProductsData';
 
 export default function Products() {
   const { useProdutos, useImpressoras, useFilamentos, useTarifas, useAddProduto, useUpdateProduto, useDeleteProduto } = useData();
@@ -24,6 +25,7 @@ export default function Products() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [downloadingPdfId, setDownloadingPdfId] = useState<string | null>(null);
 
   // Form Fields
   const [nome, setNome] = useState('');
@@ -224,7 +226,35 @@ export default function Products() {
 
     // Carrega o preço gravado no banco — não recalcula automaticamente
     setPrecoVenda(p.precoVenda && p.precoVenda > 0 ? p.precoVenda : 0);
+
+    // Se o produto possui PDF mas o conteúdo binário foi omitido da lista para performance, busca sob demanda
+    if (!p.pdfProjeto && p.pdfProjetoNome && p.id) {
+      fetchProductPdf(p.id).then(content => {
+        if (content) setPdfProjeto(content);
+      });
+    }
+
     setIsModalOpen(true);
+  };
+
+  const handleDownloadPdf = async (p: Product) => {
+    let content = p.pdfProjeto;
+    if (!content && p.id) {
+      setDownloadingPdfId(p.id);
+      showToast('Baixando PDF do projeto...', 'info');
+      content = await fetchProductPdf(p.id);
+      setDownloadingPdfId(null);
+    }
+    if (!content) {
+      showToast('Arquivo PDF não disponível para download.', 'error');
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = content;
+    a.download = p.pdfProjetoNome || `${p.nome}_projeto.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
   const handleUseGlobalDefaults = () => {
@@ -571,15 +601,16 @@ export default function Products() {
             header: 'Anexos & Links do Projeto',
             render: (p) => (
               <div className="flex flex-wrap items-center gap-3 text-xs">
-                {p.pdfProjeto ? (
-                  <a
-                    href={p.pdfProjeto}
-                    download={p.pdfProjetoNome || `${p.nome}_projeto.pdf`}
-                    className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-750 text-neutral-200 border border-neutral-700 rounded-lg flex items-center gap-1.5 font-mono text-[11px]"
+                {p.pdfProjetoNome || p.pdfProjeto ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadPdf(p)}
+                    disabled={downloadingPdfId === p.id}
+                    className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-750 text-neutral-200 border border-neutral-700 rounded-lg flex items-center gap-1.5 font-mono text-[11px] cursor-pointer disabled:opacity-50"
                   >
                     <FileText size={13} className="text-red-400" />
-                    <span>{p.pdfProjetoNome || 'Baixar PDF Projeto'}</span>
-                  </a>
+                    <span>{downloadingPdfId === p.id ? 'Baixando...' : (p.pdfProjetoNome || 'Baixar PDF Projeto')}</span>
+                  </button>
                 ) : <span className="text-neutral-600 text-xs italic">Nenhum PDF anexo</span>}
 
                 {p.linkProjeto && (

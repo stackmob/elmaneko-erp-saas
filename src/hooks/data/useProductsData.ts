@@ -6,7 +6,18 @@ import {
 } from '../../utils/storage';
 import { enqueueOfflineOperation, isNetworkFailure } from '../../utils/offlineQueue';
 
-const productColumns = 'id,nome,categoria,descricao,imagem,tempo_impressao,impressora_padrao_id,tempo_acabamento,valor_mao_de_obra,margem_lucro,over_percent,preco_venda,pdf_projeto,pdf_projeto_nome,link_projeto,outras_despesas,has_custom_margem_lucro,has_custom_mao_de_obra,has_custom_outras_despesas,observacoes,created_at';
+// Omitimos pdf_projeto (que pode ter até 10MB em base64 por item) da listagem geral para resposta instantânea (< 300ms)
+const productColumns = 'id,nome,categoria,descricao,imagem,tempo_impressao,impressora_padrao_id,tempo_acabamento,valor_mao_de_obra,margem_lucro,over_percent,preco_venda,pdf_projeto_nome,link_projeto,outras_despesas,has_custom_margem_lucro,has_custom_mao_de_obra,has_custom_outras_despesas,observacoes,created_at';
+
+export async function fetchProductPdf(id: string): Promise<string> {
+  try {
+    const { data, error } = await supabase.from('produtos').select('pdf_projeto').eq('id', id).single();
+    if (error || !data) return '';
+    return data.pdf_projeto || '';
+  } catch {
+    return '';
+  }
+}
 
 function normalizeMaterials(materials: Product['materials'] = []) {
   const grouped = new Map<string, Product['materials'][number]>();
@@ -59,7 +70,7 @@ export function useProdutos() {
           margemLucro: item.margem_lucro !== null ? Number(item.margem_lucro) : 100,
           overPercent: item.over_percent !== null ? Number(item.over_percent) : 0,
           precoVenda: item.preco_venda !== null ? Number(item.preco_venda) : 0,
-          pdfProjeto: item.pdf_projeto || '',
+          pdfProjeto: (item as any).pdf_projeto || '',
           pdfProjetoNome: item.pdf_projeto_nome || '',
           linkProjeto: item.link_projeto || '',
           outrasDespesas: item.outras_despesas !== null ? Number(item.outras_despesas) : 0,
