@@ -44,7 +44,6 @@ export default function Products() {
   const [marginPercentage, setMarginPercentage] = useState(100); // % Profit Margin
   const [overPercent, setOverPercent] = useState(0); // % Overhead / Extra
   const [precoVenda, setPrecoVenda] = useState(0); // Selling price in R$
-  const [isCustomPriceManual, setIsCustomPriceManual] = useState(false);
 
   // Custom product overrides flags
   const [hasCustomMargemLucro, setHasCustomMargemLucro] = useState(false);
@@ -69,54 +68,26 @@ export default function Products() {
     return consumptionKwh * currentTariff;
   };
 
-  // Helper for centralized calculation using current state
-  const getCurrentPricing = (customMargem?: number, customOver?: number, customMao?: number, customOutras?: number, customMat?: BOMItem[], customTempo?: number, customPrinter?: string) => {
-    return calculateProductPricing({
-      materials: customMat ?? formMaterials,
-      filaments,
-      tempoImpressao: customTempo ?? tempoImpressao,
-      impressoraPadraoId: customPrinter ?? impressoraPadraoId,
-      printers,
-      tariffs,
-      margemLucro: customMargem !== undefined ? customMargem : marginPercentage,
-      outrasDespesas: customOutras !== undefined ? customOutras : outrasDespesas,
-      valorMaoDeObra: customMao !== undefined ? customMao : valorMaoDeObra,
-      overPercent: customOver !== undefined ? customOver : overPercent,
-      hasCustomMargemLucro,
-      hasCustomMaoDeObra,
-      hasCustomOutrasDespesas
-    });
-  };
+  // Cálculo de custos para exibição no formulário (informacional — painel reativo)
+  // O campo "Preço de Venda" NÃO é atualizado automaticamente — use o botão "Calcular Preço"
+  const formCalc = React.useMemo(() => calculateProductPricing({
+    materials: formMaterials,
+    filaments,
+    tempoImpressao,
+    impressoraPadraoId,
+    printers,
+    tariffs,
+    margemLucro: marginPercentage,
+    outrasDespesas,
+    valorMaoDeObra,
+    overPercent,
+    hasCustomMargemLucro,
+    hasCustomMaoDeObra,
+    hasCustomOutrasDespesas
+  }), [formMaterials, filaments, tempoImpressao, impressoraPadraoId, printers, tariffs,
+      marginPercentage, outrasDespesas, valorMaoDeObra, overPercent,
+      hasCustomMargemLucro, hasCustomMaoDeObra, hasCustomOutrasDespesas]);
 
-  const currentCalc = getCurrentPricing();
-  const costBOM = currentCalc.costBOM;
-  const costEnergy = currentCalc.costEnergy;
-  const costTotal = currentCalc.costTotal;
-
-  // Dynamic price & margin handlers
-  const handleMarginChange = (newMargin: number) => {
-    setMarginPercentage(newMargin);
-    const calc = getCurrentPricing(newMargin, overPercent);
-    setPrecoVenda(calc.suggestedPrice);
-    setIsCustomPriceManual(false);
-  };
-
-  const handleOverChange = (newOver: number) => {
-    setOverPercent(newOver);
-    const calc = getCurrentPricing(marginPercentage, newOver);
-    setPrecoVenda(calc.suggestedPrice);
-    setIsCustomPriceManual(false);
-  };
-
-  const handlePriceChange = (newPrice: number) => {
-    setPrecoVenda(newPrice);
-    const calc = getCurrentPricing(marginPercentage, overPercent);
-    const diff = newPrice - calc.costTotal;
-    const totalMarkup = calc.costTotal > 0 ? (diff / calc.costTotal) * 100 : 0;
-    const newMargin = Math.max(0, totalMarkup - overPercent);
-    setMarginPercentage(newMargin);
-    setIsCustomPriceManual(true);
-  };
 
   // Local File Readers for Image & PDF
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,25 +145,8 @@ export default function Products() {
     setFormMaterials(defaultMaterials);
     setOverPercent(0);
 
-    const calc = calculateProductPricing({
-      materials: defaultMaterials,
-      filaments,
-      tempoImpressao: 4,
-      impressoraPadraoId: defaultPrinter,
-      printers,
-      tariffs,
-      margemLucro: globalCfg.margemLucroPadrao,
-      outrasDespesas: globalCfg.outrasDespesasPadrao,
-      valorMaoDeObra: globalCfg.valorMaoDeObraPadrao,
-      overPercent: 0,
-      hasCustomMargemLucro: false,
-      hasCustomMaoDeObra: false,
-      hasCustomOutrasDespesas: false,
-      globalConfig: globalCfg
-    });
-    
-    setPrecoVenda(calc.suggestedPrice);
-    setIsCustomPriceManual(false);
+    // Preço não calculado automaticamente — clique em "Calcular Preço" para gerar
+    setPrecoVenda(0);
     setIsModalOpen(true);
   };
 
@@ -234,31 +188,8 @@ export default function Products() {
       : [{ tipoFilamento: 'PLA' as FilamentType, filamentoId: 'any', quantidadeGrams: 100 }];
     setFormMaterials(mats);
 
-    const calc = calculateProductPricing({
-      materials: mats,
-      filaments,
-      tempoImpressao: p.tempoImpressao,
-      impressoraPadraoId: p.impressoraPadraoId,
-      printers,
-      tariffs,
-      margemLucro: loadedMargin,
-      outrasDespesas: loadedOutras,
-      valorMaoDeObra: loadedMao,
-      overPercent: loadedOver,
-      hasCustomMargemLucro: customMargem,
-      hasCustomMaoDeObra: customMao,
-      hasCustomOutrasDespesas: customOutras,
-      globalConfig: globalCfg
-    });
-
-    const isExplicitlyManual = Boolean(p.precoVenda && p.precoVenda > 0 && Math.abs(p.precoVenda - calc.suggestedPrice) > 0.05);
-    if (p.precoVenda && p.precoVenda > 0) {
-      setPrecoVenda(p.precoVenda);
-      setIsCustomPriceManual(isExplicitlyManual);
-    } else {
-      setPrecoVenda(calc.suggestedPrice);
-      setIsCustomPriceManual(false);
-    }
+    // Carrega o preço gravado no banco — não recalcula automaticamente
+    setPrecoVenda(p.precoVenda && p.precoVenda > 0 ? p.precoVenda : 0);
     setIsModalOpen(true);
   };
 
@@ -270,128 +201,37 @@ export default function Products() {
     setHasCustomMargemLucro(false);
     setHasCustomMaoDeObra(false);
     setHasCustomOutrasDespesas(false);
-    setIsCustomPriceManual(false);
-
-    const calc = calculateProductPricing({
-      materials: formMaterials,
-      filaments,
-      tempoImpressao,
-      impressoraPadraoId,
-      printers,
-      tariffs,
-      margemLucro: globalCfg.margemLucroPadrao,
-      outrasDespesas: globalCfg.outrasDespesasPadrao,
-      valorMaoDeObra: globalCfg.valorMaoDeObraPadrao,
-      overPercent,
-      hasCustomMargemLucro: false,
-      hasCustomMaoDeObra: false,
-      hasCustomOutrasDespesas: false,
-      globalConfig: globalCfg
-    });
-    setPrecoVenda(calc.suggestedPrice);
-    showToast('Configurações herdadas do padrão global do sistema com sucesso!', 'info');
+    showToast('Parâmetros globais aplicados. Clique em "Calcular Preço" para atualizar o preço de venda.', 'info');
   };
 
-  const handleRecalculateSingleProduct = () => {
-    const globalCfg = getGlobalPricingConfig();
-    const calc = calculateProductPricing({
-      materials: formMaterials,
-      filaments,
-      tempoImpressao,
-      impressoraPadraoId,
-      printers,
-      tariffs,
-      margemLucro: hasCustomMargemLucro ? marginPercentage : globalCfg.margemLucroPadrao,
-      outrasDespesas: hasCustomOutrasDespesas ? outrasDespesas : globalCfg.outrasDespesasPadrao,
-      valorMaoDeObra: hasCustomMaoDeObra ? valorMaoDeObra : globalCfg.valorMaoDeObraPadrao,
-      overPercent,
-      hasCustomMargemLucro,
-      hasCustomMaoDeObra,
-      hasCustomOutrasDespesas,
-      globalConfig: globalCfg
-    });
-
-    setPrecoVenda(calc.suggestedPrice);
-    setIsCustomPriceManual(false);
-    showToast(`Preço recalculado: R$ ${calc.suggestedPrice.toFixed(2)}`, 'success');
+  // Único ponto de cálculo de preço — acionado EXCLUSIVAMENTE pelo botão "Calcular Preço"
+  const handleCalculatePrice = () => {
+    const price = formCalc.suggestedPrice;
+    setPrecoVenda(price);
+    showToast(`✅ Preço calculado e aplicado: R$ ${price.toFixed(2)}`, 'success');
   };
 
   const handleAddBOMItem = () => {
-    const list = [...formMaterials, { tipoFilamento: 'PLA' as FilamentType, filamentoId: 'any', quantidadeGrams: 50 }];
-    setFormMaterials(list);
-    if (!isCustomPriceManual) {
-      const calc = calculateProductPricing({
-        materials: list,
-        filaments,
-        tempoImpressao,
-        impressoraPadraoId,
-        printers,
-        tariffs,
-        margemLucro: marginPercentage,
-        outrasDespesas,
-        valorMaoDeObra,
-        overPercent,
-        hasCustomMargemLucro,
-        hasCustomMaoDeObra,
-        hasCustomOutrasDespesas
-      });
-      setPrecoVenda(calc.suggestedPrice);
-    }
+    setFormMaterials(prev => [...prev, { tipoFilamento: 'PLA' as FilamentType, filamentoId: 'any', quantidadeGrams: 50 }]);
   };
 
   const handleRemoveBOMItem = (index: number) => {
     if (formMaterials.length === 1) return;
-    const list = formMaterials.filter((_, idx) => idx !== index);
-    setFormMaterials(list);
-    if (!isCustomPriceManual) {
-      const calc = calculateProductPricing({
-        materials: list,
-        filaments,
-        tempoImpressao,
-        impressoraPadraoId,
-        printers,
-        tariffs,
-        margemLucro: marginPercentage,
-        outrasDespesas,
-        valorMaoDeObra,
-        overPercent,
-        hasCustomMargemLucro,
-        hasCustomMaoDeObra,
-        hasCustomOutrasDespesas
-      });
-      setPrecoVenda(calc.suggestedPrice);
-    }
+    setFormMaterials(prev => prev.filter((_, idx) => idx !== index));
   };
 
   const handleBOMChange = (index: number, key: keyof BOMItem, value: any) => {
-    const list = [...formMaterials];
-    if (key === 'tipoFilamento') {
-      list[index].tipoFilamento = value as FilamentType;
-      list[index].filamentoId = 'any';
-    } else if (key === 'filamentoId') {
-      list[index].filamentoId = value;
-    } else if (key === 'quantidadeGrams') {
-      list[index].quantidadeGrams = Number(value);
-    }
-    setFormMaterials(list);
-    if (!isCustomPriceManual) {
-      const calc = calculateProductPricing({
-        materials: list,
-        filaments,
-        tempoImpressao,
-        impressoraPadraoId,
-        printers,
-        tariffs,
-        margemLucro: marginPercentage,
-        outrasDespesas,
-        valorMaoDeObra,
-        overPercent,
-        hasCustomMargemLucro,
-        hasCustomMaoDeObra,
-        hasCustomOutrasDespesas
-      });
-      setPrecoVenda(calc.suggestedPrice);
-    }
+    setFormMaterials(prev => {
+      const list = [...prev];
+      if (key === 'tipoFilamento') {
+        list[index] = { ...list[index], tipoFilamento: value as FilamentType, filamentoId: 'any' };
+      } else if (key === 'filamentoId') {
+        list[index] = { ...list[index], filamentoId: value };
+      } else if (key === 'quantidadeGrams') {
+        list[index] = { ...list[index], quantidadeGrams: Number(value) };
+      }
+      return list;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -895,28 +735,7 @@ export default function Products() {
                   step="0.1"
                   min="0.1"
                   value={tempoImpressao}
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    setTempoImpressao(val);
-                    if (!isCustomPriceManual) {
-                      const calc = calculateProductPricing({
-                        materials: formMaterials,
-                        filaments,
-                        tempoImpressao: val,
-                        impressoraPadraoId,
-                        printers,
-                        tariffs,
-                        margemLucro: marginPercentage,
-                        outrasDespesas,
-                        valorMaoDeObra,
-                        overPercent,
-                        hasCustomMargemLucro,
-                        hasCustomMaoDeObra,
-                        hasCustomOutrasDespesas
-                      });
-                      setPrecoVenda(calc.suggestedPrice);
-                    }
-                  }}
+                  onChange={(e) => setTempoImpressao(Number(e.target.value))}
                   className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
                 />
               </div>
@@ -925,28 +744,7 @@ export default function Products() {
                 <label className="block text-neutral-400 mb-1 uppercase tracking-wider font-semibold text-[11px] min-h-[28px] flex items-end">Impressora Padrão</label>
                 <select
                   value={impressoraPadraoId}
-                  onChange={(e) => {
-                    const pid = e.target.value;
-                    setImpressoraPadraoId(pid);
-                    if (!isCustomPriceManual) {
-                      const calc = calculateProductPricing({
-                        materials: formMaterials,
-                        filaments,
-                        tempoImpressao,
-                        impressoraPadraoId: pid,
-                        printers,
-                        tariffs,
-                        margemLucro: marginPercentage,
-                        outrasDespesas,
-                        valorMaoDeObra,
-                        overPercent,
-                        hasCustomMargemLucro,
-                        hasCustomMaoDeObra,
-                        hasCustomOutrasDespesas
-                      });
-                      setPrecoVenda(calc.suggestedPrice);
-                    }
-                  }}
+                  onChange={(e) => setImpressoraPadraoId(e.target.value)}
                   className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
                 >
                   <option value="">Nenhuma / Definir na Produção</option>
@@ -986,27 +784,8 @@ export default function Products() {
                   min="0"
                   value={valorMaoDeObra}
                   onChange={(e) => {
-                    const val = Number(e.target.value);
-                    setValorMaoDeObra(val);
+                    setValorMaoDeObra(Number(e.target.value));
                     setHasCustomMaoDeObra(true);
-                    if (!isCustomPriceManual) {
-                      const calc = calculateProductPricing({
-                        materials: formMaterials,
-                        filaments,
-                        tempoImpressao,
-                        impressoraPadraoId,
-                        printers,
-                        tariffs,
-                        margemLucro: marginPercentage,
-                        outrasDespesas,
-                        valorMaoDeObra: val,
-                        overPercent,
-                        hasCustomMargemLucro,
-                        hasCustomMaoDeObra: true,
-                        hasCustomOutrasDespesas
-                      });
-                      setPrecoVenda(calc.suggestedPrice);
-                    }
                   }}
                   className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
                 />
@@ -1027,27 +806,8 @@ export default function Products() {
                   min="0"
                   value={outrasDespesas}
                   onChange={(e) => {
-                    const val = Number(e.target.value);
-                    setOutrasDespesas(val);
+                    setOutrasDespesas(Number(e.target.value));
                     setHasCustomOutrasDespesas(true);
-                    if (!isCustomPriceManual) {
-                      const calc = calculateProductPricing({
-                        materials: formMaterials,
-                        filaments,
-                        tempoImpressao,
-                        impressoraPadraoId,
-                        printers,
-                        tariffs,
-                        margemLucro: marginPercentage,
-                        outrasDespesas: val,
-                        valorMaoDeObra,
-                        overPercent,
-                        hasCustomMargemLucro,
-                        hasCustomMaoDeObra,
-                        hasCustomOutrasDespesas: true
-                      });
-                      setPrecoVenda(calc.suggestedPrice);
-                    }
                   }}
                   className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-orange-500"
                 />
@@ -1136,13 +896,13 @@ export default function Products() {
             })}
           </div>
 
-          {/* REAL-TIME COST SUMMARY & MARGINS */}
+          {/* CUSTOS INFORMACIONAIS & PRECIFICAÇÃO MANUAL */}
           <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-900 pb-2">
               <h4 className="text-xs font-bold text-orange-500 uppercase tracking-wider flex items-center gap-1.5">
-                <DollarSign size={14} /> Detalhamento de Custos, Margem & Over
+                <DollarSign size={14} /> Custos & Precificação
               </h4>
-              
+
               <div className="flex items-center gap-2">
                 {(hasCustomMargemLucro || hasCustomMaoDeObra || hasCustomOutrasDespesas) && (
                   <button
@@ -1151,86 +911,67 @@ export default function Products() {
                     className="px-2.5 py-1 bg-neutral-900 hover:bg-neutral-800 text-amber-400 border border-amber-500/30 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
                   >
                     <RotateCcw size={12} />
-                    Usar Configuração Padrão
+                    Restaurar Padrões
                   </button>
                 )}
 
                 <button
                   type="button"
-                  onClick={handleRecalculateSingleProduct}
-                  className="px-2.5 py-1 bg-orange-950/60 hover:bg-orange-900/60 text-orange-300 border border-orange-500/30 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                  onClick={handleCalculatePrice}
+                  className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-md shadow-orange-600/20 hover:translate-y-[-1px]"
                 >
-                  <Sparkles size={12} />
-                  Recalcular Preço
+                  <Sparkles size={13} />
+                  Calcular Preço
                 </button>
               </div>
             </div>
 
-            {(() => {
-              const calcSummary = calculateProductPricing({
-                materials: formMaterials,
-                filaments,
-                tempoImpressao,
-                impressoraPadraoId,
-                printers,
-                tariffs,
-                margemLucro: marginPercentage,
-                outrasDespesas,
-                valorMaoDeObra,
-                overPercent,
-                hasCustomMargemLucro,
-                hasCustomMaoDeObra,
-                hasCustomOutrasDespesas
-              });
+            {/* Breakdown de Custos — apenas informacional, não define o preço automaticamente */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono text-xs">
+              <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
+                <span className="text-neutral-500 uppercase text-[9px] block">Insumos (BOM)</span>
+                <strong className="text-white text-xs">R$ {formCalc.costBOM.toFixed(2)}</strong>
+              </div>
 
-              return (
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono text-xs">
-                  <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
-                    <span className="text-neutral-500 uppercase text-[9px] block">Insumos (BOM)</span>
-                    <strong className="text-white text-xs">R$ {calcSummary.costBOM.toFixed(2)}</strong>
-                  </div>
+              <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
+                <span className="text-neutral-500 uppercase text-[9px] block">Energia</span>
+                <strong className="text-white text-xs">R$ {formCalc.costEnergy.toFixed(2)}</strong>
+              </div>
 
-                  <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
-                    <span className="text-neutral-500 uppercase text-[9px] block">Energia</span>
-                    <strong className="text-white text-xs">R$ {calcSummary.costEnergy.toFixed(2)}</strong>
-                  </div>
-
-                  <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
-                    <div className="flex items-center justify-between">
-                      <span className="text-neutral-500 uppercase text-[9px]">Mão de Obra</span>
-                      {hasCustomMaoDeObra ? (
-                        <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded">Exceção</span>
-                      ) : (
-                        <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded">Global</span>
-                      )}
-                    </div>
-                    <strong className="text-white text-xs">R$ {calcSummary.valorMaoDeObra.toFixed(2)}</strong>
-                    {calcSummary.isMaoDeObraCapped && (
-                      <span className="text-[8px] text-amber-400 block mt-0.5" title="Limitado a no máximo 50% do custo do produto sem mão de obra">
-                        ⚠️ Máx 50% Custo Base
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
-                    <div className="flex items-center justify-between">
-                      <span className="text-neutral-500 uppercase text-[9px]">Outras Despesas</span>
-                      {hasCustomOutrasDespesas ? (
-                        <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded">Exceção</span>
-                      ) : (
-                        <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded">Global</span>
-                      )}
-                    </div>
-                    <strong className="text-white text-xs">R$ {calcSummary.outrasDespesas.toFixed(2)}</strong>
-                  </div>
-
-                  <div className="bg-neutral-900 p-2 rounded border border-neutral-850 col-span-2 sm:col-span-1">
-                    <span className="text-orange-400 uppercase text-[9px] font-bold block">Custo Total</span>
-                    <strong className="text-orange-400 text-sm font-bold">R$ {calcSummary.costTotal.toFixed(2)}</strong>
-                  </div>
+              <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
+                <div className="flex items-center justify-between">
+                  <span className="text-neutral-500 uppercase text-[9px]">Mão de Obra</span>
+                  {hasCustomMaoDeObra ? (
+                    <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded">Exceção</span>
+                  ) : (
+                    <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded">Global</span>
+                  )}
                 </div>
-              );
-            })()}
+                <strong className="text-white text-xs">R$ {formCalc.valorMaoDeObra.toFixed(2)}</strong>
+                {formCalc.isMaoDeObraCapped && (
+                  <span className="text-[8px] text-amber-400 block mt-0.5" title="Limitado a no máximo 50% do custo do produto sem mão de obra">
+                    ⚠️ Máx 50% Custo Base
+                  </span>
+                )}
+              </div>
+
+              <div className="bg-neutral-900 p-2 rounded border border-neutral-850">
+                <div className="flex items-center justify-between">
+                  <span className="text-neutral-500 uppercase text-[9px]">Outras Despesas</span>
+                  {hasCustomOutrasDespesas ? (
+                    <span className="text-[8px] px-1 bg-amber-950 text-amber-400 rounded">Exceção</span>
+                  ) : (
+                    <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 rounded">Global</span>
+                  )}
+                </div>
+                <strong className="text-white text-xs">R$ {formCalc.outrasDespesas.toFixed(2)}</strong>
+              </div>
+
+              <div className="bg-neutral-900 p-2 rounded border border-neutral-850 col-span-2 sm:col-span-1">
+                <span className="text-orange-400 uppercase text-[9px] font-bold block">Custo Total</span>
+                <strong className="text-orange-400 text-sm font-bold">R$ {formCalc.costTotal.toFixed(2)}</strong>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
               <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800">
@@ -1256,14 +997,14 @@ export default function Products() {
                     value={Number(marginPercentage.toFixed(1))}
                     onChange={(e) => {
                       setHasCustomMargemLucro(true);
-                      handleMarginChange(Number(e.target.value));
+                      setMarginPercentage(Number(e.target.value));
                     }}
                     className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold"
                   />
                   <span className="text-neutral-400 font-mono text-xs">%</span>
                 </div>
                 <span className="text-[9px] text-neutral-500 block mt-1">
-                  Lucro líquido: R$ {(costTotal * (marginPercentage / 100)).toFixed(2)}
+                  Lucro estimado: R$ {(formCalc.costTotal * (marginPercentage / 100)).toFixed(2)}
                 </span>
               </div>
 
@@ -1277,19 +1018,19 @@ export default function Products() {
                     step="1"
                     min="0"
                     value={Number(overPercent.toFixed(1))}
-                    onChange={(e) => handleOverChange(Number(e.target.value))}
+                    onChange={(e) => setOverPercent(Number(e.target.value))}
                     className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-white font-mono text-xs focus:outline-none focus:border-orange-500 font-bold"
                   />
                   <span className="text-neutral-400 font-mono text-xs">%</span>
                 </div>
                 <span className="text-[9px] text-neutral-500 block mt-1">
-                  Valor Over: R$ {(costTotal * (overPercent / 100)).toFixed(2)}
+                  Valor Over: R$ {(formCalc.costTotal * (overPercent / 100)).toFixed(2)}
                 </span>
               </div>
 
               <div className="bg-neutral-900 p-3 rounded-lg border border-orange-500/30 shadow-inner">
                 <label className="block text-orange-400 text-[10px] uppercase tracking-wider font-bold mb-1">
-                  Preço Final Sugerido (R$) *
+                  Preço de Venda (R$) *
                 </label>
                 <div className="flex items-center gap-2">
                   <span className="text-orange-500 font-mono font-bold text-xs">R$</span>
@@ -1299,12 +1040,14 @@ export default function Products() {
                     min="0"
                     required
                     value={Number(precoVenda.toFixed(2))}
-                    onChange={(e) => handlePriceChange(Number(e.target.value))}
+                    onChange={(e) => setPrecoVenda(Number(e.target.value))}
                     className="w-full px-3 py-1.5 bg-neutral-950 border border-orange-500/50 rounded text-orange-400 font-mono text-sm focus:outline-none focus:border-orange-500 font-black"
                   />
                 </div>
                 <span className="text-[9px] text-neutral-400 block mt-1">
-                  {isCustomPriceManual ? '✏️ Preço ajustado manualmente' : '⚡ Calculado via Margem + Over'}
+                  {precoVenda > 0
+                    ? `✅ R$ ${precoVenda.toFixed(2)} gravado — altere ou clique em "Calcular Preço"`
+                    : `⚠️ Defina o preço ou clique em "Calcular Preço"`}
                 </span>
               </div>
             </div>
